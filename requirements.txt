@@ -1,0 +1,17 @@
+# Core dependencies
+streamlit>=1.28.0
+python-dotenv>=1.0.0
+
+# Google Gemini
+google-generativeai>=0.3.0
+
+# Web scraping
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+
+# PDF generation
+markdown>=3.5.0
+weasyprint>=60.0
+
+# Additional utilities
+python-dateutil>=2.8.2
