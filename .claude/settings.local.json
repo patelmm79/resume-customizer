@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add .)"
+      "Bash(git add .)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nRefactor: Migrate to LangGraph orchestration\n\nMajor architectural refactoring to use LangGraph for agent orchestration:\n\nNEW FEATURES:\n- LangGraph-based workflow with stateful orchestration\n- Three separate compiled workflows for each phase\n- Typed state management with WorkflowState\n- Human-in-the-loop checkpoints between phases\n- Message trail for full observability\n- Error handling at node level\n- Resumable workflows with state persistence\n\nARCHITECTURE:\n- workflow/state.py: Typed state definitions\n- workflow/nodes.py: Node functions for each agent\n- workflow/graph.py: LangGraph workflow definitions\n- workflow/orchestrator.py: High-level orchestrator API\n\nBENEFITS:\n- Better separation of concerns\n- Easier testing and debugging\n- More extensible architecture\n- Natural human-in-the-loop integration\n- Prepared for future enhancements (streaming, persistence)\n\nCOMPATIBILITY:\n- Backward compatible - legacy methods still available\n- app_legacy.py preserved for reference\n- New app.py uses LangGraph orchestrator\n- main.py supports both interfaces\n\nDEPENDENCIES:\n- Added langgraph>=0.2.0\n- Added langchain-core>=0.3.0\n- Added langchain-google-genai>=2.0.0\n\nDOCUMENTATION:\n- Updated CLAUDE.md with LangGraph architecture\n- Added LANGGRAPH_ARCHITECTURE.md with detailed diagrams\n- Updated main.py with usage examples\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git add -A)"
     ],
     "deny": [],
     "ask": []

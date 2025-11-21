@@ -1,9 +1,10 @@
 # Resume Customizer
 
-An intelligent, multi-agent AI system that analyzes, optimizes, and tailors resumes to specific job descriptions using Google Gemini.
+An intelligent, multi-agent AI system orchestrated by **LangGraph** that analyzes, optimizes, and tailors resumes to specific job descriptions using Google Gemini.
 
 ## Features
 
+- **LangGraph Orchestration**: Stateful workflow with human-in-the-loop checkpoints
 - **Multi-Agent AI System**: Three specialized agents working together
   - **Agent 1**: Analyzes and scores resumes against job descriptions
   - **Agent 2**: Modifies resumes based on selected suggestions
@@ -13,6 +14,7 @@ An intelligent, multi-agent AI system that analyzes, optimizes, and tailors resu
 - **1-Page Optimization**: Automatically optimizes for single-page format
 - **PDF Export**: Professional PDF generation
 - **Job Scraping**: Fetch job descriptions directly from URLs
+- **Message Trail**: Full observability of workflow execution
 
 ## Architecture
 
@@ -21,9 +23,16 @@ An intelligent, multi-agent AI system that analyzes, optimizes, and tailors resu
 │  Streamlit UI   │
 └────────┬────────┘
          │
+    ┌────▼────────┐
+    │  LangGraph  │
+    │ Orchestrator│
+    └────┬────────┘
+         │
     ┌────▼────┐
     │ Agent 1 │ Score & Analyze (1-10)
     └────┬────┘
+         │
+    [Human Checkpoint]
          │
     ┌────▼────┐
     │ Agent 2 │ Modify Resume
@@ -32,6 +41,8 @@ An intelligent, multi-agent AI system that analyzes, optimizes, and tailors resu
     ┌────▼────┐
     │ Agent 3 │ Re-score & Approve
     └────┬────┘
+         │
+    [Human Checkpoint]
          │
     ┌────▼────┐
     │   PDF   │ Export to PDF

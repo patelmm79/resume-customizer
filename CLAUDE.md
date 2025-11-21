@@ -170,9 +170,8 @@ resume-customizer/
 │   └── job_scraper.py         # Job description fetching
 ├── data/
 │   └── resumes/               # Storage for resumes
-├── app.py                     # Streamlit frontend (LangGraph)
-├── app_legacy.py              # Original Streamlit (pre-LangGraph)
-├── main.py                    # Core application logic with LangGraph
+├── app.py                     # Streamlit frontend
+├── main.py                    # Core application logic
 ├── requirements.txt           # Python dependencies
 ├── .env.example              # Environment variables template
 └── CLAUDE.md                 # This file
@@ -371,13 +370,3 @@ The `ResumeWorkflowOrchestrator` class provides:
 - `update_suggestions()` - Helper for UI
 - `approve_resume()` - Helper for UI
 - `get_workflow_status()` - Current state info
-
-## Backward Compatibility
-
-The legacy (pre-LangGraph) methods are still available:
-- `analyze_resume()` - Direct Agent 1 call
-- `modify_resume()` - Direct Agent 2 call
-- `rescore_resume()` - Direct Agent 3 call
-- `export_to_pdf()` - Direct PDF export
-
-Use `app_legacy.py` for the original Streamlit interface.
