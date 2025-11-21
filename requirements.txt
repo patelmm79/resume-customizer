@@ -2,6 +2,11 @@
 streamlit>=1.28.0
 python-dotenv>=1.0.0
 
+# LangGraph for agent orchestration
+langgraph>=0.2.0
+langchain-core>=0.3.0
+langchain-google-genai>=2.0.0
+
 # Google Gemini
 google-generativeai>=0.3.0
 
@@ -15,3 +20,4 @@ weasyprint>=60.0
 
 # Additional utilities
 python-dateutil>=2.8.2
+typing-extensions>=4.5.0
