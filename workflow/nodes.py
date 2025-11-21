@@ -4,6 +4,7 @@ from workflow.state import WorkflowState
 from agents.agent_1_scorer import ResumeScorerAgent
 from agents.agent_2_modifier import ResumeModifierAgent
 from agents.agent_3_rescorer import ResumeRescorerAgent
+from agents.agent_4_validator import ResumeValidatorAgent
 from utils.job_scraper import JobScraper
 from utils.pdf_exporter import PDFExporter
 
@@ -135,6 +136,40 @@ def rescoring_node(state: WorkflowState) -> Dict[str, Any]:
     except Exception as e:
         return {
             "error": f"Rescoring failed: {str(e)}",
+            "current_stage": "error",
+            "messages": [{"role": "system", "content": f"Error: {str(e)}"}]
+        }
+
+
+def validation_node(state: WorkflowState) -> Dict[str, Any]:
+    """
+    Agent 4: Validate resume formatting and consistency.
+
+    Args:
+        state: Current workflow state
+
+    Returns:
+        Updated state with validation results
+    """
+    try:
+        agent = ResumeValidatorAgent()
+        result = agent.validate_resume(state["modified_resume"])
+
+        return {
+            "validation_score": result["validation_score"],
+            "is_valid": result["is_valid"],
+            "validation_issues": result["issues"],
+            "validation_recommendations": result["recommendations"],
+            "validation_summary": result["summary"],
+            "critical_count": result["critical_count"],
+            "warning_count": result["warning_count"],
+            "info_count": result["info_count"],
+            "current_stage": "awaiting_validation_approval",
+            "messages": [{"role": "ai", "content": f"Agent 4: Validation score: {result['validation_score']}/10"}]
+        }
+    except Exception as e:
+        return {
+            "error": f"Validation failed: {str(e)}",
             "current_stage": "error",
             "messages": [{"role": "system", "content": f"Error: {str(e)}"}]
         }

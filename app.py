@@ -53,8 +53,9 @@ with st.sidebar:
         "modification": "5. Modifying Resume",
         "rescoring": "6. Re-scoring",
         "awaiting_approval": "7. Approval",
-        "export": "8. Exporting PDF",
-        "completed": "9. Completed",
+        "awaiting_validation_approval": "8. Validation Check",
+        "export": "9. Exporting PDF",
+        "completed": "10. Completed",
         "error": "❌ Error"
     }
 
@@ -213,11 +214,16 @@ elif current_stage == "awaiting_selection":
                     st.code(traceback.format_exc())
 
 
-# Stage 5-6: Modification & Rescoring
-elif current_stage in ["modification", "rescoring"]:
+# Stage 5-6: Modification, Rescoring & Validation
+elif current_stage in ["modification", "rescoring", "validation"]:
     st.header("Processing Resume Changes...")
     with st.spinner("Agents are working..."):
-        st.info("Modifying and rescoring your resume. Please wait...")
+        if current_stage == "modification":
+            st.info("Agent 2: Modifying your resume based on selected suggestions...")
+        elif current_stage == "rescoring":
+            st.info("Agent 3: Re-scoring the modified resume...")
+        elif current_stage == "validation":
+            st.info("Agent 4: Validating formatting and consistency...")
 
 
 # Stage 7: Approval
@@ -304,7 +310,103 @@ elif current_stage == "awaiting_approval":
             st.rerun()
 
     with col3:
-        if st.button("✅ Approve & Export", type="primary", use_container_width=True):
+        if st.button("✅ Review Validation", type="primary", use_container_width=True):
+            # Validation already ran as part of modification workflow
+            # Just move to validation approval stage
+            st.session_state.workflow_state['current_stage'] = "awaiting_validation_approval"
+            st.rerun()
+
+
+# Stage 8: Validation Check
+elif current_stage == "awaiting_validation_approval":
+    state = st.session_state.workflow_state
+    st.header("Step 4: Validation Results")
+
+    # Display validation score
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "Validation Score",
+            f"{state['validation_score']}/10",
+            help="Resume formatting and consistency score"
+        )
+
+    with col2:
+        critical_count = state.get('critical_count', 0)
+        warning_count = state.get('warning_count', 0)
+        if critical_count > 0:
+            st.metric("Critical Issues", critical_count, delta_color="inverse")
+        elif warning_count > 0:
+            st.metric("Warnings", warning_count, delta_color="inverse")
+        else:
+            st.metric("Issues", 0)
+
+    with col3:
+        if state['is_valid']:
+            st.success("✅ Passes Validation")
+        else:
+            st.error("❌ Needs Fixes")
+
+    st.divider()
+
+    # Display validation summary
+    if state.get('validation_summary'):
+        st.subheader("Summary")
+        st.info(state['validation_summary'])
+
+    # Display issues if any
+    if state.get('validation_issues'):
+        st.subheader("Issues Found")
+
+        # Group by severity
+        critical = [i for i in state['validation_issues'] if i['severity'] == 'CRITICAL']
+        warnings = [i for i in state['validation_issues'] if i['severity'] == 'WARNING']
+        info = [i for i in state['validation_issues'] if i['severity'] == 'INFO']
+
+        if critical:
+            with st.expander(f"🔴 Critical Issues ({len(critical)})", expanded=True):
+                for issue in critical:
+                    st.markdown(f"**[{issue['category']}]** {issue['description']}")
+
+        if warnings:
+            with st.expander(f"🟡 Warnings ({len(warnings)})", expanded=True):
+                for issue in warnings:
+                    st.markdown(f"**[{issue['category']}]** {issue['description']}")
+
+        if info:
+            with st.expander(f"ℹ️ Informational ({len(info)})", expanded=False):
+                for issue in info:
+                    st.markdown(f"**[{issue['category']}]** {issue['description']}")
+
+    # Display recommendations
+    if state.get('validation_recommendations'):
+        st.subheader("Recommendations")
+        for rec in state['validation_recommendations']:
+            st.markdown(f"- {rec}")
+
+    st.divider()
+
+    # Action buttons
+    st.subheader("Next Steps")
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("⬅️ Start Over", use_container_width=True):
+            reset_app()
+
+    with col2:
+        if st.button("🔄 Reselect Suggestions", use_container_width=True):
+            # Go back to suggestion selection
+            st.session_state.workflow_state['current_stage'] = "awaiting_selection"
+            st.rerun()
+
+    with col3:
+        button_label = "✅ Proceed to Export" if state['is_valid'] else "⚠️ Export Anyway"
+        button_type = "primary" if state['is_valid'] else "secondary"
+
+        if st.button(button_label, type=button_type, use_container_width=True):
             with st.spinner("Exporting to PDF..."):
                 try:
                     final_state = st.session_state.customizer.finalize_workflow(
@@ -317,10 +419,10 @@ elif current_stage == "awaiting_approval":
                     st.code(traceback.format_exc())
 
 
-# Stage 8-9: Export & Completed
+# Stage 9-10: Export & Completed
 elif current_stage in ["export", "completed"]:
     state = st.session_state.workflow_state
-    st.header("Step 4: Export Complete!")
+    st.header("Step 5: Export Complete!")
 
     st.success("Resume approved and exported successfully!")
 

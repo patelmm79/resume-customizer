@@ -35,6 +35,16 @@ class WorkflowState(TypedDict):
     recommendation: Optional[str]
     reasoning: Optional[str]
 
+    # Agent 4 outputs (Validation)
+    validation_score: Optional[int]
+    is_valid: Optional[bool]
+    validation_issues: Optional[List[Dict]]
+    validation_recommendations: Optional[List[str]]
+    validation_summary: Optional[str]
+    critical_count: Optional[int]
+    warning_count: Optional[int]
+    info_count: Optional[int]
+
     # Final outputs
     pdf_path: Optional[str]
     pdf_bytes: Optional[bytes]
@@ -77,6 +87,14 @@ def create_initial_state(
         concerns=None,
         recommendation=None,
         reasoning=None,
+        validation_score=None,
+        is_valid=None,
+        validation_issues=None,
+        validation_recommendations=None,
+        validation_summary=None,
+        critical_count=None,
+        warning_count=None,
+        info_count=None,
         pdf_path=None,
         pdf_bytes=None,
         current_stage="fetch_job" if job_url else "scoring",

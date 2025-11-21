@@ -50,7 +50,14 @@ This application implements a **multi-agent system with LangGraph orchestration*
          │
          ▼
 ┌─────────────────┐
-│  HUMAN          │ ← User approves
+│  Agent 4:       │
+│  Validate       │ → Validation Score + Issues
+│  [Node]         │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  HUMAN          │ ← User reviews validation
 │  [Checkpoint]   │
 └────────┬────────┘
          │
@@ -88,13 +95,13 @@ This application implements a **multi-agent system with LangGraph orchestration*
   - Preserve professional formatting
 - **LangGraph Node**: `modification_node`
 
-### Agent 3: Re-scorer & Approval
+### Agent 3: Re-scorer
 - **Input**: Modified resume, original job description
 - **Output**:
   - New compatibility score (1-10)
   - Comparison with original score
   - Improvement analysis
-  - Approval recommendation
+  - Remaining concerns
 - **Responsibilities**:
   - Evaluate improvement from modifications
   - Present before/after comparison
@@ -102,7 +109,22 @@ This application implements a **multi-agent system with LangGraph orchestration*
   - Recommend next steps
 - **LangGraph Node**: `rescoring_node`
 
-### Process 4: PDF Export
+### Agent 4: Formatting Validator
+- **Input**: Modified resume (markdown)
+- **Output**:
+  - Validation score (1-10)
+  - List of issues (Critical, Warning, Info)
+  - Formatting recommendations
+  - Overall validity status
+- **Responsibilities**:
+  - Check formatting consistency
+  - Validate professional appearance
+  - Ensure proper structure
+  - Verify no typos or errors
+  - Check resume length (1 page ideal)
+- **LangGraph Node**: `validation_node`
+
+### Process 5: PDF Export
 - **Input**: Approved resume (markdown)
 - **Output**: Professional PDF document
 - **Responsibilities**:
@@ -124,7 +146,7 @@ The workflow uses a **typed state dictionary** (`WorkflowState`) that tracks:
 ### Workflow Phases
 
 1. **Analysis Workflow**: Input → Fetch Job → Score → END
-2. **Modification Workflow**: Modify → Rescore → END
+2. **Modification Workflow**: Modify → Rescore → Validate → END
 3. **Export Workflow**: Export → END
 
 Each phase can be invoked independently with human-in-the-loop checkpoints between phases.
@@ -156,7 +178,8 @@ resume-customizer/
 │   ├── __init__.py
 │   ├── agent_1_scorer.py      # Resume scoring and analysis
 │   ├── agent_2_modifier.py    # Resume modification
-│   └── agent_3_rescorer.py    # Re-evaluation and approval
+│   ├── agent_3_rescorer.py    # Re-evaluation
+│   └── agent_4_validator.py   # Formatting validation
 ├── workflow/
 │   ├── __init__.py
 │   ├── state.py               # LangGraph state definitions
@@ -217,7 +240,8 @@ resume-customizer/
 4. Review and select suggested changes
 5. Agent 2 modifies your resume
 6. Agent 3 rescores and presents improvements
-7. Approve and export to PDF
+7. Agent 4 validates formatting and consistency
+8. Review validation results and export to PDF
 
 ### Programmatic Usage (LangGraph)
 
@@ -338,6 +362,12 @@ WorkflowState = TypedDict({
     "concerns": List[str],
     "recommendation": str,
 
+    # Agent 4 outputs
+    "validation_score": int,
+    "is_valid": bool,
+    "validation_issues": List[Dict],
+    "validation_recommendations": List[str],
+
     # Control
     "current_stage": str,
     "approved": bool,
@@ -365,7 +395,7 @@ def node_function(state: WorkflowState) -> Dict[str, Any]:
 
 The `ResumeWorkflowOrchestrator` class provides:
 - `start_analysis()` - Run Agent 1
-- `apply_modifications()` - Run Agents 2 & 3
+- `apply_modifications()` - Run Agents 2, 3 & 4
 - `export_resume()` - Run PDF export
 - `update_suggestions()` - Helper for UI
 - `approve_resume()` - Helper for UI
