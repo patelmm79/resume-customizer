@@ -331,31 +331,50 @@ elif current_stage in ["export", "completed"]:
     st.divider()
 
     # Export options
+    st.subheader("Download Options")
+
     col1, col2 = st.columns(2)
 
     with col1:
-        filename = st.text_input(
+        pdf_filename = st.text_input(
             "PDF Filename",
             value="optimized_resume.pdf",
             help="Enter the desired filename for your PDF"
         )
 
     with col2:
-        st.write("")
-        st.write("")
-
-    # Download button
-    if state.get('pdf_bytes'):
-        st.download_button(
-            label="⬇️ Download PDF",
-            data=state['pdf_bytes'],
-            file_name=filename,
-            mime="application/pdf",
-            use_container_width=True,
-            type="primary"
+        md_filename = st.text_input(
+            "Markdown Filename",
+            value="optimized_resume.md",
+            help="Enter the desired filename for your Markdown file"
         )
 
-        st.info(f"PDF saved to: {state.get('pdf_path', 'N/A')}")
+    # Download buttons
+    col1, col2 = st.columns(2)
+
+    with col1:
+        if state.get('pdf_bytes'):
+            st.download_button(
+                label="📄 Download PDF",
+                data=state['pdf_bytes'],
+                file_name=pdf_filename,
+                mime="application/pdf",
+                use_container_width=True,
+                type="primary"
+            )
+            st.caption(f"PDF saved to: {state.get('pdf_path', 'N/A')}")
+
+    with col2:
+        if state.get('modified_resume'):
+            st.download_button(
+                label="📝 Download Markdown",
+                data=state['modified_resume'],
+                file_name=md_filename,
+                mime="text/markdown",
+                use_container_width=True,
+                type="primary"
+            )
+            st.caption("Download the optimized resume as markdown")
 
     st.divider()
 
