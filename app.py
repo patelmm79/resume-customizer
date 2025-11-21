@@ -55,8 +55,10 @@ with st.sidebar:
         "optimization": "7. Optimizing Length",
         "validation": "8. Validating Format",
         "awaiting_approval": "9. Review & Approve",
-        "export": "10. Exporting PDF",
-        "completed": "11. Completed",
+        "freeform_editing": "10. Final Edits (Optional)",
+        "final_scoring": "11. Final Score",
+        "export": "12. Exporting PDF",
+        "completed": "13. Completed",
         "error": "❌ Error"
     }
 
@@ -470,17 +472,202 @@ elif current_stage == "awaiting_approval":
             st.rerun()
 
     with col3:
-        if st.button("✅ Approve & Export", type="primary", use_container_width=True):
-            with st.spinner("Exporting to PDF..."):
-                try:
-                    final_state = st.session_state.customizer.finalize_workflow(
-                        st.session_state.workflow_state
-                    )
-                    st.session_state.workflow_state = final_state
+        if st.button("➡️ Continue to Final Edits", type="primary", use_container_width=True):
+            # Move to freeform editing stage
+            st.session_state.workflow_state['current_stage'] = "freeform_editing"
+            st.rerun()
+
+
+# Stage 10: Freeform Editing (Optional)
+elif current_stage == "freeform_editing":
+    state = st.session_state.workflow_state
+    st.header("Step 4: Final Edits (Optional)")
+
+    st.info("💡 Request any additional changes before finalizing. Type your requested changes below, or click 'Finalize' to proceed to scoring.")
+
+    # Initialize freeform changes history if not exists
+    if state.get('freeform_changes_history') is None:
+        state['freeform_changes_history'] = []
+
+    # Get the current resume (use freeform if available, otherwise optimized)
+    current_resume = state.get('freeform_resume') or state.get('optimized_resume') or state['modified_resume']
+
+    # Display current resume
+    col1, col2 = st.columns([1, 1])
+
+    with col1:
+        st.subheader("Current Resume")
+        with st.container():
+            st.markdown("""
+            <style>
+            .freeform-preview {
+                border: 1px solid #ddd;
+                border-radius: 5px;
+                padding: 15px;
+                background-color: #f9f9f9;
+                max-height: 500px;
+                overflow-y: auto;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            st.markdown(f'<div class="freeform-preview">', unsafe_allow_html=True)
+            st.markdown(current_resume)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    with col2:
+        st.subheader("Request Changes")
+
+        # Text area for user input
+        user_request = st.text_area(
+            "Describe the changes you'd like:",
+            height=150,
+            placeholder="Example: Change the summary to emphasize leadership skills, or remove the last bullet point from Experience section, etc.",
+            key="freeform_input"
+        )
+
+        if st.button("✨ Apply Changes", type="primary", use_container_width=True):
+            if user_request.strip():
+                with st.spinner("Applying your requested changes..."):
+                    try:
+                        from agents.agent_6_freeform import FreeformEditorAgent
+
+                        agent = FreeformEditorAgent()
+                        result = agent.apply_changes(
+                            current_resume,
+                            user_request,
+                            state['job_description']
+                        )
+
+                        # Update state with new resume
+                        state['freeform_resume'] = result['modified_resume']
+
+                        # Add to change history
+                        if state['freeform_changes_history'] is None:
+                            state['freeform_changes_history'] = []
+                        state['freeform_changes_history'].append({
+                            'request': user_request,
+                            'summary': result['changes_summary']
+                        })
+
+                        st.success(f"✅ Changes applied! {result['changes_summary']}")
+                        st.rerun()
+
+                    except Exception as e:
+                        st.error(f"Error applying changes: {str(e)}")
+                        st.code(traceback.format_exc())
+            else:
+                st.warning("Please enter your requested changes.")
+
+        st.divider()
+
+        # Show change history
+        if state.get('freeform_changes_history'):
+            st.subheader("Change History")
+            for idx, change in enumerate(state['freeform_changes_history'], 1):
+                with st.expander(f"Change #{idx}: {change['summary'][:50]}..."):
+                    st.markdown(f"**Your Request:** {change['request']}")
+                    st.markdown(f"**Changes Made:** {change['summary']}")
+
+    st.divider()
+
+    # Action buttons
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("⬅️ Back to Review", use_container_width=True):
+            st.session_state.workflow_state['current_stage'] = "awaiting_approval"
+            st.rerun()
+
+    with col2:
+        if st.button("🔄 Reset to Optimized", use_container_width=True):
+            # Reset to optimized version
+            state['freeform_resume'] = None
+            state['freeform_changes_history'] = []
+            st.success("Reset to optimized version")
+            st.rerun()
+
+    with col3:
+        if st.button("✅ Finalize & Score", type="primary", use_container_width=True):
+            # Move to final scoring
+            st.session_state.workflow_state['current_stage'] = "final_scoring"
+            st.rerun()
+
+
+# Stage 11: Final Scoring
+elif current_stage == "final_scoring":
+    state = st.session_state.workflow_state
+    st.header("Step 5: Final Score")
+
+    with st.spinner("Calculating final score..."):
+        try:
+            from agents.agent_3_rescorer import ResumeRescorerAgent
+
+            # Get the final resume
+            final_resume = state.get('freeform_resume') or state.get('optimized_resume') or state['modified_resume']
+
+            # Calculate final score
+            agent = ResumeRescorerAgent()
+            result = agent.rescore_resume(
+                final_resume,
+                state['job_description'],
+                state['initial_score']
+            )
+
+            # Store final score
+            state['final_score'] = result['new_score']
+            state['freeform_resume'] = final_resume  # Ensure this is saved
+
+            # Display results
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric("Initial Score", f"{state['initial_score']}/10")
+
+            with col2:
+                st.metric("After Optimization", f"{state['new_score']}/10")
+
+            with col3:
+                improvement = result['new_score'] - state['initial_score']
+                st.metric(
+                    "Final Score",
+                    f"{result['new_score']}/10",
+                    delta=f"+{improvement}" if improvement > 0 else str(improvement)
+                )
+
+            st.divider()
+
+            if result.get('improvements'):
+                st.subheader("Final Assessment")
+                with st.expander("View Details", expanded=True):
+                    st.markdown("**Strengths:**")
+                    for improvement in result['improvements']:
+                        st.markdown(f"✅ {improvement}")
+
+            st.divider()
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("⬅️ Back to Edits", use_container_width=True):
+                    st.session_state.workflow_state['current_stage'] = "freeform_editing"
                     st.rerun()
-                except Exception as e:
-                    st.error(f"Error exporting: {str(e)}")
-                    st.code(traceback.format_exc())
+
+            with col2:
+                if st.button("📄 Export Resume", type="primary", use_container_width=True):
+                    with st.spinner("Exporting to PDF..."):
+                        try:
+                            final_state = st.session_state.customizer.finalize_workflow(
+                                st.session_state.workflow_state
+                            )
+                            st.session_state.workflow_state = final_state
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error exporting: {str(e)}")
+                            st.code(traceback.format_exc())
+
+        except Exception as e:
+            st.error(f"Error calculating final score: {str(e)}")
+            st.code(traceback.format_exc())
 
 
 # Stage 9b: Legacy validation approval stage (shouldn't reach here anymore)
@@ -592,16 +779,16 @@ elif current_stage == "awaiting_validation_approval_old":
                     st.code(traceback.format_exc())
 
 
-# Stage 10-11: Export & Completed
+# Stage 12-13: Export & Completed
 elif current_stage in ["export", "completed"]:
     state = st.session_state.workflow_state
-    st.header("Step 4: Export Complete!")
+    st.header("Step 6: Export Complete!")
 
     st.success("Resume approved and exported successfully!")
 
     # Display final resume
     with st.expander("View Final Resume", expanded=True):
-        final_resume = state.get('optimized_resume') or state['modified_resume']
+        final_resume = state.get('freeform_resume') or state.get('optimized_resume') or state['modified_resume']
         st.markdown(final_resume)
 
     st.divider()
@@ -641,7 +828,7 @@ elif current_stage in ["export", "completed"]:
             st.caption(f"PDF saved to: {state.get('pdf_path', 'N/A')}")
 
     with col2:
-        final_resume = state.get('optimized_resume') or state['modified_resume']
+        final_resume = state.get('freeform_resume') or state.get('optimized_resume') or state['modified_resume']
         if final_resume:
             st.download_button(
                 label="📝 Download Markdown",

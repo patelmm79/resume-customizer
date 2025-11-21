@@ -230,8 +230,8 @@ def export_pdf_node(state: WorkflowState) -> Dict[str, Any]:
     try:
         exporter = PDFExporter()
 
-        # Use optimized resume if available, otherwise use modified resume
-        final_resume = state.get("optimized_resume") or state["modified_resume"]
+        # Use freeform resume if available, otherwise optimized, otherwise modified
+        final_resume = state.get("freeform_resume") or state.get("optimized_resume") or state["modified_resume"]
 
         # Generate PDF bytes for download
         pdf_bytes = exporter.markdown_to_pdf_bytes(final_resume)

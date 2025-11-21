@@ -53,6 +53,11 @@ class WorkflowState(TypedDict):
     warning_count: Optional[int]
     info_count: Optional[int]
 
+    # Agent 6 outputs (Freeform Editing)
+    freeform_resume: Optional[str]
+    freeform_changes_history: Optional[List[Dict]]
+    final_score: Optional[int]
+
     # Final outputs
     pdf_path: Optional[str]
     pdf_bytes: Optional[bytes]
@@ -109,6 +114,9 @@ def create_initial_state(
         critical_count=None,
         warning_count=None,
         info_count=None,
+        freeform_resume=None,
+        freeform_changes_history=None,
+        final_score=None,
         pdf_path=None,
         pdf_bytes=None,
         current_stage="fetch_job" if job_url else "scoring",
