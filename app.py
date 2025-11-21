@@ -340,26 +340,94 @@ elif current_stage == "awaiting_approval":
             else:
                 st.warning("⚠️ Has Issues")
 
-        if state.get('validation_issues'):
-            with st.expander("View Validation Issues", expanded=False):
-                critical = [i for i in state['validation_issues'] if i['severity'] == 'CRITICAL']
-                warnings = [i for i in state['validation_issues'] if i['severity'] == 'WARNING']
-                info = [i for i in state['validation_issues'] if i['severity'] == 'INFO']
+        # Interactive validation recommendations
+        if state.get('validation_recommendations'):
+            st.markdown("### 📋 Apply Recommendations (Optional)")
+            st.info("Check recommendations below to preview how they would improve your resume")
 
-                if critical:
-                    st.markdown("**🔴 Critical Issues:**")
-                    for issue in critical:
-                        st.markdown(f"- [{issue['category']}] {issue['description']}")
+            # Create two columns: recommendations on left, preview on right
+            rec_col, preview_col = st.columns([1, 1])
 
-                if warnings:
-                    st.markdown("**🟡 Warnings:**")
-                    for issue in warnings:
-                        st.markdown(f"- [{issue['category']}] {issue['description']}")
+            with rec_col:
+                st.markdown("**Select Fixes to Apply:**")
 
-                if info:
-                    st.markdown("**ℹ️ Info:**")
-                    for issue in info:
-                        st.markdown(f"- [{issue['category']}] {issue['description']}")
+                # Initialize selected recommendations in session state
+                if 'selected_validation_recs' not in st.session_state:
+                    st.session_state.selected_validation_recs = []
+
+                selected_recs = []
+                for idx, rec in enumerate(state['validation_recommendations']):
+                    is_selected = st.checkbox(
+                        rec,
+                        value=False,
+                        key=f"val_rec_{idx}"
+                    )
+                    if is_selected:
+                        selected_recs.append(rec)
+
+                st.session_state.selected_validation_recs = selected_recs
+
+                # Show issues in expandable section
+                if state.get('validation_issues'):
+                    with st.expander("View All Validation Issues", expanded=False):
+                        critical = [i for i in state['validation_issues'] if i['severity'] == 'CRITICAL']
+                        warnings = [i for i in state['validation_issues'] if i['severity'] == 'WARNING']
+                        info = [i for i in state['validation_issues'] if i['severity'] == 'INFO']
+
+                        if critical:
+                            st.markdown("**🔴 Critical Issues:**")
+                            for issue in critical:
+                                st.markdown(f"- [{issue['category']}] {issue['description']}")
+
+                        if warnings:
+                            st.markdown("**🟡 Warnings:**")
+                            for issue in warnings:
+                                st.markdown(f"- [{issue['category']}] {issue['description']}")
+
+                        if info:
+                            st.markdown("**ℹ️ Info:**")
+                            for issue in info:
+                                st.markdown(f"- [{issue['category']}] {issue['description']}")
+
+            with preview_col:
+                st.markdown("**Resume Preview:**")
+
+                # Get the current resume
+                current_resume = state.get('optimized_resume') or state['modified_resume']
+
+                # Show preview with selected recommendations highlighted
+                if selected_recs:
+                    st.info(f"✓ {len(selected_recs)} recommendation(s) selected")
+                    st.caption("These improvements are noted for your reference. The current resume is shown below.")
+                else:
+                    st.caption("Select recommendations on the left to mark them for consideration")
+
+                # Render the markdown preview in a scrollable container
+                st.markdown("""
+                <style>
+                .resume-preview {
+                    border: 1px solid #ddd;
+                    border-radius: 5px;
+                    padding: 20px;
+                    background-color: white;
+                    max-height: 600px;
+                    overflow-y: auto;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                </style>
+                """, unsafe_allow_html=True)
+
+                with st.container():
+                    st.markdown(f'<div class="resume-preview">', unsafe_allow_html=True)
+                    st.markdown(current_resume)
+                    st.markdown('</div>', unsafe_allow_html=True)
+
+                # Show selected recommendations summary
+                if selected_recs:
+                    with st.expander("Selected Recommendations Summary", expanded=False):
+                        st.markdown("You've selected these improvements:")
+                        for rec in selected_recs:
+                            st.markdown(f"✓ {rec}")
 
         st.divider()
 
