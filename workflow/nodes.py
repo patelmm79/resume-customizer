@@ -131,7 +131,7 @@ def rescoring_node(state: WorkflowState) -> Dict[str, Any]:
             "concerns": result["concerns"],
             "recommendation": result["recommendation"],
             "reasoning": result["reasoning"],
-            "current_stage": "awaiting_approval",
+            "current_stage": "optimization",
             "messages": [{"role": "ai", "content": f"Agent 3: New score: {result['new_score']}/10 (improvement: +{result['score_improvement']})"}]
         }
     except Exception as e:
@@ -167,7 +167,7 @@ def optimization_node(state: WorkflowState) -> Dict[str, Any]:
             "words_removed": result["words_removed"],
             "optimization_summary": result["optimization_summary"],
             "optimization_changes": result["changes_made"],
-            "current_stage": "optimization_complete",
+            "current_stage": "validation",
             "messages": [{
                 "role": "ai",
                 "content": f"Agent 5: Optimized resume from {result['word_count_before']} to {result['word_count_after']} words (-{result['words_removed']} words)"
@@ -206,7 +206,7 @@ def validation_node(state: WorkflowState) -> Dict[str, Any]:
             "critical_count": result["critical_count"],
             "warning_count": result["warning_count"],
             "info_count": result["info_count"],
-            "current_stage": "awaiting_validation_approval",
+            "current_stage": "awaiting_approval",
             "messages": [{"role": "ai", "content": f"Agent 4: Validation score: {result['validation_score']}/10"}]
         }
     except Exception as e:
