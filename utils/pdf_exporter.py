@@ -21,54 +21,69 @@ class HTMLToFlowables(HTMLParser):
         super().__init__()
         self.flowables = []
         self.styles = styles
-        self.current_tag = None
+        self.tag_stack = []
         self.text_buffer = []
         self.list_items = []
         self.in_list = False
 
     def handle_starttag(self, tag, attrs):
+        self.tag_stack.append(tag)
         if tag in ['ul', 'ol']:
             self.in_list = True
-        self.current_tag = tag
+            self.text_buffer = []  # Clear buffer for list start
 
     def handle_endtag(self, tag):
+        # Remove from stack
+        if self.tag_stack and self.tag_stack[-1] == tag:
+            self.tag_stack.pop()
+
         text = ''.join(self.text_buffer).strip()
 
         if text:
             if tag == 'h1':
                 self.flowables.append(Paragraph(text, self.styles['ResumeH1']))
                 self.flowables.append(Spacer(1, 0.1*inch))
+                self.text_buffer = []
             elif tag == 'h2':
                 self.flowables.append(Spacer(1, 0.15*inch))
                 self.flowables.append(Paragraph(text, self.styles['ResumeH2']))
                 self.flowables.append(Spacer(1, 0.08*inch))
+                self.text_buffer = []
             elif tag == 'h3':
                 self.flowables.append(Spacer(1, 0.1*inch))
                 self.flowables.append(Paragraph(text, self.styles['ResumeH3']))
                 self.flowables.append(Spacer(1, 0.05*inch))
+                self.text_buffer = []
             elif tag == 'p':
-                self.flowables.append(Paragraph(text, self.styles['ResumeBody']))
+                # Preserve formatting (bold, italic)
+                formatted_text = text.replace('<strong>', '<b>').replace('</strong>', '</b>')
+                formatted_text = formatted_text.replace('<em>', '<i>').replace('</em>', '</i>')
+                self.flowables.append(Paragraph(formatted_text, self.styles['ResumeBody']))
                 self.flowables.append(Spacer(1, 0.05*inch))
+                self.text_buffer = []
             elif tag == 'li':
-                self.list_items.append(ListItem(Paragraph(text, self.styles['ResumeBody'])))
-            elif tag in ['ul', 'ol']:
-                if self.list_items:
-                    bullet_type = 'bullet' if tag == 'ul' else '1'
-                    self.flowables.append(ListFlowable(
-                        self.list_items,
-                        bulletType=bullet_type,
-                        leftIndent=20
-                    ))
-                    self.flowables.append(Spacer(1, 0.05*inch))
-                    self.list_items = []
-                self.in_list = False
+                # Preserve formatting in list items
+                formatted_text = text.replace('<strong>', '<b>').replace('</strong>', '</b>')
+                formatted_text = formatted_text.replace('<em>', '<i>').replace('</em>', '</i>')
+                self.list_items.append(ListItem(Paragraph(formatted_text, self.styles['ResumeBody'])))
+                self.text_buffer = []
 
-        self.text_buffer = []
-        self.current_tag = None
+        if tag in ['ul', 'ol']:
+            if self.list_items:
+                bullet_type = 'bullet' if tag == 'ul' else '1'
+                self.flowables.append(ListFlowable(
+                    self.list_items,
+                    bulletType=bullet_type,
+                    leftIndent=20
+                ))
+                self.flowables.append(Spacer(1, 0.05*inch))
+                self.list_items = []
+            self.in_list = False
+            self.text_buffer = []
 
     def handle_data(self, data):
-        if self.current_tag:
-            self.text_buffer.append(data)
+        # Always collect text data
+        self.text_buffer.append(data)
 
 
 class PDFExporter:
