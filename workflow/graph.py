@@ -7,6 +7,7 @@ from workflow.nodes import (
     scoring_node,
     modification_node,
     rescoring_node,
+    optimization_node,
     validation_node,
     export_pdf_node,
     human_feedback_node
@@ -65,9 +66,10 @@ def create_workflow() -> StateGraph:
     3. [Human selects suggestions]
     4. modification - Agent 2 modifies resume
     5. rescoring - Agent 3 rescores and evaluates
-    6. validation - Agent 4 validates formatting and consistency
-    7. [Human approves]
-    8. export - Generate PDF
+    6. optimization - Agent 5 optimizes resume length
+    7. validation - Agent 4 validates formatting and consistency
+    8. [Human approves]
+    9. export - Generate PDF
 
     Returns:
         Compiled LangGraph workflow
@@ -112,11 +114,13 @@ def create_modification_workflow() -> StateGraph:
 
     workflow.add_node("modify", modification_node)
     workflow.add_node("rescoring", rescoring_node)
+    workflow.add_node("optimization", optimization_node)
     workflow.add_node("validation", validation_node)
 
     workflow.set_entry_point("modify")
     workflow.add_edge("modify", "rescoring")
-    workflow.add_edge("rescoring", "validation")
+    workflow.add_edge("rescoring", "optimization")
+    workflow.add_edge("optimization", "validation")
     workflow.add_edge("validation", END)
 
     return workflow

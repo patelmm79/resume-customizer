@@ -48,14 +48,15 @@ with st.sidebar:
     stages_map = {
         "input": "1. Input Resume & Job",
         "fetch_job": "2. Fetching Job Description",
-        "scoring": "3. Analyzing & Scoring",
+        "scoring": "3. Initial Scoring",
         "awaiting_selection": "4. Select Suggestions",
         "modification": "5. Modifying Resume",
-        "rescoring": "6. Re-scoring",
-        "awaiting_approval": "7. Approval",
-        "awaiting_validation_approval": "8. Validation Check",
-        "export": "9. Exporting PDF",
-        "completed": "10. Completed",
+        "rescoring": "6. Second Scoring",
+        "optimization": "7. Optimizing Length",
+        "awaiting_approval": "8. Review Optimized Resume",
+        "awaiting_validation_approval": "9. Validation Check",
+        "export": "10. Exporting PDF",
+        "completed": "11. Completed",
         "error": "❌ Error"
     }
 
@@ -214,22 +215,24 @@ elif current_stage == "awaiting_selection":
                     st.code(traceback.format_exc())
 
 
-# Stage 5-6: Modification, Rescoring & Validation
-elif current_stage in ["modification", "rescoring", "validation"]:
+# Stage 5-7: Modification, Rescoring, Optimization & Validation
+elif current_stage in ["modification", "rescoring", "optimization", "validation"]:
     st.header("Processing Resume Changes...")
     with st.spinner("Agents are working..."):
         if current_stage == "modification":
             st.info("Agent 2: Modifying your resume based on selected suggestions...")
         elif current_stage == "rescoring":
             st.info("Agent 3: Re-scoring the modified resume...")
+        elif current_stage == "optimization":
+            st.info("Agent 5: Optimizing resume length while maintaining score...")
         elif current_stage == "validation":
             st.info("Agent 4: Validating formatting and consistency...")
 
 
-# Stage 7: Approval
+# Stage 8: Review Optimized Resume
 elif current_stage == "awaiting_approval":
     state = st.session_state.workflow_state
-    st.header("Step 3: Review Results & Approve")
+    st.header("Step 3: Review Optimized Resume")
 
     # Display score comparison
     col1, col2, col3 = st.columns(3)
@@ -256,6 +259,43 @@ elif current_stage == "awaiting_approval":
 
     st.divider()
 
+    # Display optimization info if available
+    if state.get('optimized_resume'):
+        st.subheader("Optimization Results")
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.metric(
+                "Words Before",
+                state.get('word_count_before', 'N/A')
+            )
+
+        with col2:
+            st.metric(
+                "Words After",
+                state.get('word_count_after', 'N/A'),
+                delta=f"-{state.get('words_removed', 0)}"
+            )
+
+        with col3:
+            word_target = 600  # Target word count
+            current_words = state.get('word_count_after', 0)
+            if current_words <= word_target:
+                st.success(f"✅ Within Target ({word_target} words)")
+            else:
+                st.warning(f"⚠️ Above Target ({word_target} words)")
+
+        if state.get('optimization_summary'):
+            with st.expander("Optimization Summary"):
+                st.info(state['optimization_summary'])
+
+        if state.get('optimization_changes'):
+            with st.expander("Changes Made"):
+                for change in state['optimization_changes']:
+                    st.markdown(f"- {change}")
+
+        st.divider()
+
     # Display side-by-side comparison
     col1, col2 = st.columns(2)
 
@@ -265,9 +305,10 @@ elif current_stage == "awaiting_approval":
             st.markdown(state['original_resume'])
 
     with col2:
-        st.subheader("Modified Resume")
-        with st.expander("View Modified", expanded=True):
-            st.markdown(state['modified_resume'])
+        st.subheader("Optimized Resume")
+        with st.expander("View Optimized", expanded=True):
+            final_resume = state.get('optimized_resume') or state['modified_resume']
+            st.markdown(final_resume)
 
     st.divider()
 
@@ -317,7 +358,7 @@ elif current_stage == "awaiting_approval":
             st.rerun()
 
 
-# Stage 8: Validation Check
+# Stage 9: Validation Check
 elif current_stage == "awaiting_validation_approval":
     state = st.session_state.workflow_state
     st.header("Step 4: Validation Results")
@@ -419,7 +460,7 @@ elif current_stage == "awaiting_validation_approval":
                     st.code(traceback.format_exc())
 
 
-# Stage 9-10: Export & Completed
+# Stage 10-11: Export & Completed
 elif current_stage in ["export", "completed"]:
     state = st.session_state.workflow_state
     st.header("Step 5: Export Complete!")
@@ -428,7 +469,8 @@ elif current_stage in ["export", "completed"]:
 
     # Display final resume
     with st.expander("View Final Resume", expanded=True):
-        st.markdown(state['modified_resume'])
+        final_resume = state.get('optimized_resume') or state['modified_resume']
+        st.markdown(final_resume)
 
     st.divider()
 
@@ -467,10 +509,11 @@ elif current_stage in ["export", "completed"]:
             st.caption(f"PDF saved to: {state.get('pdf_path', 'N/A')}")
 
     with col2:
-        if state.get('modified_resume'):
+        final_resume = state.get('optimized_resume') or state['modified_resume']
+        if final_resume:
             st.download_button(
                 label="📝 Download Markdown",
-                data=state['modified_resume'],
+                data=final_resume,
                 file_name=md_filename,
                 mime="text/markdown",
                 use_container_width=True,

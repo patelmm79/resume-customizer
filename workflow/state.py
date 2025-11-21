@@ -35,6 +35,14 @@ class WorkflowState(TypedDict):
     recommendation: Optional[str]
     reasoning: Optional[str]
 
+    # Agent 5 outputs (Optimization)
+    optimized_resume: Optional[str]
+    word_count_before: Optional[int]
+    word_count_after: Optional[int]
+    words_removed: Optional[int]
+    optimization_summary: Optional[str]
+    optimization_changes: Optional[List[str]]
+
     # Agent 4 outputs (Validation)
     validation_score: Optional[int]
     is_valid: Optional[bool]
@@ -87,6 +95,12 @@ def create_initial_state(
         concerns=None,
         recommendation=None,
         reasoning=None,
+        optimized_resume=None,
+        word_count_before=None,
+        word_count_after=None,
+        words_removed=None,
+        optimization_summary=None,
+        optimization_changes=None,
         validation_score=None,
         is_valid=None,
         validation_issues=None,

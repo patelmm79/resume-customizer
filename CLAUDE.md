@@ -50,6 +50,13 @@ This application implements a **multi-agent system with LangGraph orchestration*
          │
          ▼
 ┌─────────────────┐
+│  Agent 5:       │
+│  Optimize       │ → Optimized Resume (concise)
+│  [Node]         │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
 │  Agent 4:       │
 │  Validate       │ → Validation Score + Issues
 │  [Node]         │
@@ -109,6 +116,21 @@ This application implements a **multi-agent system with LangGraph orchestration*
   - Recommend next steps
 - **LangGraph Node**: `rescoring_node`
 
+### Agent 5: Resume Optimizer
+- **Input**: Modified resume, job description, current score
+- **Output**:
+  - Optimized resume (as concise as possible)
+  - Word count before/after
+  - Optimization summary
+  - List of changes made
+- **Responsibilities**:
+  - Optimize resume length without impacting score
+  - Remove redundancy and wordiness
+  - Aim for 1 page (500-700 words)
+  - Maintain all critical information
+  - Iteratively optimize until no further improvements possible
+- **LangGraph Node**: `optimization_node`
+
 ### Agent 4: Formatting Validator
 - **Input**: Modified resume (markdown)
 - **Output**:
@@ -146,7 +168,7 @@ The workflow uses a **typed state dictionary** (`WorkflowState`) that tracks:
 ### Workflow Phases
 
 1. **Analysis Workflow**: Input → Fetch Job → Score → END
-2. **Modification Workflow**: Modify → Rescore → Validate → END
+2. **Modification Workflow**: Modify → Rescore → Optimize → Validate → END
 3. **Export Workflow**: Export → END
 
 Each phase can be invoked independently with human-in-the-loop checkpoints between phases.
@@ -179,6 +201,7 @@ resume-customizer/
 │   ├── agent_1_scorer.py      # Resume scoring and analysis
 │   ├── agent_2_modifier.py    # Resume modification
 │   ├── agent_3_rescorer.py    # Re-evaluation
+│   ├── agent_5_optimizer.py   # Length optimization
 │   └── agent_4_validator.py   # Formatting validation
 ├── workflow/
 │   ├── __init__.py
@@ -236,12 +259,13 @@ resume-customizer/
 
 1. Upload your resume in markdown format
 2. Provide the job description URL or paste manually
-3. Agent 1 analyzes and scores your resume
+3. Agent 1 analyzes and scores your resume (Initial Scoring)
 4. Review and select suggested changes
 5. Agent 2 modifies your resume
-6. Agent 3 rescores and presents improvements
-7. Agent 4 validates formatting and consistency
-8. Review validation results and export to PDF
+6. Agent 3 rescores and presents improvements (Second Scoring)
+7. Agent 5 optimizes resume length while maintaining score
+8. Agent 4 validates formatting and consistency
+9. Review validation results and export to PDF
 
 ### Programmatic Usage (LangGraph)
 
@@ -362,6 +386,14 @@ WorkflowState = TypedDict({
     "concerns": List[str],
     "recommendation": str,
 
+    # Agent 5 outputs
+    "optimized_resume": str,
+    "word_count_before": int,
+    "word_count_after": int,
+    "words_removed": int,
+    "optimization_summary": str,
+    "optimization_changes": List[str],
+
     # Agent 4 outputs
     "validation_score": int,
     "is_valid": bool,
@@ -395,7 +427,7 @@ def node_function(state: WorkflowState) -> Dict[str, Any]:
 
 The `ResumeWorkflowOrchestrator` class provides:
 - `start_analysis()` - Run Agent 1
-- `apply_modifications()` - Run Agents 2, 3 & 4
+- `apply_modifications()` - Run Agents 2, 3, 5 & 4
 - `export_resume()` - Run PDF export
 - `update_suggestions()` - Helper for UI
 - `approve_resume()` - Helper for UI

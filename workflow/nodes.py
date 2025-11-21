@@ -5,6 +5,7 @@ from agents.agent_1_scorer import ResumeScorerAgent
 from agents.agent_2_modifier import ResumeModifierAgent
 from agents.agent_3_rescorer import ResumeRescorerAgent
 from agents.agent_4_validator import ResumeValidatorAgent
+from agents.agent_5_optimizer import ResumeOptimizerAgent
 from utils.job_scraper import JobScraper
 from utils.pdf_exporter import PDFExporter
 
@@ -141,6 +142,45 @@ def rescoring_node(state: WorkflowState) -> Dict[str, Any]:
         }
 
 
+def optimization_node(state: WorkflowState) -> Dict[str, Any]:
+    """
+    Agent 5: Optimize resume length while maintaining score.
+
+    Args:
+        state: Current workflow state
+
+    Returns:
+        Updated state with optimization results
+    """
+    try:
+        agent = ResumeOptimizerAgent()
+        result = agent.optimize_resume(
+            state["modified_resume"],
+            state["job_description"],
+            state["new_score"]
+        )
+
+        return {
+            "optimized_resume": result["optimized_resume"],
+            "word_count_before": result["word_count_before"],
+            "word_count_after": result["word_count_after"],
+            "words_removed": result["words_removed"],
+            "optimization_summary": result["optimization_summary"],
+            "optimization_changes": result["changes_made"],
+            "current_stage": "optimization_complete",
+            "messages": [{
+                "role": "ai",
+                "content": f"Agent 5: Optimized resume from {result['word_count_before']} to {result['word_count_after']} words (-{result['words_removed']} words)"
+            }]
+        }
+    except Exception as e:
+        return {
+            "error": f"Optimization failed: {str(e)}",
+            "current_stage": "error",
+            "messages": [{"role": "system", "content": f"Error: {str(e)}"}]
+        }
+
+
 def validation_node(state: WorkflowState) -> Dict[str, Any]:
     """
     Agent 4: Validate resume formatting and consistency.
@@ -153,7 +193,9 @@ def validation_node(state: WorkflowState) -> Dict[str, Any]:
     """
     try:
         agent = ResumeValidatorAgent()
-        result = agent.validate_resume(state["modified_resume"])
+        # Use optimized resume if available, otherwise use modified resume
+        resume_to_validate = state.get("optimized_resume") or state["modified_resume"]
+        result = agent.validate_resume(resume_to_validate)
 
         return {
             "validation_score": result["validation_score"],
@@ -188,11 +230,14 @@ def export_pdf_node(state: WorkflowState) -> Dict[str, Any]:
     try:
         exporter = PDFExporter()
 
+        # Use optimized resume if available, otherwise use modified resume
+        final_resume = state.get("optimized_resume") or state["modified_resume"]
+
         # Generate PDF bytes for download
-        pdf_bytes = exporter.markdown_to_pdf_bytes(state["modified_resume"])
+        pdf_bytes = exporter.markdown_to_pdf_bytes(final_resume)
 
         # Optionally save to file
-        pdf_path = exporter.markdown_to_pdf(state["modified_resume"])
+        pdf_path = exporter.markdown_to_pdf(final_resume)
 
         return {
             "pdf_path": pdf_path,
