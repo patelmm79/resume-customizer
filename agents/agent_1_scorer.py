@@ -41,6 +41,12 @@ Focus on:
 - Removing irrelevant information
 - Highlighting transferable skills
 
+IMPORTANT for Skills:
+- Create a SEPARATE checklist item for EACH individual skill from the job description
+- Include skills that are important in the job description, even if not mentioned in the resume
+- Each skill should be its own suggestion so the user can selectively approve which skills to add
+- Only skills that are checked will be added to the resume
+
 Be specific and actionable in your suggestions."""
 
         user_prompt = f"""Please analyze this resume against the job description and provide:
@@ -63,12 +69,14 @@ ANALYSIS:
 [Your detailed analysis here]
 
 SUGGESTIONS:
-- [CATEGORY: Skills] Suggestion text here
-- [CATEGORY: Experience] Another suggestion here
-- [CATEGORY: Summary] Another suggestion here
+- [CATEGORY: Skills] Add skill: Python
+- [CATEGORY: Skills] Add skill: Docker
+- [CATEGORY: Skills] Add skill: Kubernetes
+- [CATEGORY: Experience] Quantify achievement in role X with specific metrics
+- [CATEGORY: Summary] Rewrite summary to emphasize Y
 (Continue with more suggestions as needed)
 
-Each suggestion should start with a category in brackets followed by the suggestion."""
+IMPORTANT: For skills, create ONE suggestion per skill. Each skill should be its own line item so the user can individually approve which skills to add. Only include skills that are relevant to the job description. Skills not checked will NOT be added to the resume."""
 
         try:
             response = self.client.generate_with_system_prompt(

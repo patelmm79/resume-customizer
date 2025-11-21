@@ -50,6 +50,12 @@ IMPORTANT CONSTRAINTS:
 - Maintain proper markdown structure
 - Focus on impact and results
 
+CRITICAL RULE FOR SKILLS:
+- ONLY add skills that are EXPLICITLY listed in the suggestions provided
+- DO NOT add any skills that are not in the approved suggestions list
+- DO NOT infer or assume additional skills should be added
+- If a skill is not in the suggestions, it must NOT appear in the modified resume unless it was already in the original resume
+
 Return ONLY the modified resume in markdown format. Do not include any explanations or comments."""
 
         suggestions_text = "\n".join([
@@ -62,11 +68,18 @@ Return ONLY the modified resume in markdown format. Do not include any explanati
 ORIGINAL RESUME:
 {original_resume}
 
-SUGGESTIONS TO IMPLEMENT:
+SUGGESTIONS TO IMPLEMENT (USER APPROVED):
 {suggestions_text}
 
-TARGET JOB DESCRIPTION:
+TARGET JOB DESCRIPTION (for context only):
 {job_description}
+
+CRITICAL INSTRUCTIONS:
+- Apply ONLY the suggestions listed above that the user approved
+- For skills: Add ONLY the skills explicitly listed in the "Add skill:" suggestions above
+- DO NOT add any skills from the job description that are not in the approved suggestions
+- DO NOT add any skills that were not explicitly approved by the user
+- If no skill suggestions were approved, do not modify the skills section beyond what's already there
 
 Return the complete modified resume in markdown format. Maintain the structure but apply all suggestions while keeping it concise and focused on relevance to the job."""
 
