@@ -36,21 +36,21 @@ class HTMLToFlowables(HTMLParser):
 
         if text:
             if tag == 'h1':
-                self.flowables.append(Paragraph(text, self.styles['Heading1']))
+                self.flowables.append(Paragraph(text, self.styles['ResumeH1']))
                 self.flowables.append(Spacer(1, 0.1*inch))
             elif tag == 'h2':
                 self.flowables.append(Spacer(1, 0.15*inch))
-                self.flowables.append(Paragraph(text, self.styles['Heading2']))
+                self.flowables.append(Paragraph(text, self.styles['ResumeH2']))
                 self.flowables.append(Spacer(1, 0.08*inch))
             elif tag == 'h3':
                 self.flowables.append(Spacer(1, 0.1*inch))
-                self.flowables.append(Paragraph(text, self.styles['Heading3']))
+                self.flowables.append(Paragraph(text, self.styles['ResumeH3']))
                 self.flowables.append(Spacer(1, 0.05*inch))
             elif tag == 'p':
-                self.flowables.append(Paragraph(text, self.styles['BodyText']))
+                self.flowables.append(Paragraph(text, self.styles['ResumeBody']))
                 self.flowables.append(Spacer(1, 0.05*inch))
             elif tag == 'li':
-                self.list_items.append(ListItem(Paragraph(text, self.styles['BodyText'])))
+                self.list_items.append(ListItem(Paragraph(text, self.styles['ResumeBody'])))
             elif tag in ['ul', 'ol']:
                 if self.list_items:
                     bullet_type = 'bullet' if tag == 'ul' else '1'
@@ -89,9 +89,9 @@ class PDFExporter:
         """Create custom styles for the resume."""
         styles = getSampleStyleSheet()
 
-        # Heading 1 - Name
+        # Custom Heading 1 - Name
         styles.add(ParagraphStyle(
-            name='Heading1',
+            name='ResumeH1',
             parent=styles['Heading1'],
             fontSize=22,
             textColor=HexColor('#1a1a1a'),
@@ -101,9 +101,9 @@ class PDFExporter:
             fontName='Helvetica-Bold'
         ))
 
-        # Heading 2 - Section headers
+        # Custom Heading 2 - Section headers
         styles.add(ParagraphStyle(
-            name='Heading2',
+            name='ResumeH2',
             parent=styles['Heading2'],
             fontSize=14,
             textColor=HexColor('#2c3e50'),
@@ -115,9 +115,9 @@ class PDFExporter:
             fontName='Helvetica-Bold'
         ))
 
-        # Heading 3 - Subsections
+        # Custom Heading 3 - Subsections
         styles.add(ParagraphStyle(
-            name='Heading3',
+            name='ResumeH3',
             parent=styles['Heading3'],
             fontSize=12,
             textColor=HexColor('#34495e'),
@@ -126,9 +126,9 @@ class PDFExporter:
             fontName='Helvetica-Bold'
         ))
 
-        # Body text
+        # Custom Body text
         styles.add(ParagraphStyle(
-            name='BodyText',
+            name='ResumeBody',
             parent=styles['BodyText'],
             fontSize=11,
             leading=14,
