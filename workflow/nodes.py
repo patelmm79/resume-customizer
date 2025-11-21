@@ -62,7 +62,7 @@ def scoring_node(state: WorkflowState) -> Dict[str, Any]:
             "analysis": result["analysis"],
             "suggestions": result["suggestions"],
             "current_stage": "awaiting_selection",
-            "messages": [{"role": "agent_1", "content": f"Initial score: {result['score']}/10"}]
+            "messages": [{"role": "ai", "content": f"Agent 1: Initial score: {result['score']}/10"}]
         }
     except Exception as e:
         return {
@@ -93,7 +93,7 @@ def modification_node(state: WorkflowState) -> Dict[str, Any]:
         return {
             "modified_resume": modified,
             "current_stage": "rescoring",
-            "messages": [{"role": "agent_2", "content": "Resume modified successfully"}]
+            "messages": [{"role": "ai", "content": "Agent 2: Resume modified successfully"}]
         }
     except Exception as e:
         return {
@@ -130,7 +130,7 @@ def rescoring_node(state: WorkflowState) -> Dict[str, Any]:
             "recommendation": result["recommendation"],
             "reasoning": result["reasoning"],
             "current_stage": "awaiting_approval",
-            "messages": [{"role": "agent_3", "content": f"New score: {result['new_score']}/10 (improvement: +{result['score_improvement']})"}]
+            "messages": [{"role": "ai", "content": f"Agent 3: New score: {result['new_score']}/10 (improvement: +{result['score_improvement']})"}]
         }
     except Exception as e:
         return {
