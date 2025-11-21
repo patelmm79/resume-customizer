@@ -161,3 +161,92 @@ IMPORTANT: For skills, create ONE suggestion per skill. Each skill should be its
             "analysis": "\n".join(analysis),
             "suggestions": suggestions
         }
+
+    def score_only(
+        self,
+        resume_content: str,
+        job_description: str
+    ) -> Dict:
+        """
+        Score resume against job description without generating suggestions.
+        Used for rescoring and final scoring.
+
+        Args:
+            resume_content: The resume in markdown format
+            job_description: The job description text
+
+        Returns:
+            Dictionary containing:
+                - score: int (1-10)
+                - analysis: str (brief evaluation)
+        """
+        system_prompt = """You are an expert resume analyzer. Your job is to:
+1. Carefully compare a resume against a job description
+2. Provide a compatibility score from 1-10 (where 10 is perfect match)
+3. Provide brief analysis of the match quality
+
+Focus on:
+- Keyword matching and ATS optimization
+- Relevant skills and experience alignment
+- Overall suitability for the role"""
+
+        user_prompt = f"""Please score this resume against the job description:
+
+RESUME:
+{resume_content}
+
+JOB DESCRIPTION:
+{job_description}
+
+Please format your response EXACTLY as follows:
+
+SCORE: [number from 1-10]
+
+ANALYSIS:
+[Your brief analysis of the match quality and key strengths]"""
+
+        try:
+            response = self.client.generate_with_system_prompt(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=0.7
+            )
+
+            # Parse just score and analysis
+            lines = response.strip().split('\n')
+            score = None
+            analysis = []
+            current_section = None
+
+            for line in lines:
+                line = line.strip()
+
+                if line.startswith("SCORE:"):
+                    score_text = line.replace("SCORE:", "").strip()
+                    try:
+                        score = int(score_text)
+                    except ValueError:
+                        import re
+                        match = re.search(r'\d+', score_text)
+                        if match:
+                            score = int(match.group())
+                        else:
+                            score = 5
+                    current_section = "score"
+
+                elif line.startswith("ANALYSIS:"):
+                    current_section = "analysis"
+
+                elif line and current_section == "analysis":
+                    analysis.append(line)
+
+            if score is None or score < 1 or score > 10:
+                score = 5
+
+            return {
+                "score": score,
+                "analysis": "\n".join(analysis)
+            }
+
+        except Exception as e:
+            raise Exception(f"Error in resume scoring: {str(e)}")

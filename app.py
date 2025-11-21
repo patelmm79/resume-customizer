@@ -600,21 +600,21 @@ elif current_stage == "final_scoring":
 
     with st.spinner("Calculating final score..."):
         try:
-            from agents.agent_3_rescorer import ResumeRescorerAgent
+            from agents.agent_1_scorer import ResumeScorerAgent
 
             # Get the final resume
             final_resume = state.get('freeform_resume') or state.get('optimized_resume') or state['modified_resume']
 
             # Calculate final score
-            agent = ResumeRescorerAgent()
-            result = agent.rescore_resume(
+            agent = ResumeScorerAgent()
+            result = agent.score_only(
                 final_resume,
-                state['job_description'],
-                state['initial_score']
+                state['job_description']
             )
 
             # Store final score
-            state['final_score'] = result['new_score']
+            final_score = result['score']
+            state['final_score'] = final_score
             state['freeform_resume'] = final_resume  # Ensure this is saved
 
             # Display results
@@ -627,21 +627,19 @@ elif current_stage == "final_scoring":
                 st.metric("After Optimization", f"{state['new_score']}/10")
 
             with col3:
-                improvement = result['new_score'] - state['initial_score']
+                improvement = final_score - state['initial_score']
                 st.metric(
                     "Final Score",
-                    f"{result['new_score']}/10",
+                    f"{final_score}/10",
                     delta=f"+{improvement}" if improvement > 0 else str(improvement)
                 )
 
             st.divider()
 
-            if result.get('improvements'):
+            if result.get('analysis'):
                 st.subheader("Final Assessment")
-                with st.expander("View Details", expanded=True):
-                    st.markdown("**Strengths:**")
-                    for improvement in result['improvements']:
-                        st.markdown(f"✅ {improvement}")
+                with st.expander("View Analysis", expanded=True):
+                    st.markdown(result['analysis'])
 
             st.divider()
 

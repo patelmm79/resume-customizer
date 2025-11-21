@@ -3,7 +3,6 @@ from typing import Dict, Any
 from workflow.state import WorkflowState
 from agents.agent_1_scorer import ResumeScorerAgent
 from agents.agent_2_modifier import ResumeModifierAgent
-from agents.agent_3_rescorer import ResumeRescorerAgent
 from agents.agent_4_validator import ResumeValidatorAgent
 from agents.agent_5_optimizer import ResumeOptimizerAgent
 from utils.job_scraper import JobScraper
@@ -107,7 +106,7 @@ def modification_node(state: WorkflowState) -> Dict[str, Any]:
 
 def rescoring_node(state: WorkflowState) -> Dict[str, Any]:
     """
-    Agent 3: Rescore modified resume.
+    Agent 1 (Rescoring): Score modified resume.
 
     Args:
         state: Current workflow state
@@ -116,23 +115,25 @@ def rescoring_node(state: WorkflowState) -> Dict[str, Any]:
         Updated state with rescoring results
     """
     try:
-        agent = ResumeRescorerAgent()
-        result = agent.rescore_resume(
+        agent = ResumeScorerAgent()
+        result = agent.score_only(
             state["modified_resume"],
-            state["job_description"],
-            state["initial_score"]
+            state["job_description"]
         )
 
+        new_score = result["score"]
+        score_improvement = new_score - state["initial_score"]
+
         return {
-            "new_score": result["new_score"],
-            "score_improvement": result["score_improvement"],
-            "comparison": result["comparison"],
-            "improvements": result["improvements"],
-            "concerns": result["concerns"],
-            "recommendation": result["recommendation"],
-            "reasoning": result["reasoning"],
+            "new_score": new_score,
+            "score_improvement": score_improvement,
+            "comparison": result["analysis"],
+            "improvements": [],  # Not needed for simple rescoring
+            "concerns": [],
+            "recommendation": "Ready to Optimize" if new_score >= state["initial_score"] else "Consider More Changes",
+            "reasoning": result["analysis"],
             "current_stage": "optimization",
-            "messages": [{"role": "ai", "content": f"Agent 3: New score: {result['new_score']}/10 (improvement: +{result['score_improvement']})"}]
+            "messages": [{"role": "ai", "content": f"Agent 1 (Rescoring): New score: {new_score}/10 (improvement: +{score_improvement})"}]
         }
     except Exception as e:
         return {
