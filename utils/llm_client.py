@@ -181,19 +181,66 @@ def get_llm_client(provider: str = "gemini", model_name: Optional[str] = None) -
         raise ValueError(f"Unsupported LLM provider: {provider}")
 
 
-# Available models configuration
-AVAILABLE_MODELS = {
-    "gemini": [
-        "gemini-2.0-flash-exp",
-        "gemini-1.5-pro",
-        "gemini-1.5-flash"
-    ],
-    "claude": [
-        "claude-3-5-sonnet-20241022",
-        "claude-3-5-haiku-20241022",
-        "claude-3-opus-20240229"
-    ],
-    "custom": [
-        "custom-model"  # Will be overridden by CUSTOM_LLM_MODEL env var
-    ]
-}
+def get_available_models() -> dict:
+    """
+    Get available models from environment variables or defaults.
+
+    Users can specify multiple models per provider using comma-separated lists:
+    GEMINI_MODELS=gemini-2.0-flash-exp,gemini-1.5-pro,gemini-1.5-flash
+    CLAUDE_MODELS=claude-3-5-sonnet-20241022,claude-3-5-haiku-20241022
+    CUSTOM_MODELS=llama3:70b,mixtral:8x7b,gpt-4
+
+    Returns:
+        Dictionary mapping provider names to list of available models
+    """
+    # Default models
+    default_models = {
+        "gemini": [
+            "gemini-2.0-flash-exp",
+            "gemini-1.5-pro",
+            "gemini-1.5-flash"
+        ],
+        "claude": [
+            "claude-3-5-sonnet-20241022",
+            "claude-3-5-haiku-20241022",
+            "claude-3-opus-20240229"
+        ],
+        "custom": [
+            "custom-model"
+        ]
+    }
+
+    # Load from environment variables if available
+    available_models = {}
+
+    # Gemini models
+    gemini_models_env = os.getenv("GEMINI_MODELS", "")
+    if gemini_models_env:
+        available_models["gemini"] = [m.strip() for m in gemini_models_env.split(",") if m.strip()]
+    else:
+        available_models["gemini"] = default_models["gemini"]
+
+    # Claude models
+    claude_models_env = os.getenv("CLAUDE_MODELS", "")
+    if claude_models_env:
+        available_models["claude"] = [m.strip() for m in claude_models_env.split(",") if m.strip()]
+    else:
+        available_models["claude"] = default_models["claude"]
+
+    # Custom models
+    custom_models_env = os.getenv("CUSTOM_MODELS", "")
+    if custom_models_env:
+        available_models["custom"] = [m.strip() for m in custom_models_env.split(",") if m.strip()]
+    else:
+        # For custom, try to get from CUSTOM_LLM_MODEL if CUSTOM_MODELS not set
+        custom_model = os.getenv("CUSTOM_LLM_MODEL")
+        if custom_model:
+            available_models["custom"] = [custom_model]
+        else:
+            available_models["custom"] = default_models["custom"]
+
+    return available_models
+
+
+# Cache the available models (call get_available_models() to get fresh list)
+AVAILABLE_MODELS = get_available_models()

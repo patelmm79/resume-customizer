@@ -47,8 +47,9 @@ st.divider()
 with st.sidebar:
     st.header("⚙️ LLM Configuration")
 
-    # Import model configuration
-    from utils.llm_client import AVAILABLE_MODELS
+    # Import model configuration (get fresh list to support dynamic .env config)
+    from utils.llm_client import get_available_models
+    AVAILABLE_MODELS = get_available_models()
 
     # Provider selection
     provider = st.selectbox(
