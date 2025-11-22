@@ -1,6 +1,6 @@
 """Agent 4: Resume Formatting Validator."""
 from typing import Dict, List
-from utils.gemini_client import GeminiClient
+from utils.agent_helper import get_agent_llm_client
 
 
 class ResumeValidatorAgent:
@@ -8,7 +8,7 @@ class ResumeValidatorAgent:
 
     def __init__(self):
         """Initialize the validator agent."""
-        self.client = GeminiClient()
+        self.client = get_agent_llm_client()
 
     def validate_resume(
         self,

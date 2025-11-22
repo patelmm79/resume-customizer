@@ -1,6 +1,6 @@
 """Agent 5: Resume Length Optimizer."""
 from typing import Dict
-from utils.gemini_client import GeminiClient
+from utils.agent_helper import get_agent_llm_client
 
 
 class ResumeOptimizerAgent:
@@ -8,7 +8,7 @@ class ResumeOptimizerAgent:
 
     def __init__(self):
         """Initialize the optimizer agent."""
-        self.client = GeminiClient()
+        self.client = get_agent_llm_client()
 
     def optimize_resume(
         self,
@@ -37,7 +37,7 @@ class ResumeOptimizerAgent:
 2. Remove redundancy, wordiness, and unnecessary details
 3. Keep all critical information that contributes to the job match
 4. Aim for 1 page (approximately 500-700 words maximum)
-5. Maintain or improve the compatibility score
+5. Maintain or improve the compatibility score.  
 
 Optimization strategies:
 - Remove redundant phrases and filler words
@@ -46,6 +46,8 @@ Optimization strategies:
 - Remove less relevant experiences if space is tight
 - Consolidate skills into efficient lists
 - Ensure every word adds value
+- Remove all skills that are minimally relevant to the role
+- Eliminate all bullet points for the roles before the latest 4 roles (while keeping the basic information about the jobs themselves), if they are minimally relevant to the job.
 
 CRITICAL: Do not remove information that is directly relevant to the job description. The goal is conciseness without sacrificing match quality."""
 

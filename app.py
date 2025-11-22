@@ -19,6 +19,10 @@ if "workflow_state" not in st.session_state:
     st.session_state.workflow_state = None
 if "customizer" not in st.session_state:
     st.session_state.customizer = ResumeCustomizer()
+if "selected_provider" not in st.session_state:
+    st.session_state.selected_provider = "gemini"
+if "selected_model" not in st.session_state:
+    st.session_state.selected_model = None
 
 
 def reset_app():
@@ -41,6 +45,56 @@ st.divider()
 
 # Sidebar
 with st.sidebar:
+    st.header("⚙️ LLM Configuration")
+
+    # Import model configuration
+    from utils.llm_client import AVAILABLE_MODELS
+
+    # Provider selection
+    provider = st.selectbox(
+        "LLM Provider",
+        options=["gemini", "claude", "custom"],
+        index=["gemini", "claude", "custom"].index(st.session_state.selected_provider),
+        help="Select the LLM provider to use for resume customization",
+        key="provider_selector"
+    )
+
+    # Update session state
+    if provider != st.session_state.selected_provider:
+        st.session_state.selected_provider = provider
+        st.session_state.selected_model = None  # Reset model selection
+
+    # Model selection based on provider
+    available_models = AVAILABLE_MODELS.get(provider, [])
+
+    if available_models:
+        model = st.selectbox(
+            "Model",
+            options=available_models,
+            help=f"Select the specific {provider} model to use",
+            key="model_selector"
+        )
+        st.session_state.selected_model = model
+
+    # Show configuration status
+    import os
+    from dotenv import load_dotenv
+    load_dotenv()
+
+    config_status = "✅ Configured"
+    if provider == "gemini":
+        if not os.getenv("GEMINI_API_KEY"):
+            config_status = "❌ Missing GEMINI_API_KEY"
+    elif provider == "claude":
+        if not os.getenv("ANTHROPIC_API_KEY"):
+            config_status = "❌ Missing ANTHROPIC_API_KEY"
+    elif provider == "custom":
+        if not os.getenv("CUSTOM_LLM_API_KEY") or not os.getenv("CUSTOM_LLM_BASE_URL"):
+            config_status = "❌ Missing API config"
+
+    st.caption(f"Status: {config_status}")
+
+    st.divider()
     st.header("Workflow Stages")
 
     current_stage = get_current_stage()

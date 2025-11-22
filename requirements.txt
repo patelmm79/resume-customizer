@@ -7,8 +7,10 @@ langgraph>=0.2.0
 langchain-core>=0.3.0
 langchain-google-genai>=2.0.0
 
-# Google Gemini
-google-generativeai>=0.3.0
+# LLM Providers
+google-generativeai>=0.3.0  # Gemini
+anthropic>=0.40.0  # Claude (optional)
+openai>=1.0.0  # OpenAI and compatible APIs (optional)
 
 # Web scraping
 requests>=2.31.0

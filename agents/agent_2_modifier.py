@@ -1,6 +1,6 @@
 """Agent 2: Resume Modifier."""
 from typing import Dict, List
-from utils.gemini_client import GeminiClient
+from utils.agent_helper import get_agent_llm_client
 
 
 class ResumeModifierAgent:
@@ -8,7 +8,7 @@ class ResumeModifierAgent:
 
     def __init__(self):
         """Initialize the modifier agent."""
-        self.client = GeminiClient()
+        self.client = get_agent_llm_client()
 
     def modify_resume(
         self,
@@ -55,6 +55,12 @@ CRITICAL RULE FOR SKILLS:
 - DO NOT add any skills that are not in the approved suggestions list
 - DO NOT infer or assume additional skills should be added
 - If a skill is not in the suggestions, it must NOT appear in the modified resume unless it was already in the original resume
+
+GUIDANCE FOR SUMMARY SECTION:
+Craft a summary that bests aligns with the stated job description, emphasizing relevant qualifications and incorporating key responsibilities and skills from the job description.  Ensure each bullet point best describes the action taken and the result achieved.
+
+GUIDANCE FOR MODIFYING BULLET POINTS FOR JOBS:
+Polish the description of the three most recent positions to showcase how the experience best aligns with the requirements of the role.
 
 Return ONLY the modified resume in markdown format. Do not include any explanations or comments."""
 

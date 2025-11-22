@@ -1,6 +1,6 @@
 """Agent 6: Freeform Resume Editor."""
 from typing import Dict
-from utils.gemini_client import GeminiClient
+from utils.agent_helper import get_agent_llm_client
 
 
 class FreeformEditorAgent:
@@ -8,7 +8,7 @@ class FreeformEditorAgent:
 
     def __init__(self):
         """Initialize the freeform editor agent."""
-        self.client = GeminiClient()
+        self.client = get_agent_llm_client()
 
     def apply_changes(
         self,

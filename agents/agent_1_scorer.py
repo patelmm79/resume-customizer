@@ -1,6 +1,6 @@
 """Agent 1: Resume Scorer and Analyzer."""
 from typing import Dict, List
-from utils.gemini_client import GeminiClient
+from utils.agent_helper import get_agent_llm_client
 
 
 class ResumeScorerAgent:
@@ -8,7 +8,7 @@ class ResumeScorerAgent:
 
     def __init__(self):
         """Initialize the scorer agent."""
-        self.client = GeminiClient()
+        self.client = get_agent_llm_client()
 
     def analyze_and_score(
         self,
