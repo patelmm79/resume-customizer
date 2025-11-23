@@ -17,9 +17,7 @@ requests>=2.31.0
 beautifulsoup4>=4.12.0
 
 # PDF generation
-markdown>=3.5.0
-reportlab>=4.0.0
-pillow>=9.0.0
+markdown-pdf>=1.10
 
 # Additional utilities
 python-dateutil>=2.8.2

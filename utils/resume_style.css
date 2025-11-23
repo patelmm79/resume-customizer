@@ -1,0 +1,50 @@
+body {
+  font-family:      Helvetica, arial, sans-serif;
+
+  font-size:        9.5px;
+  line-height:      1.2em;
+  background-color: white;
+  padding-top:      0.5px;
+  padding-bottom:   0.5px;
+  padding-left:     0.5px;
+  padding-right:    0.5px;
+
+  margin-bottom: 1em; /* Adds vertical space below paragraphs */
+  margin-left: 0;     /* Removes default left margin */
+  margin-right: 0;    /* Removes default right margin */}
+
+h1, h2, h3, h4, h5, h6 {
+  margin:       0.1 px 0 0.1px;
+  padding:      0;
+  line-height:  1.0em;
+  font-weight:  bold;
+  -webkit-font-smoothing: antialiased;
+  cursor:       text;
+  position:   relative; }
+
+p {
+    display: block;
+    margin-block-start: 0em;
+    margin-block-end: 0em;
+    margin-inline-start: 0px;
+    margin-inline-end: 0px;
+    unicode-bidi: isolate;
+    margin-bottom: 0em; /* Adds vertical space below paragraphs */
+  margin-left: 0;     /* Removes default left margin */
+  margin-right: 0;    /* Removes default right margin */
+}
+
+
+ul, ol {
+    padding-left: 5; /* Removes default left padding */
+    margin-left: 1;  /* Ensures the list starts at the very left margin */
+    text-align: left; /* Explicitly left-aligns the list content */
+}
+ul > li {
+  list-style-type: small circle;
+}
+
+
+li {
+  padding-left: 0.1em;
+}

@@ -1,93 +1,15 @@
-"""PDF export utility using ReportLab (Windows-compatible)."""
+"""PDF export utility using markdown-pdf."""
 import os
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-import markdown
 from io import BytesIO
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, ListFlowable, ListItem
-from reportlab.lib.enums import TA_LEFT, TA_CENTER
-from reportlab.lib.colors import HexColor
-from html.parser import HTMLParser
-
-
-class HTMLToFlowables(HTMLParser):
-    """Parse HTML and convert to ReportLab flowables."""
-
-    def __init__(self, styles):
-        super().__init__()
-        self.flowables = []
-        self.styles = styles
-        self.tag_stack = []
-        self.text_buffer = []
-        self.list_items = []
-        self.in_list = False
-
-    def handle_starttag(self, tag, attrs):
-        self.tag_stack.append(tag)
-        if tag in ['ul', 'ol']:
-            self.in_list = True
-            self.text_buffer = []  # Clear buffer for list start
-
-    def handle_endtag(self, tag):
-        # Remove from stack
-        if self.tag_stack and self.tag_stack[-1] == tag:
-            self.tag_stack.pop()
-
-        text = ''.join(self.text_buffer).strip()
-
-        if text:
-            if tag == 'h1':
-                self.flowables.append(Paragraph(text, self.styles['ResumeH1']))
-                self.flowables.append(Spacer(1, 0.1*inch))
-                self.text_buffer = []
-            elif tag == 'h2':
-                self.flowables.append(Spacer(1, 0.15*inch))
-                self.flowables.append(Paragraph(text, self.styles['ResumeH2']))
-                self.flowables.append(Spacer(1, 0.08*inch))
-                self.text_buffer = []
-            elif tag == 'h3':
-                self.flowables.append(Spacer(1, 0.1*inch))
-                self.flowables.append(Paragraph(text, self.styles['ResumeH3']))
-                self.flowables.append(Spacer(1, 0.05*inch))
-                self.text_buffer = []
-            elif tag == 'p':
-                # Preserve formatting (bold, italic)
-                formatted_text = text.replace('<strong>', '<b>').replace('</strong>', '</b>')
-                formatted_text = formatted_text.replace('<em>', '<i>').replace('</em>', '</i>')
-                self.flowables.append(Paragraph(formatted_text, self.styles['ResumeBody']))
-                self.flowables.append(Spacer(1, 0.05*inch))
-                self.text_buffer = []
-            elif tag == 'li':
-                # Preserve formatting in list items
-                formatted_text = text.replace('<strong>', '<b>').replace('</strong>', '</b>')
-                formatted_text = formatted_text.replace('<em>', '<i>').replace('</em>', '</i>')
-                self.list_items.append(ListItem(Paragraph(formatted_text, self.styles['ResumeBody'])))
-                self.text_buffer = []
-
-        if tag in ['ul', 'ol']:
-            if self.list_items:
-                bullet_type = 'bullet' if tag == 'ul' else '1'
-                self.flowables.append(ListFlowable(
-                    self.list_items,
-                    bulletType=bullet_type,
-                    leftIndent=20
-                ))
-                self.flowables.append(Spacer(1, 0.05*inch))
-                self.list_items = []
-            self.in_list = False
-            self.text_buffer = []
-
-    def handle_data(self, data):
-        # Always collect text data
-        self.text_buffer.append(data)
+import tempfile
+from markdown_pdf import MarkdownPdf, Section
 
 
 class PDFExporter:
-    """Exports markdown resumes to PDF format using ReportLab."""
+    """Exports markdown resumes to PDF format using markdown-pdf."""
 
     def __init__(self, output_dir: str = "data/resumes"):
         """
@@ -98,60 +20,11 @@ class PDFExporter:
         """
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.styles = self._create_styles()
 
-    def _create_styles(self):
-        """Create custom styles for the resume."""
-        styles = getSampleStyleSheet()
-
-        # Custom Heading 1 - Name
-        styles.add(ParagraphStyle(
-            name='ResumeH1',
-            parent=styles['Heading1'],
-            fontSize=22,
-            textColor=HexColor('#1a1a1a'),
-            spaceAfter=6,
-            spaceBefore=0,
-            alignment=TA_CENTER,
-            fontName='Helvetica-Bold'
-        ))
-
-        # Custom Heading 2 - Section headers
-        styles.add(ParagraphStyle(
-            name='ResumeH2',
-            parent=styles['Heading2'],
-            fontSize=14,
-            textColor=HexColor('#2c3e50'),
-            spaceAfter=4,
-            spaceBefore=10,
-            borderWidth=1,
-            borderColor=HexColor('#bbbbbb'),
-            borderPadding=2,
-            fontName='Helvetica-Bold'
-        ))
-
-        # Custom Heading 3 - Subsections
-        styles.add(ParagraphStyle(
-            name='ResumeH3',
-            parent=styles['Heading3'],
-            fontSize=12,
-            textColor=HexColor('#34495e'),
-            spaceAfter=3,
-            spaceBefore=6,
-            fontName='Helvetica-Bold'
-        ))
-
-        # Custom Body text
-        styles.add(ParagraphStyle(
-            name='ResumeBody',
-            parent=styles['BodyText'],
-            fontSize=11,
-            leading=14,
-            textColor=HexColor('#333333'),
-            fontName='Helvetica'
-        ))
-
-        return styles
+        # Load custom CSS from file
+        css_path = Path(__file__).parent / "resume_style.css"
+        with open(css_path, 'r', encoding='utf-8') as f:
+            self.custom_css = f.read()
 
     def markdown_to_pdf(
         self,
@@ -177,27 +50,14 @@ class PDFExporter:
 
         output_path = self.output_dir / filename
 
-        # Convert markdown to HTML
-        html_content = markdown.markdown(
-            markdown_content,
-            extensions=['extra', 'tables']
-        )
+        # Create PDF with custom CSS
+        pdf = MarkdownPdf(toc_level=0)
 
-        # Parse HTML and create flowables
-        parser = HTMLToFlowables(self.styles)
-        parser.feed(html_content)
+        # Add custom CSS styling
+        pdf.add_section(Section(markdown_content, toc=False), user_css=self.custom_css)
 
-        # Create PDF
-        doc = SimpleDocTemplate(
-            str(output_path),
-            pagesize=letter,
-            rightMargin=0.75*inch,
-            leftMargin=0.75*inch,
-            topMargin=0.75*inch,
-            bottomMargin=0.75*inch
-        )
-
-        doc.build(parser.flowables)
+        # Save to file
+        pdf.save(str(output_path))
 
         return str(output_path)
 
@@ -211,30 +71,23 @@ class PDFExporter:
         Returns:
             PDF file as bytes
         """
-        # Convert markdown to HTML
-        html_content = markdown.markdown(
-            markdown_content,
-            extensions=['extra', 'tables']
-        )
+        # Create temporary file for PDF generation
+        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as tmp_file:
+            tmp_path = tmp_file.name
 
-        # Parse HTML and create flowables
-        parser = HTMLToFlowables(self.styles)
-        parser.feed(html_content)
+        try:
+            # Create PDF with custom CSS
+            pdf = MarkdownPdf(toc_level=0)
+            pdf.add_section(Section(markdown_content, toc=False), user_css=self.custom_css)
+            pdf.save(tmp_path)
 
-        # Create PDF in memory
-        buffer = BytesIO()
-        doc = SimpleDocTemplate(
-            buffer,
-            pagesize=letter,
-            rightMargin=0.75*inch,
-            leftMargin=0.75*inch,
-            topMargin=0.75*inch,
-            bottomMargin=0.75*inch
-        )
+            # Read the PDF bytes
+            with open(tmp_path, 'rb') as f:
+                pdf_bytes = f.read()
 
-        doc.build(parser.flowables)
+            return pdf_bytes
 
-        pdf_bytes = buffer.getvalue()
-        buffer.close()
-
-        return pdf_bytes
+        finally:
+            # Clean up temporary file
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)

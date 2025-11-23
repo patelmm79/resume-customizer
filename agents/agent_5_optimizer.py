@@ -47,7 +47,7 @@ Optimization strategies:
 - Consolidate skills into efficient lists
 - Ensure every word adds value
 - Remove all skills that are minimally relevant to the role
-- Eliminate all bullet points for the roles before the latest 4 roles (while keeping the basic information about the jobs themselves), if they are minimally relevant to the job.
+- Eliminate all bullet points under all roles before the most recent 4 roles--however, you must always keep  the basic information about the jobs themselves, such as company name, job name, date, and location.)
 
 CRITICAL: Do not remove information that is directly relevant to the job description. The goal is conciseness without sacrificing match quality."""
 
