@@ -79,8 +79,8 @@ SUGGESTIONS:
 - [CATEGORY: Skills] Add skill: Python
 - [CATEGORY: Skills] Add skill: Docker
 - [CATEGORY: Skills] Add skill: Kubernetes
-- [CATEGORY: Summary] Results-driven Data Scientist with 8+ years of experience building ML pipelines and deploying models at scale. Proven track record of reducing infrastructure costs by 40% through optimization and driving data-driven decision making across cross-functional teams.
-- [CATEGORY: Experience] Led a team of 5 engineers to architect and deploy a real-time fraud detection system processing 10M+ transactions daily, reducing false positives by 35% and saving $2M annually.
+- [CATEGORY: Summary] [DESCRIPTION: Emphasize cloud architecture and leadership experience] [SUGGESTED_TEXT: Results-driven Data Scientist with 8+ years of experience building ML pipelines and deploying models at scale. Proven track record of reducing infrastructure costs by 40% through optimization and driving data-driven decision making across cross-functional teams.]
+- [CATEGORY: Experience] [DESCRIPTION: Quantify achievement in recent engineering role] [SUGGESTED_TEXT: Led a team of 5 engineers to architect and deploy a real-time fraud detection system processing 10M+ transactions daily, reducing false positives by 35% and saving $2M annually.]
 (Continue with more suggestions as needed)
 
 CRITICAL FORMAT REQUIREMENTS:
@@ -94,17 +94,14 @@ For Skills:
 - Each skill should be its own line item so the user can individually approve which skills to add
 - Format: "Add skill: [Skill Name]"
 
-For Summary:
-- Provide the COMPLETE suggested summary text as you would write it
-- Do NOT write instructions like "Emphasize leadership" - write the actual summary text
-- Users can edit this text before applying it
-- Format: Directly provide the suggested summary paragraph
-
-For Experience:
-- Provide the COMPLETE suggested bullet point or description as you would write it
-- Do NOT write instructions like "Quantify achievement" - write the actual bullet with metrics
-- Include specific numbers, percentages, and impact where possible
-- Format: Directly provide the suggested experience text or bullet point
+For Summary and Experience:
+- Use this format: [DESCRIPTION: Brief justification] [SUGGESTED_TEXT: Actual text to use]
+- DESCRIPTION: A brief phrase explaining why this change is suggested (shown in checkbox)
+- SUGGESTED_TEXT: The COMPLETE actual text to insert/replace (shown in text box)
+- For Summary: Provide a complete paragraph rewrite
+- For Experience: Provide a complete bullet point with metrics and impact
+- Do NOT write vague instructions - always provide concrete, ready-to-use text
+- Users will be able to edit the SUGGESTED_TEXT before applying it
 
 Skills not checked will NOT be added to the resume"""
 
@@ -175,11 +172,41 @@ Skills not checked will NOT be added to the resume"""
                         category = suggestion_text[10:end_bracket].strip()
                         suggestion_text = suggestion_text[end_bracket + 1:].strip()
 
+                # Extract DESCRIPTION and SUGGESTED_TEXT if present
+                description = None
+                suggested_text = None
+
+                if "[DESCRIPTION:" in suggestion_text:
+                    # Extract description
+                    desc_start = suggestion_text.find("[DESCRIPTION:") + 13
+                    desc_end = suggestion_text.find("]", desc_start)
+                    if desc_end != -1:
+                        description = suggestion_text[desc_start:desc_end].strip()
+                        suggestion_text = suggestion_text[desc_end + 1:].strip()
+
+                if "[SUGGESTED_TEXT:" in suggestion_text:
+                    # Extract suggested text
+                    text_start = suggestion_text.find("[SUGGESTED_TEXT:") + 16
+                    text_end = suggestion_text.find("]", text_start)
+                    if text_end != -1:
+                        suggested_text = suggestion_text[text_start:text_end].strip()
+                        suggestion_text = suggestion_text[text_end + 1:].strip()
+
+                # If we have both description and suggested_text, use description for display
+                if description and suggested_text:
+                    display_text = description
+                    edited_text = suggested_text
+                else:
+                    # For simple suggestions (like Skills), just use the text as-is
+                    display_text = suggestion_text
+                    edited_text = suggestion_text
+
                 suggestions.append({
                     "id": len(suggestions),
-                    "text": suggestion_text,
+                    "text": display_text,
                     "category": category,
-                    "selected": True  # Default to selected
+                    "selected": True,  # Default to selected
+                    "edited_text": edited_text  # Pre-populate with suggested text
                 })
 
         # Ensure score is valid

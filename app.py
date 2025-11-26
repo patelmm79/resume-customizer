@@ -260,12 +260,13 @@ elif current_stage == "awaiting_selection":
                 default_value = select_all if select_all else False
 
                 if needs_text_box:
-                    # Create two columns: checkbox/text on left, text box on right
+                    # Create two columns: checkbox/description on left, text box on right
                     col1, col2 = st.columns([1, 2])
 
                     with col1:
+                        # Checkbox shows the description (justification)
                         suggestion['selected'] = st.checkbox(
-                            suggestion['text'][:50] + "..." if len(suggestion['text']) > 50 else suggestion['text'],
+                            suggestion['text'],
                             value=default_value,
                             key=f"suggestion_{suggestion['id']}"
                         )
@@ -273,21 +274,21 @@ elif current_stage == "awaiting_selection":
                     with col2:
                         # Only show text box if checkbox is selected
                         if suggestion['selected']:
-                            # Initialize edited_text in suggestion if not exists
-                            if 'edited_text' not in suggestion:
-                                suggestion['edited_text'] = suggestion['text']
-
+                            # Text box shows the actual suggested text (pre-populated)
                             suggestion['edited_text'] = st.text_area(
                                 f"Edit suggestion #{suggestion['id']}",
                                 value=suggestion.get('edited_text', suggestion['text']),
                                 height=100,
                                 key=f"edit_{suggestion['id']}",
-                                help="Modify the suggested change before applying",
+                                help="Edit the suggested text before applying",
                                 label_visibility="collapsed"
                             )
                         else:
-                            # Show a placeholder or the original text when not selected
-                            st.caption(f"💡 Original: {suggestion['text']}")
+                            # Show a preview of the suggested text when not selected
+                            preview_text = suggestion.get('edited_text', suggestion['text'])
+                            if len(preview_text) > 100:
+                                preview_text = preview_text[:100] + "..."
+                            st.caption(f"💡 Suggested: {preview_text}")
                 else:
                     # For other categories, just show checkbox
                     suggestion['selected'] = st.checkbox(
