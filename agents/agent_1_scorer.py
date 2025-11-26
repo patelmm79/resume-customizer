@@ -24,13 +24,13 @@ class ResumeScorerAgent:
 
         Returns:
             Dictionary containing:
-                - score: int (1-10)
+                - score: int (1-100)
                 - analysis: str
                 - suggestions: List[Dict] with 'id', 'text', and 'category'
         """
         system_prompt = """You are an expert resume analyzer and career coach. Your job is to:
 1. Carefully compare a resume against a job description
-2. Provide a compatibility score from 1-10 (where 10 is perfect match)
+2. Provide a compatibility score from 1-100 (where 100 is perfect match)
 3. Identify specific, actionable improvements
 
 Focus on:
@@ -43,15 +43,22 @@ Focus on:
 
 IMPORTANT for Skills:
 - Create a SEPARATE checklist item for EACH individual skill from the job description
-- Include skills that are important in the job description, even if not mentioned in the resume
+- ONLY suggest skills that are NOT already present in the resume (check the Skills section carefully)
+- Do NOT suggest skills that already appear in the resume, even with slightly different wording
 - Each skill should be its own suggestion so the user can selectively approve which skills to add
 - Only skills that are checked will be added to the resume
+
+IMPORTANT for Summary and Experience suggestions:
+- For Summary: Provide the ACTUAL suggested summary text, not just a description of what to change
+- For Experience: Provide the ACTUAL suggested bullet point or text, not just instructions
+- Users will be able to edit this text before applying it
+- Make suggestions specific and ready-to-use
 
 Be specific and actionable in your suggestions."""
 
         user_prompt = f"""Please analyze this resume against the job description and provide:
 
-1. A score from 1-10 for how well this resume matches the job
+1. A score from 1-100 for how well this resume matches the job
 2. A brief analysis explaining the score
 3. A list of specific, actionable suggestions for improvement
 
@@ -63,7 +70,7 @@ JOB DESCRIPTION:
 
 Please format your response EXACTLY as follows:
 
-SCORE: [number from 1-10]
+SCORE: [number from 1-100]
 
 ANALYSIS:
 [Your detailed analysis here]
@@ -72,11 +79,34 @@ SUGGESTIONS:
 - [CATEGORY: Skills] Add skill: Python
 - [CATEGORY: Skills] Add skill: Docker
 - [CATEGORY: Skills] Add skill: Kubernetes
-- [CATEGORY: Experience] Quantify achievement in role X with specific metrics
-- [CATEGORY: Summary] Rewrite summary to emphasize Y
+- [CATEGORY: Summary] Results-driven Data Scientist with 8+ years of experience building ML pipelines and deploying models at scale. Proven track record of reducing infrastructure costs by 40% through optimization and driving data-driven decision making across cross-functional teams.
+- [CATEGORY: Experience] Led a team of 5 engineers to architect and deploy a real-time fraud detection system processing 10M+ transactions daily, reducing false positives by 35% and saving $2M annually.
 (Continue with more suggestions as needed)
 
-IMPORTANT: For skills, create ONE suggestion per skill. Each skill should be its own line item so the user can individually approve which skills to add. Only include skills that are relevant to the job description. Skills not checked will NOT be added to the resume."""
+CRITICAL FORMAT REQUIREMENTS:
+
+For Skills:
+- BEFORE suggesting a skill, carefully check if it already exists in the resume's Skills section
+- Do NOT suggest skills that are already listed (e.g., if "Tableau" is in the resume, don't suggest adding it)
+- Do NOT suggest skills with slightly different wording (e.g., if "Stakeholder Management" is listed, don't suggest "Stakeholder Engagement")
+- Only suggest skills that are genuinely missing but relevant to the job description
+- For skills, create ONE suggestion per skill
+- Each skill should be its own line item so the user can individually approve which skills to add
+- Format: "Add skill: [Skill Name]"
+
+For Summary:
+- Provide the COMPLETE suggested summary text as you would write it
+- Do NOT write instructions like "Emphasize leadership" - write the actual summary text
+- Users can edit this text before applying it
+- Format: Directly provide the suggested summary paragraph
+
+For Experience:
+- Provide the COMPLETE suggested bullet point or description as you would write it
+- Do NOT write instructions like "Quantify achievement" - write the actual bullet with metrics
+- Include specific numbers, percentages, and impact where possible
+- Format: Directly provide the suggested experience text or bullet point
+
+Skills not checked will NOT be added to the resume"""
 
         try:
             response = self.client.generate_with_system_prompt(
@@ -153,8 +183,8 @@ IMPORTANT: For skills, create ONE suggestion per skill. Each skill should be its
                 })
 
         # Ensure score is valid
-        if score is None or score < 1 or score > 10:
-            score = 5
+        if score is None or score < 1 or score > 100:
+            score = 50
 
         return {
             "score": score,
@@ -177,12 +207,12 @@ IMPORTANT: For skills, create ONE suggestion per skill. Each skill should be its
 
         Returns:
             Dictionary containing:
-                - score: int (1-10)
+                - score: int (1-100)
                 - analysis: str (brief evaluation)
         """
         system_prompt = """You are an expert resume analyzer. Your job is to:
 1. Carefully compare a resume against a job description
-2. Provide a compatibility score from 1-10 (where 10 is perfect match)
+2. Provide a compatibility score from 1-100 (where 100 is perfect match)
 3. Provide brief analysis of the match quality
 
 Focus on:
@@ -200,7 +230,7 @@ JOB DESCRIPTION:
 
 Please format your response EXACTLY as follows:
 
-SCORE: [number from 1-10]
+SCORE: [number from 1-100]
 
 ANALYSIS:
 [Your brief analysis of the match quality and key strengths]"""
@@ -231,7 +261,7 @@ ANALYSIS:
                         if match:
                             score = int(match.group())
                         else:
-                            score = 5
+                            score = 50
                     current_section = "score"
 
                 elif line.startswith("ANALYSIS:"):
@@ -240,8 +270,8 @@ ANALYSIS:
                 elif line and current_section == "analysis":
                     analysis.append(line)
 
-            if score is None or score < 1 or score > 10:
-                score = 5
+            if score is None or score < 1 or score > 100:
+                score = 50
 
             return {
                 "score": score,
