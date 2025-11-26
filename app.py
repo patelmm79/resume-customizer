@@ -205,7 +205,7 @@ elif current_stage == "awaiting_selection":
     with col1:
         st.metric(
             "Compatibility Score",
-            f"{state['initial_score']}/10",
+            f"{state['initial_score']}/100",
             help="How well your resume matches the job"
         )
 
@@ -239,12 +239,62 @@ elif current_stage == "awaiting_selection":
     # Display suggestions by category
     for category, suggestions in categories.items():
         with st.expander(f"📌 {category} ({len(suggestions)} suggestions)", expanded=True):
+            # Add Select All checkbox for this category
+            select_all_key = f"select_all_{category.replace(' ', '_')}"
+            if select_all_key not in st.session_state:
+                st.session_state[select_all_key] = False
+
+            select_all = st.checkbox(
+                "✅ Select All",
+                value=st.session_state[select_all_key],
+                key=select_all_key
+            )
+
+            st.divider()
+
+            # Check if this category needs text boxes (Summary and Experience)
+            needs_text_box = category in ["Summary", "Experience", "Professional Experience"]
+
             for suggestion in suggestions:
-                suggestion['selected'] = st.checkbox(
-                    suggestion['text'],
-                    value=suggestion['selected'],
-                    key=f"suggestion_{suggestion['id']}"
-                )
+                # Use Select All state if checked, otherwise default to unchecked
+                default_value = select_all if select_all else False
+
+                if needs_text_box:
+                    # Create two columns: checkbox/text on left, text box on right
+                    col1, col2 = st.columns([1, 2])
+
+                    with col1:
+                        suggestion['selected'] = st.checkbox(
+                            suggestion['text'][:50] + "..." if len(suggestion['text']) > 50 else suggestion['text'],
+                            value=default_value,
+                            key=f"suggestion_{suggestion['id']}"
+                        )
+
+                    with col2:
+                        # Only show text box if checkbox is selected
+                        if suggestion['selected']:
+                            # Initialize edited_text in suggestion if not exists
+                            if 'edited_text' not in suggestion:
+                                suggestion['edited_text'] = suggestion['text']
+
+                            suggestion['edited_text'] = st.text_area(
+                                f"Edit suggestion #{suggestion['id']}",
+                                value=suggestion.get('edited_text', suggestion['text']),
+                                height=100,
+                                key=f"edit_{suggestion['id']}",
+                                help="Modify the suggested change before applying",
+                                label_visibility="collapsed"
+                            )
+                        else:
+                            # Show a placeholder or the original text when not selected
+                            st.caption(f"💡 Original: {suggestion['text']}")
+                else:
+                    # For other categories, just show checkbox
+                    suggestion['selected'] = st.checkbox(
+                        suggestion['text'],
+                        value=default_value,
+                        key=f"suggestion_{suggestion['id']}"
+                    )
 
     st.divider()
 
@@ -304,7 +354,7 @@ elif current_stage == "awaiting_approval":
         improvement = state['score_improvement']
         st.metric(
             "New Score",
-            f"{state['new_score']}/10",
+            f"{state['new_score']}/100",
             delta=f"+{improvement}" if improvement > 0 else str(improvement)
         )
 
@@ -377,7 +427,7 @@ elif current_stage == "awaiting_approval":
         with col1:
             st.metric(
                 "Validation Score",
-                f"{state['validation_score']}/10",
+                f"{state['validation_score']}/100",
                 help="Formatting and consistency score"
             )
 
@@ -412,11 +462,25 @@ elif current_stage == "awaiting_approval":
                 if 'selected_validation_recs' not in st.session_state:
                     st.session_state.selected_validation_recs = []
 
+                # Add Select All checkbox
+                if 'select_all_validation' not in st.session_state:
+                    st.session_state.select_all_validation = False
+
+                select_all_validation = st.checkbox(
+                    "✅ Select All",
+                    value=st.session_state.select_all_validation,
+                    key="select_all_validation"
+                )
+
+                st.divider()
+
                 selected_recs = []
                 for idx, rec in enumerate(state['validation_recommendations']):
+                    # Use Select All state if checked, otherwise default to unchecked
+                    default_value = select_all_validation if select_all_validation else False
                     is_selected = st.checkbox(
                         rec,
-                        value=False,
+                        value=default_value,
                         key=f"val_rec_{idx}"
                     )
                     if is_selected:
@@ -676,10 +740,10 @@ elif current_stage == "final_scoring":
             col1, col2, col3 = st.columns(3)
 
             with col1:
-                st.metric("Initial Score", f"{state['initial_score']}/10")
+                st.metric("Initial Score", f"{state['initial_score']}/100")
 
             with col2:
-                st.metric("After Optimization", f"{state['new_score']}/10")
+                st.metric("After Optimization", f"{state['new_score']}/100")
 
             with col3:
                 improvement = final_score - state['initial_score']
@@ -741,7 +805,7 @@ elif current_stage == "awaiting_validation_approval_old":
     with col1:
         st.metric(
             "Validation Score",
-            f"{state['validation_score']}/10",
+            f"{state['validation_score']}/100",
             help="Resume formatting and consistency score"
         )
 
@@ -900,10 +964,10 @@ elif current_stage in ["export", "completed"]:
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("Original Score", f"{state['initial_score']}/10")
+        st.metric("Original Score", f"{state['initial_score']}/100")
 
     with col2:
-        st.metric("Final Score", f"{state['new_score']}/10")
+        st.metric("Final Score", f"{state['new_score']}/100")
 
     with col3:
         improvement = state['score_improvement']
