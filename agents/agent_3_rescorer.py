@@ -26,13 +26,13 @@ class ResumeRescorerAgent:
 
         Returns:
             Dictionary containing:
-                - new_score: int (1-10)
+                - new_score: int (1-100)
                 - comparison: str
                 - improvements: List[str]
                 - recommendation: str
         """
         system_prompt = """You are an expert resume evaluator. Your job is to:
-1. Score a modified resume against a job description (1-10 scale)
+1. Score a modified resume against a job description (1-100 scale)
 2. Compare it to the original score
 3. Identify specific improvements made
 4. Provide a recommendation on whether the resume is ready
@@ -47,17 +47,17 @@ MODIFIED RESUME:
 JOB DESCRIPTION:
 {job_description}
 
-ORIGINAL SCORE: {original_score}/10
+ORIGINAL SCORE: {original_score}/100
 
 Please provide:
-1. A new compatibility score (1-10)
+1. A new compatibility score (1-100)
 2. Key improvements you notice compared to the original
 3. Any remaining concerns or areas for improvement
 4. A recommendation (Ready to Submit / Needs More Work)
 
 Format your response EXACTLY as follows:
 
-NEW_SCORE: [number from 1-10]
+NEW_SCORE: [number from 1-100]
 
 COMPARISON:
 [Brief comparison of improvement]
@@ -162,8 +162,8 @@ REASONING:
                     reasoning.append(line)
 
         # Ensure new_score is valid
-        if new_score is None or new_score < 1 or new_score > 10:
-            new_score = min(10, original_score + 1)
+        if new_score is None or new_score < 1 or new_score > 100:
+            new_score = min(100, original_score + 5)
 
         # Calculate improvement
         score_improvement = new_score - original_score

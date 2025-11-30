@@ -133,7 +133,7 @@ def rescoring_node(state: WorkflowState) -> Dict[str, Any]:
             "recommendation": "Ready to Optimize" if new_score >= state["initial_score"] else "Consider More Changes",
             "reasoning": result["analysis"],
             "current_stage": "optimization",
-            "messages": [{"role": "ai", "content": f"Agent 1 (Rescoring): New score: {new_score}/10 (improvement: +{score_improvement})"}]
+            "messages": [{"role": "ai", "content": f"Agent 1 (Rescoring): New score: {new_score}/100 (improvement: +{score_improvement})"}]
         }
     except Exception as e:
         return {
@@ -208,7 +208,7 @@ def validation_node(state: WorkflowState) -> Dict[str, Any]:
             "warning_count": result["warning_count"],
             "info_count": result["info_count"],
             "current_stage": "awaiting_approval",
-            "messages": [{"role": "ai", "content": f"Agent 4: Validation score: {result['validation_score']}/10"}]
+            "messages": [{"role": "ai", "content": f"Agent 4: Validation score: {result['validation_score']}/100"}]
         }
     except Exception as e:
         return {

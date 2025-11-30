@@ -24,7 +24,7 @@ This application implements a **multi-agent system with LangGraph orchestration*
          ▼
 ┌─────────────────┐
 │  Agent 1:       │
-│  Score & Analyze│ → Score (1-10) + Suggestions
+│  Score & Analyze│ → Score (1-100) + Suggestions
 │  [Node]         │
 └────────┬────────┘
          │
@@ -83,7 +83,7 @@ This application implements a **multi-agent system with LangGraph orchestration*
 ### Agent 1: Resume Analyzer & Scorer
 - **Input**: Original resume (markdown), job description (URL or text)
 - **Output**:
-  - Compatibility score (1-10)
+  - Compatibility score (1-100)
   - Detailed analysis
   - Checkbox list of suggested changes
 - **Responsibilities**:
@@ -105,7 +105,7 @@ This application implements a **multi-agent system with LangGraph orchestration*
 ### Agent 3: Re-scorer
 - **Input**: Modified resume, original job description
 - **Output**:
-  - New compatibility score (1-10)
+  - New compatibility score (1-100)
   - Comparison with original score
   - Improvement analysis
   - Remaining concerns
@@ -134,7 +134,7 @@ This application implements a **multi-agent system with LangGraph orchestration*
 ### Agent 4: Formatting Validator
 - **Input**: Modified resume (markdown)
 - **Output**:
-  - Validation score (1-10)
+  - Validation score (1-100)
   - List of issues (Critical, Warning, Info)
   - Formatting recommendations
   - Overall validity status

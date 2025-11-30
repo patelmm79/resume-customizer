@@ -44,7 +44,7 @@ An intelligent, multi-agent AI system orchestrated by **LangGraph** that analyze
     └──────────┬──────────┘
                │
     ┌──────────▼──────────┐
-    │ Agent 1: Scorer     │ Initial Analysis & Score (1-10)
+    │ Agent 1: Scorer     │ Initial Analysis & Score (1-100)
     │                     │ + Individual Skill Suggestions
     └──────────┬──────────┘
                │
@@ -205,7 +205,7 @@ resume-customizer/
 ## How It Works
 
 ### Agent 1: Resume Scorer (Multi-Purpose)
-- **Initial Scoring**: Analyzes resume against job description, provides score (1-10)
+- **Initial Scoring**: Analyzes resume against job description, provides score (1-100)
 - **Individual Skill Suggestions**: Creates separate checkbox for each skill from job description
 - **Second Scoring**: Re-evaluates after modifications using `score_only()` method
 - **Final Scoring**: Provides final score after all edits using `score_only()` method
@@ -220,7 +220,7 @@ resume-customizer/
 
 ### Agent 4: Formatting Validator
 - Validates formatting, consistency, and professional appearance
-- Returns validation score (1-10) and categorized issues (CRITICAL, WARNING, INFO)
+- Returns validation score (1-100) and categorized issues (CRITICAL, WARNING, INFO)
 - Checks: formatting, length, consistency, professionalism, readability
 - Provides actionable recommendations
 - User can proceed to export or review issues

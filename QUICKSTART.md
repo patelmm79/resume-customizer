@@ -76,7 +76,7 @@ Brief summary
 ## Workflow Diagram
 
 ```
-Upload Resume → Fetch Job → Score (1-10) → Select Changes
+Upload Resume → Fetch Job → Score (1-100) → Select Changes
                                   ↓
                             Modify Resume
                                   ↓

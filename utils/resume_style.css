@@ -1,3 +1,103 @@
+@font-face {
+  font-family: 'Rubik-Light';
+  src: url('fonts/Rubik/static/Rubik-Light.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Rubik';
+  src: url('fonts/Rubik/static/Rubik-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Rubik-Medium';
+  src: url('fonts/Rubik/static/Rubik-Medium.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Rubik-SemiBold';
+  src: url('fonts/Rubik/static/Rubik-SemiBold.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Rubik-Bold';
+  src: url('fonts/Rubik/static/Rubik-Bold.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Rubik-ExtraBold';
+  src: url('fonts/Rubik/static/Rubik-ExtraBold.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Rubik-Black';
+  src: url('fonts/Rubik/static/Rubik-Black.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter/static/Inter_18pt-Light.ttf') format('truetype');
+  font-weight: 100;
+  font-style: normal;
+}
+
+
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter/static/Inter_18pt-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter/static/Inter_18pt-Medium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter/static/Inter_18pt-SemiBold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter/static/Inter_18pt-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter/static/Inter_18pt-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('fonts/Inter/static/Inter_18pt-Black.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+}
+
+
 body {
   font-family:      Helvetica, arial, sans-serif;
 
@@ -20,7 +120,53 @@ h1, h2, h3, h4, h5, h6 {
   font-weight:  bold;
   -webkit-font-smoothing: antialiased;
   cursor:       text;
-  position:   relative; }
+  position:   relative;
+  page-break-after: avoid !important;  /* Prevent page break immediately after heading */
+  page-break-inside: avoid !important; /* Prevent page break within heading */
+  break-after: avoid-page !important;  /* Modern CSS standard */
+  break-inside: avoid !important;      /* Modern CSS standard */
+  }
+
+/* Stronger rules for h2 (section headings) */
+h2 {
+  page-break-before: auto;
+  page-break-after: avoid !important;
+  break-before: auto;
+  break-after: avoid-page !important;
+  /* Keep at least 3 lines with the heading */
+  orphans: 3;
+  widows: 3;
+}
+
+
+
+/* Stronger rules for h3 (job titles) - keep with content */
+h3 {
+  page-break-after: avoid !important;
+  break-after: avoid-page !important;
+  orphans: 3;
+  widows: 3;
+}
+
+/* Strong/Bold text (job titles often use this) */
+strong {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* Ensure headings stay with their following content */
+h1 + p, h1 + ul, h1 + ol,
+h2 + p, h2 + ul, h2 + ol,
+h3 + p, h3 + ul, h3 + ol {
+  page-break-before: avoid !important; /* Keep first paragraph/list with its heading */
+  break-before: avoid !important;      /* Modern CSS standard */
+}
+
+/* Ensure paragraphs immediately after headings stay together */
+h2 + p, h3 + p {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
+}
 
 p {
     display: block;
@@ -32,6 +178,8 @@ p {
     margin-bottom: 0em; /* Adds vertical space below paragraphs */
   margin-left: 0;     /* Removes default left margin */
   margin-right: 0;    /* Removes default right margin */
+  page-break-inside: avoid; /* Prevent paragraphs from splitting across pages */
+  break-inside: avoid;      /* Modern CSS standard */
 }
 
 
@@ -39,6 +187,14 @@ ul, ol {
     padding-left: 5; /* Removes default left padding */
     margin-left: 1;  /* Ensures the list starts at the very left margin */
     text-align: left; /* Explicitly left-aligns the list content */
+    page-break-inside: avoid; /* Try to keep lists together */
+    break-inside: avoid;      /* Modern CSS standard */
+}
+
+/* Keep job title (h3 + paragraph + list) together */
+h3 + p + ul, h3 + ul {
+    page-break-before: avoid !important;
+    break-before: avoid !important;
 }
 ul > li {
   list-style-type: small circle;
@@ -47,4 +203,51 @@ ul > li {
 
 li {
   padding-left: 0.1em;
+  page-break-inside: avoid; /* Prevent list items from splitting */
+  break-inside: avoid;      /* Modern CSS standard */
+}
+
+/* Horizontal rule (separator) styling */
+hr {
+  display: block !important;
+  visibility: visible !important;
+  border: 0;
+  border-top: 2px solid #000000 !important;
+  height: 0;
+  margin: 1em 0 !important;
+  padding: 0;
+  page-break-after: avoid;  /* Prevent page break right after separator */
+  break-after: avoid;       /* Modern CSS standard */
+  -webkit-print-color-adjust: exact; /* Ensure color prints */
+  print-color-adjust: exact;          /* Modern standard */
+}
+
+strong, b {
+  font-weight: normal;
+  font-family: 'Rubik-Medium';
+}
+
+
+
+
+/* Section containers to control page breaks */
+.resume-section {
+  page-break-inside: avoid !important;
+  break-inside: avoid-page !important;
+  display: block;
+  margin-bottom: 1em;
+}
+
+/* Alternative: allow page breaks but keep heading with content */
+.section-keep-together {
+  page-break-inside: avoid !important;
+  break-inside: avoid-page !important;
+}
+
+/* Prevent orphan lines at bottom of page or widow lines at top */
+@page {
+  orphans: 3;  /* Minimum 3 lines at bottom of page */
+  widows: 3;   /* Minimum 3 lines at top of page */
+  size: letter; /* Ensure consistent page size */
+  margin: 0.75in; /* Standard margins */
 }

@@ -372,9 +372,9 @@ Every operation adds to the message trail:
 ```python
 "messages": [
     {"role": "system", "content": "Job description fetched successfully"},
-    {"role": "agent_1", "content": "Initial score: 7/10"},
+    {"role": "agent_1", "content": "Initial score: 70/100"},
     {"role": "agent_2", "content": "Resume modified successfully"},
-    {"role": "agent_3", "content": "New score: 9/10 (improvement: +2)"},
+    {"role": "agent_3", "content": "New score: 90/100 (improvement: +20)"},
     {"role": "system", "content": "PDF exported: data/resumes/resume.pdf"}
 ]
 ```

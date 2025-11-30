@@ -23,7 +23,7 @@ class ResumeValidatorAgent:
         Returns:
             Dictionary containing:
                 - is_valid: bool (True if passes all checks)
-                - validation_score: int (1-10)
+                - validation_score: int (1-100)
                 - issues: List[Dict] with 'severity', 'category', 'description'
                 - recommendations: List[str]
                 - summary: str
@@ -51,14 +51,14 @@ RESUME:
 
 Provide a comprehensive validation report with:
 
-1. Overall validation score (1-10, where 10 is perfect)
+1. Overall validation score (1-100, where 100 is perfect)
 2. List of issues found (if any)
 3. Recommendations for improvement
 4. Summary assessment
 
 Format your response EXACTLY as follows:
 
-VALIDATION_SCORE: [number from 1-10]
+VALIDATION_SCORE: [number from 1-100]
 
 ISSUES:
 - [CRITICAL/WARNING/INFO] [Category] Issue description here
@@ -68,13 +68,13 @@ ISSUES:
 RECOMMENDATIONS:
 - Recommendation 1
 - Recommendation 2
-(List recommendations, or write "NONE" if no recommendations)
+(List recommendations. CRITICAL: ALWAYS include "Review the descriptions and condense them where possible to keep the resume concise" as one of the recommendations, even if the resume appears adequate in length)
 
 SUMMARY:
 [Brief summary of validation results]
 
 IS_VALID: [YES/NO]
-(YES if validation_score >= 8 and no CRITICAL issues, otherwise NO)"""
+(YES if validation_score >= 80 and no CRITICAL issues, otherwise NO)"""
 
         try:
             response = self.client.generate_with_system_prompt(
@@ -100,7 +100,7 @@ IS_VALID: [YES/NO]
         """
         lines = response.strip().split('\n')
 
-        validation_score = 8  # Default
+        validation_score = 80  # Default
         issues = []
         recommendations = []
         summary = ""
@@ -172,12 +172,12 @@ IS_VALID: [YES/NO]
         # Ensure validation score is in range
         if validation_score < 1:
             validation_score = 1
-        elif validation_score > 10:
-            validation_score = 10
+        elif validation_score > 100:
+            validation_score = 100
 
         # Check for critical issues
         has_critical = any(issue["severity"] == "CRITICAL" for issue in issues)
-        if has_critical or validation_score < 8:
+        if has_critical or validation_score < 80:
             is_valid = False
 
         return {
