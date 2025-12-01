@@ -2,6 +2,7 @@
 from typing import Dict
 from utils.agent_helper import get_agent_llm_client
 from utils.resume_validator import ResumeStructureValidator
+from utils.resume_standards import get_optimization_prompt_prefix
 
 
 class ResumeOptimizerAgent:
@@ -12,14 +13,14 @@ class ResumeOptimizerAgent:
         self.client = get_agent_llm_client()
         self.validator = ResumeStructureValidator()
 
-    def optimize_resume(
+    def suggest_optimizations(
         self,
         resume_content: str,
         job_description: str,
         current_score: int
     ) -> Dict:
         """
-        Optimize resume to be as concise as possible without impacting score.
+        Suggest optimizations to make resume more concise without impacting score.
 
         Args:
             resume_content: Resume in markdown format
@@ -28,162 +29,206 @@ class ResumeOptimizerAgent:
 
         Returns:
             Dictionary containing:
-                - optimized_resume: str (optimized resume content)
-                - word_count_before: int
-                - word_count_after: int
-                - optimization_summary: str
-                - changes_made: List[str]
+                - suggestions: List[Dict] with optimization suggestions
+                - current_word_count: int
+                - analysis: str (explanation of optimization opportunities)
         """
-        system_prompt = """You are an expert resume optimizer specializing in concise, impactful writing. Your job is to:
-1. Make the resume as concise as possible while maintaining its effectiveness
-2. Remove redundancy, wordiness, and unnecessary details
-3. Keep all critical information that contributes to the job match
-4. Aim for 1 page (approximately 500-700 words maximum)
-5. Maintain or improve the compatibility score.
-6. PRESERVE all section separators (*** horizontal rules) from the original resume.  Do not ask to remove or change these.
-7. In the Experience section, PRESERVE the first line under each role if the line is marked in *italics*
+        # Get centralized standards
+        standards_prefix = get_optimization_prompt_prefix()
 
-Description of resume structure:
+        system_prompt = f"""{standards_prefix}
 
-- The header of the resume contains the candidate name, contact information, and most likely a headline that describes the candidate in no more than 10 words.
-- The sections of the resume include:
---Summary: This section is a paragraph that summarizes the candidate and his experience.
---Experience: This section shows the job history of the candidate.  See below for additional description of Experience section
---Skills: This section is a list of key technical and strategic skills.
---Key Achievements: This section is a set of 2-3 bullet points that outlines the candidate's key achievements.
---Education: This section lists the candidate's education history, focusing on degrees obtained.
---Certifications: This section lists the certifications obtained by the candidate. 
+You are analyzing a resume to suggest optimizations. Your goal is to identify specific changes that would make the resume more concise without losing relevance or lowering the job match score.
 
-Description of Experience section:
-- The following is an example of one job in Markdown format:
-"**Advisor in Data Science and AI** | <span style="color: #1a73e8;">**Freelance**</span> | New York, NY, USA | *Mar 2025 - Present*\
-*Provided strategic advice & built solutions to accelerate digital transformation, automation, and cost control using agentic AI.*
-* Built an LLM service for less than $2 per day by containerizing open-source LLM, using Gemma from Hugging Face and deploying on Google Cloud Run.
-* Created agentic AI application that triggers GitHub issues automatically by analyzing application logs, which flagged 4 problems and potential solutions.
-* Devised an agentic AI web search summary tool to accelerate company research from 4 hours to 5 minutes,  Used LangGraph for agent orchestration, and Claude code as coding assistant."
---Row 1 contains the job title, company, location, and date range. CRITICAL: This row MUST end with a backslash "\" character. We will call this row "job metadata".
---Row 2 contains a high-level description of the company and the role, and is marked in *italics*. CRITICAL: This row must appear IMMEDIATELY after Row 1 with NO blank lines in between. The backslash "\" at the end of Row 1 creates the line break. We will call this row "job headline".
---Rows 3, 4, and 5 are bullet points listing achievements in the role. The number of bullet points can vary between 1 and 10. We will call these "job bullet points".  
+IMPORTANT: Do NOT make changes yourself. Only SUGGEST what could be optimized."""
 
+        user_prompt = f"""Analyze this resume and suggest specific optimizations to make it more concise while maintaining a compatibility score of {current_score}/100.
 
-Optimization strategies:
-- Remove redundant phrases and filler words
-- Combine similar bullet points
-- Use stronger, more concise action verbs
-- Remove less relevant experiences if space is tight
-- Consolidate skills into efficient lists
-- Ensure every word adds value
-- Remove all skills that are minimally relevant to the role. 
-- If individual skills are similar, only keep the skill most relevant to the job description.
-- Eliminate job bullet points under all roles before the most recent 4 roles, unless they are directly relevant to the role.  However, DO NOT modify job headline.  
-- For certifications, keep all certifications for AWS and Google Cloud in all cases.  For other certifications, keep only those certifications that are directly relevant to the role.
-
-CRITICAL:
-- Do not remove information that is directly relevant to the job description. The goal is conciseness without sacrificing match quality.
-- Each job should have no more than the top 5 to 6 bullet points most relevant to the position. All other need to be removed.
-- **ABSOLUTE REQUIREMENT**: NEVER remove or modify job headlines (the italicized descriptions after job metadata). Job headlines MUST be preserved even when all bullet points are removed. This is the highest priority rule that overrides all space optimization concerns.
-- DO NOT add spaces between job metadata and job headline.
-
-
-FORMATTING REQUIREMENTS:
-- Each job entry MUST be on its own line, even older positions without bullet points
-- Use CONSISTENT formatting for ALL jobs: "**Job Title** | <span style="color: #1a73e8;">**Company**</span> | Location | *Dates*\"
-- Each job entry should have ONE blank line before and after it (use standard markdown, not <br> tags)
-- Never combine multiple jobs on the same line
-- Do NOT use HTML <br> tags - use standard markdown blank lines only. 
-- Maintain proper markdown structure with line breaks between all job entries
-- Do NOT change formatting of job headline to add any line break in between.
-
-CRITICAL RULES FOR EXPERIENCE SECTION (ABSOLUTELY NON-NEGOTIABLE):
-- ALWAYS preserve the backslash "\" at the end of job metadata (Row 1). This is MANDATORY.
-- The job headline (Row 2 in italics) MUST appear on the very next line after job metadata with NO blank lines in between.
-- The correct format is: **Title** | **Company** | Location | *Dates*\ (note the backslash at end)
-                          *Job headline in italics immediately on next line*
-- **NEVER REMOVE THE JOB HEADLINE UNDER ANY CIRCUMSTANCES** - even if you remove all job bullet points, the job headline MUST remain. This is the highest priority rule.
-- DO NOT insert blank lines between job metadata and job headline - they must be consecutive lines.
-- Every job entry MUST have: (1) job metadata line ending with \, (2) job headline in italics on the next line, (3) optional bullet points. The job headline is NEVER optional.
-
-
-PAGE LAYOUT OPTIMIZATION:
-- Limit each job (with bullets) to maximum 5-6 bullet points to help prevent page splits
-- For recent jobs, keep bullet lists concise and focused on most relevant points
-- Organize content to minimize section splits across pages:
-  * Skills section should be concise (combine similar skills)
-  * Education/Certifications should be brief, one-liners when possible
-- Aim for natural content breaks that align with page boundaries
-"""
-
-        user_prompt = f"""Please optimize this resume to be as concise as possible while maintaining a compatibility score of {current_score}/100 with the job description.
-
-CURRENT RESUME:
+CURRENT RESUME ({len(resume_content.split())} words):
 {resume_content}
 
 JOB DESCRIPTION:
 {job_description}
 
-TARGET: Ideally 1 page (500-700 words). Current resume should be shortened without losing relevance.
+TARGET: 500-700 words (1 page)
 
-**CRITICAL REMINDER**: When optimizing the Experience section, you MUST preserve the job headline (italicized description line) for EVERY job entry, even if you remove all bullet points. Job headlines are NEVER optional and MUST NOT be removed under any circumstances.
+Please identify optimization opportunities and format your response EXACTLY as follows:
 
-Please format your response EXACTLY as follows:
+ANALYSIS:
+[Brief analysis of optimization opportunities - which sections are too verbose, what could be condensed, etc.]
 
-OPTIMIZED_RESUME:
-[Your optimized resume in markdown format here]
+SUGGESTIONS:
+- [CATEGORY: Experience] [DESCRIPTION: Remove bullets 4-6 from role X (2015-2017) - older and less relevant] [LOCATION: Job title at Company]
+- [CATEGORY: Skills] [DESCRIPTION: Remove redundant skills: X, Y, Z - not mentioned in job description] [LOCATION: Skills section]
+- [CATEGORY: Experience] [DESCRIPTION: Condense bullet 2 in role Y - too wordy, can reduce from 25 to 15 words] [LOCATION: Job title at Company]
+- [CATEGORY: Summary] [DESCRIPTION: Tighten summary - reduce from 80 to 50 words by removing redundant phrases] [LOCATION: Summary section]
 
-OPTIMIZATION_SUMMARY:
-[Brief summary of what was optimized and why]
-
-CHANGES_MADE:
-- Change 1 description
-- Change 2 description
-- Change 3 description
-(List all optimization changes made)
-
-Ensure the optimized resume maintains all key information relevant to the job while being maximally concise."""
+Format rules:
+- Each suggestion must have CATEGORY, DESCRIPTION, and LOCATION tags
+- Be specific about what to change and where
+- Focus on removing/condensing content, not adding
+- Prioritize older, less relevant content
+- NEVER suggest removing job headlines
+- Each suggestion should be independently selectable"""
 
         try:
             response = self.client.generate_with_system_prompt(
                 system_prompt=system_prompt,
                 user_prompt=user_prompt,
-                temperature=0.4  # Lower temperature for consistent optimization
+                temperature=0.4
             )
 
-            result = self._parse_response(response, resume_content)
+            return self._parse_suggestions_response(response, resume_content)
 
-            # Validate and fix structure of optimized resume
+        except Exception as e:
+            raise Exception(f"Optimization analysis failed: {str(e)}")
+
+    def _parse_suggestions_response(self, response: str, resume_content: str) -> Dict:
+        """
+        Parse suggestions response into structured data.
+
+        Args:
+            response: Raw LLM response with suggestions
+            resume_content: Original resume
+
+        Returns:
+            Dictionary with suggestions and analysis
+        """
+        import re
+
+        analysis = ""
+        suggestions = []
+        current_section = None
+
+        lines = response.strip().split('\n')
+
+        for line in lines:
+            line = line.strip()
+
+            if line.startswith("ANALYSIS:"):
+                current_section = "analysis"
+                analysis_text = line.replace("ANALYSIS:", "").strip()
+                if analysis_text:
+                    analysis = analysis_text
+                continue
+
+            elif line.startswith("SUGGESTIONS:"):
+                current_section = "suggestions"
+                continue
+
+            if current_section == "analysis" and line:
+                analysis += "\n" + line
+
+            elif current_section == "suggestions" and line.startswith("-"):
+                # Parse suggestion line
+                suggestion_text = line[1:].strip()
+
+                category = "General"
+                description = suggestion_text
+                location = ""
+
+                # Extract CATEGORY
+                if "[CATEGORY:" in suggestion_text:
+                    cat_match = re.search(r'\[CATEGORY:\s*([^\]]+)\]', suggestion_text)
+                    if cat_match:
+                        category = cat_match.group(1).strip()
+
+                # Extract DESCRIPTION
+                if "[DESCRIPTION:" in suggestion_text:
+                    desc_match = re.search(r'\[DESCRIPTION:\s*([^\]]+)\]', suggestion_text)
+                    if desc_match:
+                        description = desc_match.group(1).strip()
+
+                # Extract LOCATION
+                if "[LOCATION:" in suggestion_text:
+                    loc_match = re.search(r'\[LOCATION:\s*([^\]]+)\]', suggestion_text)
+                    if loc_match:
+                        location = loc_match.group(1).strip()
+
+                suggestions.append({
+                    "id": len(suggestions),
+                    "text": description,
+                    "category": category,
+                    "location": location,
+                    "selected": True  # Default to selected
+                })
+
+        return {
+            "suggestions": suggestions,
+            "analysis": analysis.strip(),
+            "current_word_count": len(resume_content.split())
+        }
+
+    def apply_optimizations(
+        self,
+        resume_content: str,
+        suggestions: List[Dict],
+        job_description: str
+    ) -> str:
+        """
+        Apply selected optimization suggestions to the resume.
+
+        Args:
+            resume_content: Current resume
+            suggestions: List of optimization suggestions (only selected ones will be applied)
+            job_description: Job description for context
+
+        Returns:
+            Optimized resume
+        """
+        selected_suggestions = [s for s in suggestions if s.get("selected", False)]
+
+        if not selected_suggestions:
+            return resume_content
+
+        # Get centralized standards
+        standards_prefix = get_optimization_prompt_prefix()
+
+        system_prompt = f"""{standards_prefix}
+
+Apply the selected optimization suggestions to make the resume more concise."""
+
+        suggestions_text = "\n".join([
+            f"- [{s['category']}] {s['text']}" + (f" (Location: {s['location']})" if s.get('location') else "")
+            for s in selected_suggestions
+        ])
+
+        user_prompt = f"""Apply these optimization suggestions to the resume:
+
+SELECTED OPTIMIZATIONS:
+{suggestions_text}
+
+CURRENT RESUME:
+{resume_content}
+
+Return ONLY the optimized resume in markdown format. Apply the selected optimizations while:
+- Maintaining all formatting standards
+- Preserving job headlines
+- Keeping all backslashes in metadata lines
+- Not removing content that wasn't suggested for removal"""
+
+        try:
+            optimized_resume = self.client.generate_with_system_prompt(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                temperature=0.3
+            )
+
+            # Validate and fix structure
             validation_result = self.validator.validate_and_fix(
-                resume=result["optimized_resume"],
+                resume=optimized_resume,
                 original_resume=resume_content
             )
 
-            # Log any issues found
-            if validation_result["issues_found"]:
-                print("\n⚠️  Structure validation found issues in optimized resume:")
-                for issue in validation_result["issues_found"]:
-                    print(f"   - {issue}")
-
-            # Log fixes applied
             if validation_result["fixes_applied"]:
-                print("\n✓ Structure fixes applied to optimized resume:")
+                print("\n✓ Structure fixes applied:")
                 for fix in validation_result["fixes_applied"]:
                     print(f"   - {fix}")
 
-                # Add fixes to changes_made list
-                result["changes_made"].extend([
-                    f"[Auto-fix] {fix}" for fix in validation_result["fixes_applied"]
-                ])
-
-            # Update the optimized resume with fixed version
-            result["optimized_resume"] = validation_result["fixed_resume"]
-
-            # Recalculate word count after fixes
-            result["word_count_after"] = len(validation_result["fixed_resume"].split())
-            result["words_removed"] = result["word_count_before"] - result["word_count_after"]
-
-            return result
+            return validation_result["fixed_resume"]
 
         except Exception as e:
-            raise Exception(f"Optimization failed: {str(e)}")
+            raise Exception(f"Failed to apply optimizations: {str(e)}")
 
     def _parse_response(self, response: str, original_resume: str) -> Dict:
         """

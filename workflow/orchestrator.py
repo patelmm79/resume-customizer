@@ -4,7 +4,9 @@ from workflow.state import WorkflowState, create_initial_state
 from workflow.graph import (
     analysis_workflow,
     modification_workflow,
-    export_workflow
+    optimization_application_workflow,
+    export_workflow,
+    cover_letter_workflow
 )
 
 
@@ -20,7 +22,9 @@ class ResumeWorkflowOrchestrator:
         """Initialize the orchestrator with compiled workflows."""
         self.analysis_workflow = analysis_workflow
         self.modification_workflow = modification_workflow
+        self.optimization_application_workflow = optimization_application_workflow
         self.export_workflow = export_workflow
+        self.cover_letter_workflow = cover_letter_workflow
 
     def start_analysis(
         self,
@@ -53,16 +57,31 @@ class ResumeWorkflowOrchestrator:
 
     def apply_modifications(self, state: WorkflowState) -> WorkflowState:
         """
-        Apply modifications based on selected suggestions (Agent 2 + Agent 3).
+        Apply modifications based on selected suggestions (Agent 2 + Agent 3 + Agent 5 suggestions).
 
         Args:
             state: Workflow state with selected suggestions
 
         Returns:
-            Updated workflow state with modified resume and rescoring
+            Updated workflow state with modified resume, rescoring, and optimization suggestions
         """
-        # Run modification and rescoring workflow
+        # Run modification, rescoring, and optimization suggestion workflow
         result = self.modification_workflow.invoke(state)
+
+        return result
+
+    def apply_optimizations(self, state: WorkflowState) -> WorkflowState:
+        """
+        Apply selected optimization suggestions (Agent 5 application + Agent 4 validation).
+
+        Args:
+            state: Workflow state with selected optimization suggestions
+
+        Returns:
+            Updated workflow state with optimized resume and validation
+        """
+        # Run optimization application and validation workflow
+        result = self.optimization_application_workflow.invoke(state)
 
         return result
 
@@ -78,6 +97,21 @@ class ResumeWorkflowOrchestrator:
         """
         # Run export workflow
         result = self.export_workflow.invoke(state)
+
+        return result
+
+    def generate_cover_letter(self, state: WorkflowState) -> WorkflowState:
+        """
+        Generate cover letter and export to PDF (optional final step).
+
+        Args:
+            state: Workflow state with resume and job description
+
+        Returns:
+            Updated workflow state with cover letter and PDF
+        """
+        # Run cover letter workflow
+        result = self.cover_letter_workflow.invoke(state)
 
         return result
 

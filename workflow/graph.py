@@ -8,9 +8,12 @@ from workflow.nodes import (
     modification_node,
     rescoring_node,
     optimization_node,
+    apply_optimizations_node,
     validation_node,
     export_pdf_node,
-    human_feedback_node
+    human_feedback_node,
+    cover_letter_generation_node,
+    export_cover_letter_pdf_node
 )
 
 
@@ -115,12 +118,30 @@ def create_modification_workflow() -> StateGraph:
     workflow.add_node("modify", modification_node)
     workflow.add_node("rescoring", rescoring_node)
     workflow.add_node("optimization", optimization_node)
-    workflow.add_node("validation", validation_node)
 
     workflow.set_entry_point("modify")
     workflow.add_edge("modify", "rescoring")
     workflow.add_edge("rescoring", "optimization")
-    workflow.add_edge("optimization", "validation")
+    # optimization node now proposes suggestions and ends (awaits selection)
+    workflow.add_edge("optimization", END)
+
+    return workflow
+
+
+def create_optimization_application_workflow() -> StateGraph:
+    """
+    Create workflow for applying selected optimization suggestions.
+
+    Returns:
+        Compiled LangGraph workflow
+    """
+    workflow = StateGraph(WorkflowState)
+
+    workflow.add_node("apply_optimizations", apply_optimizations_node)
+    workflow.add_node("validation", validation_node)
+
+    workflow.set_entry_point("apply_optimizations")
+    workflow.add_edge("apply_optimizations", "validation")
     workflow.add_edge("validation", END)
 
     return workflow
@@ -143,7 +164,28 @@ def create_export_workflow() -> StateGraph:
     return workflow
 
 
+def create_cover_letter_workflow() -> StateGraph:
+    """
+    Create workflow for cover letter generation (optional final step).
+
+    Returns:
+        Compiled LangGraph workflow
+    """
+    workflow = StateGraph(WorkflowState)
+
+    workflow.add_node("generate_cover_letter", cover_letter_generation_node)
+    workflow.add_node("export_cover_letter", export_cover_letter_pdf_node)
+
+    workflow.set_entry_point("generate_cover_letter")
+    workflow.add_edge("generate_cover_letter", "export_cover_letter")
+    workflow.add_edge("export_cover_letter", END)
+
+    return workflow
+
+
 # Compile workflows
 analysis_workflow = create_workflow().compile()
 modification_workflow = create_modification_workflow().compile()
+optimization_application_workflow = create_optimization_application_workflow().compile()
 export_workflow = create_export_workflow().compile()
+cover_letter_workflow = create_cover_letter_workflow().compile()

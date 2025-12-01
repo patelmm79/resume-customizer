@@ -36,12 +36,15 @@ class WorkflowState(TypedDict):
     reasoning: Optional[str]
 
     # Agent 5 outputs (Optimization)
-    optimized_resume: Optional[str]
-    word_count_before: Optional[int]
-    word_count_after: Optional[int]
-    words_removed: Optional[int]
-    optimization_summary: Optional[str]
-    optimization_changes: Optional[List[str]]
+    optimization_suggestions: Optional[List[SuggestionDict]]  # Suggestions from Agent 5
+    optimization_analysis: Optional[str]  # Analysis of optimization opportunities
+    word_count_before_optimization: Optional[int]  # Word count before optimization
+    optimized_resume: Optional[str]  # Resume after applying optimizations
+    word_count_before: Optional[int]  # Word count before applying selected optimizations
+    word_count_after: Optional[int]  # Word count after applying selected optimizations
+    words_removed: Optional[int]  # Words removed by optimization
+    optimization_summary: Optional[str]  # Summary of optimizations applied
+    optimization_changes: Optional[List[str]]  # List of changes made
 
     # Agent 4 outputs (Validation)
     validation_score: Optional[int]
@@ -58,9 +61,16 @@ class WorkflowState(TypedDict):
     freeform_changes_history: Optional[List[Dict]]
     final_score: Optional[int]
 
+    # Agent 7 outputs (Cover Letter)
+    cover_letter: Optional[str]
+    cover_letter_summary: Optional[str]
+    generate_cover_letter: Optional[bool]
+
     # Final outputs
     pdf_path: Optional[str]
     pdf_bytes: Optional[bytes]
+    cover_letter_pdf_path: Optional[str]
+    cover_letter_pdf_bytes: Optional[bytes]
 
     # Workflow control
     current_stage: str
@@ -117,8 +127,13 @@ def create_initial_state(
         freeform_resume=None,
         freeform_changes_history=None,
         final_score=None,
+        cover_letter=None,
+        cover_letter_summary=None,
+        generate_cover_letter=False,
         pdf_path=None,
         pdf_bytes=None,
+        cover_letter_pdf_path=None,
+        cover_letter_pdf_bytes=None,
         current_stage="fetch_job" if job_url else "scoring",
         approved=False,
         error=None,

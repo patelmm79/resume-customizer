@@ -107,13 +107,16 @@ with st.sidebar:
         "awaiting_selection": "4. Select Suggestions",
         "modification": "5. Modifying Resume",
         "rescoring": "6. Second Scoring",
-        "optimization": "7. Optimizing Length",
-        "validation": "8. Validating Format",
-        "awaiting_approval": "9. Review & Approve",
-        "freeform_editing": "10. Final Edits (Optional)",
-        "final_scoring": "11. Final Score",
-        "export": "12. Exporting PDF",
-        "completed": "13. Completed",
+        "optimization": "7. Analyzing Length",
+        "awaiting_optimization_selection": "8. Select Optimizations",
+        "applying_optimizations": "9. Applying Optimizations",
+        "validation": "10. Validating Format",
+        "awaiting_approval": "11. Review & Approve",
+        "freeform_editing": "12. Final Edits (Optional)",
+        "final_scoring": "13. Final Score",
+        "export": "14. Exporting PDF",
+        "cover_letter_ready": "15. Cover Letter Generated",
+        "completed": "16. Completed",
         "error": "❌ Error"
     }
 
@@ -215,9 +218,9 @@ elif current_stage == "awaiting_selection":
 
     with col3:
         score = state['initial_score']
-        if score >= 8:
+        if score >= 80:
             st.success("Excellent match! Minor improvements suggested.")
-        elif score >= 6:
+        elif score >= 60:
             st.warning("Good foundation. Improvements will help.")
         else:
             st.error("Significant improvements needed for better match.")
@@ -323,8 +326,8 @@ elif current_stage == "awaiting_selection":
                     st.code(traceback.format_exc())
 
 
-# Stage 5-7: Modification, Rescoring, Optimization & Validation
-elif current_stage in ["modification", "rescoring", "optimization", "validation"]:
+# Stage 5-7: Modification, Rescoring, Optimization Analysis
+elif current_stage in ["modification", "rescoring", "optimization"]:
     st.header("Processing Resume Changes...")
     with st.spinner("Agents are working..."):
         if current_stage == "modification":
@@ -332,7 +335,148 @@ elif current_stage in ["modification", "rescoring", "optimization", "validation"
         elif current_stage == "rescoring":
             st.info("Agent 3: Re-scoring the modified resume...")
         elif current_stage == "optimization":
-            st.info("Agent 5: Optimizing resume length while maintaining score...")
+            st.info("Agent 5: Analyzing optimization opportunities...")
+
+
+# Stage 8: Optimization Suggestion Selection
+elif current_stage == "awaiting_optimization_selection":
+    state = st.session_state.workflow_state
+    st.header("Step 3: Select Optimization Suggestions")
+
+    # Display score info
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric("Initial Score", f"{state['initial_score']}/100")
+
+    with col2:
+        improvement = state['score_improvement']
+        st.metric(
+            "New Score",
+            f"{state['new_score']}/100",
+            delta=f"+{improvement}" if improvement > 0 else str(improvement)
+        )
+
+    with col3:
+        current_words = state.get('word_count_before_optimization', 0)
+        target_words = 600
+        if current_words <= target_words:
+            st.success(f"✅ {current_words} words")
+        else:
+            st.warning(f"⚠️ {current_words} words (target: {target_words})")
+
+    st.divider()
+
+    # Display optimization analysis
+    if state.get('optimization_analysis'):
+        st.subheader("Optimization Analysis")
+        st.info(state['optimization_analysis'])
+
+    st.divider()
+
+    # Suggestions with checkboxes
+    st.subheader("Optimization Suggestions")
+    st.markdown("Select the optimizations you want to apply to make your resume more concise:")
+
+    # Group suggestions by category
+    categories = {}
+    for suggestion in state.get('optimization_suggestions', []):
+        category = suggestion['category']
+        if category not in categories:
+            categories[category] = []
+        categories[category].append(suggestion)
+
+    # Display suggestions by category
+    for category, suggestions in categories.items():
+        with st.expander(f"📌 {category} ({len(suggestions)} suggestions)", expanded=True):
+            # Add Select All checkbox for this category
+            select_all_key = f"select_all_opt_{category.replace(' ', '_')}"
+            if select_all_key not in st.session_state:
+                st.session_state[select_all_key] = True  # Default to selected for optimizations
+
+            select_all = st.checkbox(
+                "✅ Select All",
+                value=st.session_state[select_all_key],
+                key=select_all_key
+            )
+
+            st.divider()
+
+            for suggestion in suggestions:
+                # Use Select All state if checked, otherwise use suggestion's default
+                default_value = select_all if select_all else suggestion.get('selected', True)
+
+                # Display suggestion with location context
+                suggestion_label = suggestion['text']
+                if suggestion.get('location'):
+                    suggestion_label += f" (Location: {suggestion['location']})"
+
+                suggestion['selected'] = st.checkbox(
+                    suggestion_label,
+                    value=default_value,
+                    key=f"opt_suggestion_{suggestion['id']}"
+                )
+
+    st.divider()
+
+    # Show estimated word reduction
+    selected_count = sum(1 for s in state.get('optimization_suggestions', []) if s.get('selected', False))
+    if selected_count > 0:
+        st.info(f"✓ {selected_count} optimization(s) selected")
+    else:
+        st.warning("No optimizations selected. Resume will proceed to validation unchanged.")
+
+    st.divider()
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("⬅️ Back to Suggestions", use_container_width=True):
+            st.session_state.workflow_state['current_stage'] = "awaiting_selection"
+            st.rerun()
+
+    with col2:
+        if st.button("⏭️ Skip Optimizations", use_container_width=True):
+            # Deselect all and continue
+            for suggestion in state.get('optimization_suggestions', []):
+                suggestion['selected'] = False
+            st.session_state.workflow_state['optimization_suggestions'] = state['optimization_suggestions']
+
+            with st.spinner("Proceeding to validation..."):
+                try:
+                    updated_state = st.session_state.customizer.orchestrator.apply_optimizations(
+                        st.session_state.workflow_state
+                    )
+                    st.session_state.workflow_state = updated_state
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+                    st.code(traceback.format_exc())
+
+    with col3:
+        if st.button("➡️ Apply Optimizations", type="primary", use_container_width=True):
+            with st.spinner("Applying optimizations..."):
+                try:
+                    # Update state with current selections
+                    st.session_state.workflow_state['optimization_suggestions'] = state['optimization_suggestions']
+
+                    # Continue workflow
+                    updated_state = st.session_state.customizer.orchestrator.apply_optimizations(
+                        st.session_state.workflow_state
+                    )
+                    st.session_state.workflow_state = updated_state
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error applying optimizations: {str(e)}")
+                    st.code(traceback.format_exc())
+
+
+# Stage 9-10: Applying Optimizations, Validation
+elif current_stage in ["applying_optimizations", "validation"]:
+    st.header("Finalizing Resume...")
+    with st.spinner("Agents are working..."):
+        if current_stage == "applying_optimizations":
+            st.info("Agent 5: Applying selected optimizations...")
         elif current_stage == "validation":
             st.info("Agent 4: Validating formatting and consistency...")
 
@@ -973,6 +1117,62 @@ elif current_stage in ["export", "completed"]:
     with col3:
         improvement = state['score_improvement']
         st.metric("Improvement", f"+{improvement}" if improvement > 0 else str(improvement))
+
+    st.divider()
+
+    # Cover Letter Section (Optional)
+    st.subheader("📨 Cover Letter (Optional)")
+    st.markdown("Generate a tailored cover letter for this job application.")
+
+    # Check if cover letter was already generated
+    if state.get('cover_letter'):
+        st.success("✅ Cover letter generated!")
+
+        # Display cover letter
+        with st.expander("View Cover Letter", expanded=True):
+            st.markdown(state['cover_letter'])
+
+        # Download cover letter PDF
+        if state.get('cover_letter_pdf_bytes'):
+            col1, col2 = st.columns(2)
+            with col1:
+                st.download_button(
+                    label="📄 Download Cover Letter PDF",
+                    data=state['cover_letter_pdf_bytes'],
+                    file_name="cover_letter.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
+                )
+            with col2:
+                st.download_button(
+                    label="📝 Download Cover Letter Markdown",
+                    data=state['cover_letter'],
+                    file_name="cover_letter.md",
+                    mime="text/markdown",
+                    use_container_width=True
+                )
+
+        # Show summary
+        if state.get('cover_letter_summary'):
+            with st.expander("Cover Letter Summary"):
+                st.info(state['cover_letter_summary'])
+    else:
+        # Offer to generate cover letter
+        st.info("💡 Click below to generate a personalized cover letter based on your resume and the job description.")
+
+        if st.button("✨ Generate Cover Letter", use_container_width=True):
+            with st.spinner("Generating cover letter..."):
+                try:
+                    # Generate cover letter using orchestrator
+                    updated_state = st.session_state.customizer.orchestrator.generate_cover_letter(
+                        st.session_state.workflow_state
+                    )
+                    st.session_state.workflow_state = updated_state
+                    st.success("Cover letter generated successfully!")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error generating cover letter: {str(e)}")
+                    st.code(traceback.format_exc())
 
     st.divider()
 

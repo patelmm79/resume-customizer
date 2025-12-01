@@ -51,7 +51,20 @@ This application implements a **multi-agent system with LangGraph orchestration*
          ▼
 ┌─────────────────┐
 │  Agent 5:       │
-│  Optimize       │ → Optimized Resume (concise)
+│  Suggest Opts   │ → Optimization Suggestions
+│  [Node]         │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  HUMAN          │ ← User selects optimizations
+│  [Checkpoint]   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Agent 5:       │
+│  Apply Opts     │ → Optimized Resume (concise)
 │  [Node]         │
 └────────┬────────┘
          │
@@ -71,6 +84,19 @@ This application implements a **multi-agent system with LangGraph orchestration*
          ▼
 ┌─────────────────┐
 │  Export PDF     │ → Professional PDF
+│  [Node]         │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  HUMAN          │ ← User decides to generate cover letter (optional)
+│  [Checkpoint]   │
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Agent 7:       │ → Cover Letter (Optional)
+│  Cover Letter   │ → Cover Letter PDF
 │  [Node]         │
 └────────┬────────┘
          │
@@ -118,18 +144,23 @@ This application implements a **multi-agent system with LangGraph orchestration*
 
 ### Agent 5: Resume Optimizer
 - **Input**: Modified resume, job description, current score
-- **Output**:
-  - Optimized resume (as concise as possible)
+- **Output (Suggestion Phase)**:
+  - List of optimization suggestions with checkboxes
+  - Analysis of optimization opportunities
+  - Current word count
+- **Output (Application Phase)**:
+  - Optimized resume (with selected optimizations applied)
   - Word count before/after
   - Optimization summary
   - List of changes made
 - **Responsibilities**:
-  - Optimize resume length without impacting score
-  - Remove redundancy and wordiness
+  - **Phase 1**: Analyze and suggest specific optimizations (does NOT auto-apply)
+  - **Phase 2**: Apply only the user-selected optimization suggestions
+  - Remove redundancy and wordiness based on user approval
   - Aim for 1 page (500-700 words)
   - Maintain all critical information
-  - Iteratively optimize until no further improvements possible
-- **LangGraph Node**: `optimization_node`
+  - Each suggestion is independently selectable
+- **LangGraph Nodes**: `optimization_node` (suggest), `apply_optimizations_node` (apply)
 
 ### Agent 4: Formatting Validator
 - **Input**: Modified resume (markdown)
@@ -155,6 +186,22 @@ This application implements a **multi-agent system with LangGraph orchestration*
   - Ensure ATS-friendly formatting
 - **LangGraph Node**: `export_pdf_node`
 
+### Agent 7: Cover Letter Generator (Optional)
+- **Input**: Optimized resume (markdown), job description
+- **Output**:
+  - Tailored cover letter (markdown)
+  - Cover letter summary (approach and key points)
+  - Cover letter PDF
+- **Responsibilities**:
+  - Generate personalized cover letter based on resume and job
+  - Highlight candidate's most relevant qualifications
+  - Address key requirements from job description
+  - Create cohesive narrative about candidate's career
+  - Show enthusiasm and cultural fit
+  - Keep it concise (250-350 words, 3-4 paragraphs)
+  - Export to professional PDF format
+- **LangGraph Node**: `cover_letter_generation_node` and `export_cover_letter_pdf_node`
+
 ## LangGraph Integration
 
 ### State Management
@@ -168,17 +215,21 @@ The workflow uses a **typed state dictionary** (`WorkflowState`) that tracks:
 ### Workflow Phases
 
 1. **Analysis Workflow**: Input → Fetch Job → Score → END
-2. **Modification Workflow**: Modify → Rescore → Optimize → Validate → END
-3. **Export Workflow**: Export → END
+2. **Modification Workflow**: Modify → Rescore → Suggest Optimizations → END
+3. **Optimization Application Workflow**: Apply Optimizations → Validate → END
+4. **Export Workflow**: Export → END
+5. **Cover Letter Workflow** (Optional): Generate Cover Letter → Export Cover Letter PDF → END
 
 Each phase can be invoked independently with human-in-the-loop checkpoints between phases.
 
 ### Human-in-the-Loop
 
 LangGraph enables natural **checkpoints** where:
-- User selects which suggestions to apply
-- User approves or rejects modifications
+- User selects which suggestions to apply (after Agent 1)
+- User selects which optimizations to apply (after Agent 5 suggestions)
+- User approves or rejects modifications (after Agent 4 validation)
 - User decides when to export
+- User optionally generates a cover letter
 
 The state persists between invocations, allowing resumable workflows.
 
@@ -201,8 +252,10 @@ resume-customizer/
 │   ├── agent_1_scorer.py      # Resume scoring and analysis
 │   ├── agent_2_modifier.py    # Resume modification
 │   ├── agent_3_rescorer.py    # Re-evaluation
+│   ├── agent_4_validator.py   # Formatting validation
 │   ├── agent_5_optimizer.py   # Length optimization
-│   └── agent_4_validator.py   # Formatting validation
+│   ├── agent_6_freeform.py    # Freeform editing
+│   └── agent_7_cover_letter.py # Cover letter generation
 ├── workflow/
 │   ├── __init__.py
 │   ├── state.py               # LangGraph state definitions
@@ -260,12 +313,17 @@ resume-customizer/
 1. Upload your resume in markdown format
 2. Provide the job description URL or paste manually
 3. Agent 1 analyzes and scores your resume (Initial Scoring)
-4. Review and select suggested changes
-5. Agent 2 modifies your resume
+4. **Checkpoint**: Review and select suggested changes
+5. Agent 2 modifies your resume based on selections
 6. Agent 3 rescores and presents improvements (Second Scoring)
-7. Agent 5 optimizes resume length while maintaining score
-8. Agent 4 validates formatting and consistency
-9. Review validation results and export to PDF
+7. Agent 5 analyzes and suggests optimization opportunities
+8. **Checkpoint**: Review and select which optimizations to apply
+9. Agent 5 applies selected optimizations to make resume concise
+10. Agent 4 validates formatting and consistency
+11. **Checkpoint**: Review validation results and approve
+12. Export to PDF
+13. **Optional**: Generate a tailored cover letter with Agent 7
+14. Download both resume and cover letter as PDFs
 
 ### Programmatic Usage (LangGraph)
 
@@ -289,6 +347,10 @@ final_state = customizer.finalize_workflow(state)
 
 # Download PDF
 pdf_bytes = final_state['pdf_bytes']
+
+# Optional: Generate cover letter
+cover_letter_state = customizer.orchestrator.generate_cover_letter(final_state)
+cover_letter_pdf = cover_letter_state['cover_letter_pdf_bytes']
 ```
 
 ### Full Automation (Testing)
@@ -310,7 +372,8 @@ final_state = customizer.run_complete_workflow(
 - ✅ Human-in-the-loop decision points
 - ✅ Real-time scoring and feedback
 - ✅ Maintains 1-page format
-- ✅ Professional PDF export
+- ✅ Professional PDF export for resumes
+- ✅ **Optional cover letter generation** with PDF export
 - ✅ Interactive checkbox interface for suggested changes
 - ✅ Before/after comparison
 - ✅ Message audit trail
@@ -386,7 +449,12 @@ WorkflowState = TypedDict({
     "concerns": List[str],
     "recommendation": str,
 
-    # Agent 5 outputs
+    # Agent 5 outputs (Optimization suggestions phase)
+    "optimization_suggestions": List[Dict],
+    "optimization_analysis": str,
+    "word_count_before_optimization": int,
+
+    # Agent 5 outputs (Optimization application phase)
     "optimized_resume": str,
     "word_count_before": int,
     "word_count_after": int,
@@ -399,6 +467,12 @@ WorkflowState = TypedDict({
     "is_valid": bool,
     "validation_issues": List[Dict],
     "validation_recommendations": List[str],
+
+    # Agent 7 outputs (Cover Letter)
+    "cover_letter": str,
+    "cover_letter_summary": str,
+    "cover_letter_pdf_path": str,
+    "cover_letter_pdf_bytes": bytes,
 
     # Control
     "current_stage": str,
@@ -426,9 +500,11 @@ def node_function(state: WorkflowState) -> Dict[str, Any]:
 ### Orchestrator API
 
 The `ResumeWorkflowOrchestrator` class provides:
-- `start_analysis()` - Run Agent 1
-- `apply_modifications()` - Run Agents 2, 3, 5 & 4
+- `start_analysis()` - Run Agent 1 (scoring and suggestions)
+- `apply_modifications()` - Run Agents 2, 3, and 5 (modification, rescoring, optimization suggestions)
+- `apply_optimizations()` - Run Agent 5 application and Agent 4 (apply selected optimizations and validate)
 - `export_resume()` - Run PDF export
+- `generate_cover_letter()` - Run Agent 7 (optional cover letter generation)
 - `update_suggestions()` - Helper for UI
 - `approve_resume()` - Helper for UI
 - `get_workflow_status()` - Current state info

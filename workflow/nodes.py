@@ -5,6 +5,7 @@ from agents.agent_1_scorer import ResumeScorerAgent
 from agents.agent_2_modifier import ResumeModifierAgent
 from agents.agent_4_validator import ResumeValidatorAgent
 from agents.agent_5_optimizer import ResumeOptimizerAgent
+from agents.agent_7_cover_letter import CoverLetterAgent
 from utils.job_scraper import JobScraper
 from utils.pdf_exporter import PDFExporter
 
@@ -145,38 +146,99 @@ def rescoring_node(state: WorkflowState) -> Dict[str, Any]:
 
 def optimization_node(state: WorkflowState) -> Dict[str, Any]:
     """
-    Agent 5: Optimize resume length while maintaining score.
+    Agent 5: Suggest optimization opportunities (does not auto-apply).
 
     Args:
         state: Current workflow state
 
     Returns:
-        Updated state with optimization results
+        Updated state with optimization suggestions
     """
     try:
         agent = ResumeOptimizerAgent()
-        result = agent.optimize_resume(
+        result = agent.suggest_optimizations(
             state["modified_resume"],
             state["job_description"],
             state["new_score"]
         )
 
         return {
-            "optimized_resume": result["optimized_resume"],
-            "word_count_before": result["word_count_before"],
-            "word_count_after": result["word_count_after"],
-            "words_removed": result["words_removed"],
-            "optimization_summary": result["optimization_summary"],
-            "optimization_changes": result["changes_made"],
-            "current_stage": "validation",
+            "optimization_suggestions": result["suggestions"],
+            "optimization_analysis": result["analysis"],
+            "word_count_before_optimization": result["current_word_count"],
+            "current_stage": "awaiting_optimization_selection",
             "messages": [{
                 "role": "ai",
-                "content": f"Agent 5: Optimized resume from {result['word_count_before']} to {result['word_count_after']} words (-{result['words_removed']} words)"
+                "content": f"Agent 5: Found {len(result['suggestions'])} optimization opportunities (current: {result['current_word_count']} words)"
             }]
         }
     except Exception as e:
         return {
-            "error": f"Optimization failed: {str(e)}",
+            "error": f"Optimization analysis failed: {str(e)}",
+            "current_stage": "error",
+            "messages": [{"role": "system", "content": f"Error: {str(e)}"}]
+        }
+
+
+def apply_optimizations_node(state: WorkflowState) -> Dict[str, Any]:
+    """
+    Agent 5: Apply selected optimization suggestions.
+
+    Args:
+        state: Current workflow state with selected optimization suggestions
+
+    Returns:
+        Updated state with optimized resume
+    """
+    try:
+        agent = ResumeOptimizerAgent()
+
+        # Get selected suggestions
+        selected_suggestions = [
+            s for s in state.get("optimization_suggestions", [])
+            if s.get("selected", False)
+        ]
+
+        if not selected_suggestions:
+            # No optimizations selected, skip to validation
+            return {
+                "optimized_resume": state["modified_resume"],
+                "word_count_before": len(state["modified_resume"].split()),
+                "word_count_after": len(state["modified_resume"].split()),
+                "words_removed": 0,
+                "optimization_summary": "No optimizations applied",
+                "optimization_changes": [],
+                "current_stage": "validation",
+                "messages": [{"role": "ai", "content": "Agent 5: No optimizations selected, proceeding to validation"}]
+            }
+
+        # Apply selected optimizations
+        optimized_resume = agent.apply_optimizations(
+            state["modified_resume"],
+            selected_suggestions,
+            state["job_description"]
+        )
+
+        word_count_before = len(state["modified_resume"].split())
+        word_count_after = len(optimized_resume.split())
+        words_removed = word_count_before - word_count_after
+
+        return {
+            "optimized_resume": optimized_resume,
+            "word_count_before": word_count_before,
+            "word_count_after": word_count_after,
+            "words_removed": words_removed,
+            "optimization_summary": f"Applied {len(selected_suggestions)} optimization(s)",
+            "optimization_changes": [s["text"] for s in selected_suggestions],
+            "current_stage": "validation",
+            "messages": [{
+                "role": "ai",
+                "content": f"Agent 5: Optimized resume from {word_count_before} to {word_count_after} words (-{words_removed} words)"
+            }]
+        }
+    except Exception as e:
+        return {
+            "error": f"Optimization application failed: {str(e)}",
             "current_stage": "error",
             "messages": [{"role": "system", "content": f"Error: {str(e)}"}]
         }
@@ -270,3 +332,84 @@ def human_feedback_node(state: WorkflowState) -> Dict[str, Any]:
     return {
         "messages": [{"role": "system", "content": "Awaiting human feedback"}]
     }
+
+
+def cover_letter_generation_node(state: WorkflowState) -> Dict[str, Any]:
+    """
+    Agent 7: Generate cover letter based on resume and job description.
+
+    Args:
+        state: Current workflow state
+
+    Returns:
+        Updated state with cover letter
+    """
+    try:
+        agent = CoverLetterAgent()
+
+        # Use freeform resume if available, otherwise optimized, otherwise modified
+        final_resume = state.get("freeform_resume") or state.get("optimized_resume") or state.get("modified_resume")
+
+        if not final_resume:
+            raise ValueError("No resume found in state. Please complete the resume workflow first.")
+
+        result = agent.generate_cover_letter(
+            final_resume,
+            state["job_description"]
+        )
+
+        # Validate the result
+        cover_letter = result.get("cover_letter", "")
+        if not cover_letter or not cover_letter.strip():
+            raise ValueError("Cover letter generation returned empty content. Please try again.")
+
+        return {
+            "cover_letter": cover_letter,
+            "cover_letter_summary": result.get("summary", "Cover letter generated successfully."),
+            "current_stage": "cover_letter_ready",
+            "messages": [{"role": "ai", "content": "Agent 7: Cover letter generated successfully"}]
+        }
+    except Exception as e:
+        return {
+            "error": f"Cover letter generation failed: {str(e)}",
+            "current_stage": "error",
+            "messages": [{"role": "system", "content": f"Error: {str(e)}"}]
+        }
+
+
+def export_cover_letter_pdf_node(state: WorkflowState) -> Dict[str, Any]:
+    """
+    Export cover letter to PDF.
+
+    Args:
+        state: Current workflow state
+
+    Returns:
+        Updated state with cover letter PDF output
+    """
+    try:
+        # Check if cover letter exists
+        cover_letter = state.get("cover_letter")
+        if not cover_letter:
+            raise ValueError("No cover letter found in state. Generate cover letter first.")
+
+        exporter = PDFExporter()
+
+        # Generate PDF bytes for download
+        pdf_bytes = exporter.markdown_to_pdf_bytes(cover_letter)
+
+        # Optionally save to file
+        pdf_path = exporter.markdown_to_pdf(cover_letter, filename="cover_letter.pdf")
+
+        return {
+            "cover_letter_pdf_path": pdf_path,
+            "cover_letter_pdf_bytes": pdf_bytes,
+            "current_stage": "completed",
+            "messages": [{"role": "system", "content": f"Cover letter PDF exported: {pdf_path}"}]
+        }
+    except Exception as e:
+        return {
+            "error": f"Cover letter PDF export failed: {str(e)}",
+            "current_stage": "error",
+            "messages": [{"role": "system", "content": f"Error: {str(e)}"}]
+        }
