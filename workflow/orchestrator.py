@@ -6,7 +6,9 @@ from workflow.graph import (
     modification_workflow,
     optimization_application_workflow,
     export_workflow,
-    cover_letter_workflow
+    cover_letter_workflow,
+    cover_letter_revision_workflow,
+    cover_letter_export_workflow
 )
 
 
@@ -25,6 +27,8 @@ class ResumeWorkflowOrchestrator:
         self.optimization_application_workflow = optimization_application_workflow
         self.export_workflow = export_workflow
         self.cover_letter_workflow = cover_letter_workflow
+        self.cover_letter_revision_workflow = cover_letter_revision_workflow
+        self.cover_letter_export_workflow = cover_letter_export_workflow
 
     def start_analysis(
         self,
@@ -102,16 +106,55 @@ class ResumeWorkflowOrchestrator:
 
     def generate_cover_letter(self, state: WorkflowState) -> WorkflowState:
         """
-        Generate cover letter and export to PDF (optional final step).
+        Generate cover letter, have it reviewed by Agent 8 (optional final step).
 
         Args:
             state: Workflow state with resume and job description
 
         Returns:
-            Updated workflow state with cover letter and PDF
+            Updated workflow state with cover letter and review feedback
         """
-        # Run cover letter workflow
+        # Run cover letter workflow (generate + review)
         result = self.cover_letter_workflow.invoke(state)
+
+        return result
+
+    def revise_cover_letter(
+        self,
+        state: WorkflowState,
+        user_feedback: str = None
+    ) -> WorkflowState:
+        """
+        Revise cover letter based on reviewer feedback and optional user feedback.
+
+        Args:
+            state: Workflow state with cover letter and review feedback
+            user_feedback: Optional additional feedback from the user
+
+        Returns:
+            Updated workflow state with revised cover letter
+        """
+        # Add user feedback to state if provided
+        if user_feedback:
+            state["user_cover_letter_feedback"] = user_feedback
+
+        # Run revision workflow
+        result = self.cover_letter_revision_workflow.invoke(state)
+
+        return result
+
+    def export_cover_letter(self, state: WorkflowState) -> WorkflowState:
+        """
+        Export approved cover letter to PDF.
+
+        Args:
+            state: Workflow state with approved cover letter
+
+        Returns:
+            Updated workflow state with cover letter PDF
+        """
+        # Run cover letter export workflow
+        result = self.cover_letter_export_workflow.invoke(state)
 
         return result
 

@@ -116,6 +116,8 @@ with st.sidebar:
         "final_scoring": "13. Final Score",
         "export": "14. Exporting PDF",
         "cover_letter_ready": "15. Cover Letter Generated",
+        "cover_letter_reviewed": "16. Cover Letter Reviewed",
+        "cover_letter_revised": "17. Cover Letter Revised",
         "completed": "16. Completed",
         "error": "❌ Error"
     }
@@ -1126,14 +1128,15 @@ elif current_stage in ["export", "completed"]:
 
     # Check if cover letter was already generated
     if state.get('cover_letter'):
-        st.success("✅ Cover letter generated!")
-
-        # Display cover letter
-        with st.expander("View Cover Letter", expanded=True):
-            st.markdown(state['cover_letter'])
-
-        # Download cover letter PDF
+        # Check if we have PDF (fully approved and exported)
         if state.get('cover_letter_pdf_bytes'):
+            st.success("✅ Cover letter finalized!")
+
+            # Display cover letter
+            with st.expander("View Final Cover Letter", expanded=True):
+                st.markdown(state['cover_letter'])
+
+            # Download cover letter PDF
             col1, col2 = st.columns(2)
             with col1:
                 st.download_button(
@@ -1152,23 +1155,144 @@ elif current_stage in ["export", "completed"]:
                     use_container_width=True
                 )
 
-        # Show summary
-        if state.get('cover_letter_summary'):
-            with st.expander("Cover Letter Summary"):
-                st.info(state['cover_letter_summary'])
+        else:
+            # Cover letter generated and reviewed, but not yet exported
+            st.success("✅ Cover letter generated and reviewed!")
+
+            # Display the cover letter
+            with st.expander("View Cover Letter", expanded=True):
+                st.markdown(state['cover_letter'])
+
+            # Show summary
+            if state.get('cover_letter_summary'):
+                with st.expander("Cover Letter Approach"):
+                    st.info(state['cover_letter_summary'])
+
+            # Display review feedback from Agent 8
+            if state.get('cover_letter_review'):
+                st.subheader("🔍 Review Feedback")
+                review = state['cover_letter_review']
+
+                # Overall assessment
+                st.info(f"**Overall Assessment:** {review.get('overall_assessment', 'N/A')}")
+
+                # Revision status
+                revision_needed = review.get('revision_needed', False)
+                revision_priority = review.get('revision_priority', 'none')
+
+                if revision_needed:
+                    if revision_priority == "critical":
+                        st.error(f"⚠️ Revision Priority: {revision_priority.upper()}")
+                    elif revision_priority == "moderate":
+                        st.warning(f"⚠️ Revision Priority: {revision_priority.capitalize()}")
+                    else:
+                        st.info(f"ℹ️ Revision Priority: {revision_priority.capitalize()}")
+                else:
+                    st.success("✅ No critical revisions needed!")
+
+                # Show issues
+                col1, col2, col3 = st.columns(3)
+
+                with col1:
+                    critical_issues = review.get('critical_issues', [])
+                    if critical_issues:
+                        with st.expander(f"🔴 Critical Issues ({len(critical_issues)})", expanded=True):
+                            for i, issue in enumerate(critical_issues, 1):
+                                st.markdown(f"**{i}. {issue.get('issue', 'N/A')}**")
+                                st.markdown(f"📍 *Location:* {issue.get('location', 'N/A')}")
+                                st.markdown(f"🔧 *Fix:* {issue.get('fix', 'N/A')}")
+                                st.divider()
+
+                with col2:
+                    content_issues = review.get('content_issues', [])
+                    if content_issues:
+                        with st.expander(f"🟡 Content Issues ({len(content_issues)})", expanded=False):
+                            for i, issue in enumerate(content_issues, 1):
+                                st.markdown(f"**{i}. {issue.get('issue', 'N/A')}**")
+                                st.markdown(f"📍 *Location:* {issue.get('location', 'N/A')}")
+                                st.markdown(f"🔧 *Fix:* {issue.get('fix', 'N/A')}")
+                                st.divider()
+
+                with col3:
+                    minor_issues = review.get('minor_issues', [])
+                    if minor_issues:
+                        with st.expander(f"🔵 Minor Issues ({len(minor_issues)})", expanded=False):
+                            for i, issue in enumerate(minor_issues, 1):
+                                st.markdown(f"**{i}. {issue.get('issue', 'N/A')}**")
+                                st.markdown(f"📍 *Location:* {issue.get('location', 'N/A')}")
+                                st.markdown(f"🔧 *Fix:* {issue.get('fix', 'N/A')}")
+                                st.divider()
+
+                # Show strengths
+                strengths = review.get('strengths', [])
+                if strengths:
+                    with st.expander("💪 Strengths", expanded=False):
+                        for strength in strengths:
+                            st.markdown(f"✓ {strength}")
+
+            # Show revision notes if this is a revised version
+            if state.get('cover_letter_revision_notes'):
+                with st.expander("📝 Revision Notes"):
+                    st.markdown(state['cover_letter_revision_notes'])
+
+            st.divider()
+
+            # User feedback and actions
+            st.subheader("📝 Your Feedback (Optional)")
+            user_feedback = st.text_area(
+                "Add any additional feedback or changes you'd like:",
+                placeholder="e.g., 'Make the tone more formal' or 'Emphasize my leadership experience'",
+                height=100,
+                key="cover_letter_user_feedback"
+            )
+
+            # Action buttons
+            col1, col2 = st.columns(2)
+
+            with col1:
+                if st.button("🔄 Revise Cover Letter", use_container_width=True):
+                    with st.spinner("Revising cover letter based on feedback..."):
+                        try:
+                            # Revise cover letter using orchestrator
+                            updated_state = st.session_state.customizer.orchestrator.revise_cover_letter(
+                                st.session_state.workflow_state,
+                                user_feedback=user_feedback if user_feedback.strip() else None
+                            )
+                            st.session_state.workflow_state = updated_state
+                            st.success("Cover letter revised successfully!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error revising cover letter: {str(e)}")
+                            st.code(traceback.format_exc())
+
+            with col2:
+                if st.button("✅ Approve & Export PDF", type="primary", use_container_width=True):
+                    with st.spinner("Exporting cover letter to PDF..."):
+                        try:
+                            # Export cover letter using orchestrator
+                            updated_state = st.session_state.customizer.orchestrator.export_cover_letter(
+                                st.session_state.workflow_state
+                            )
+                            st.session_state.workflow_state = updated_state
+                            st.success("Cover letter exported successfully!")
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error exporting cover letter: {str(e)}")
+                            st.code(traceback.format_exc())
+
     else:
         # Offer to generate cover letter
         st.info("💡 Click below to generate a personalized cover letter based on your resume and the job description.")
 
         if st.button("✨ Generate Cover Letter", use_container_width=True):
-            with st.spinner("Generating cover letter..."):
+            with st.spinner("Generating and reviewing cover letter..."):
                 try:
-                    # Generate cover letter using orchestrator
+                    # Generate cover letter using orchestrator (includes review)
                     updated_state = st.session_state.customizer.orchestrator.generate_cover_letter(
                         st.session_state.workflow_state
                     )
                     st.session_state.workflow_state = updated_state
-                    st.success("Cover letter generated successfully!")
+                    st.success("Cover letter generated and reviewed successfully!")
                     st.rerun()
                 except Exception as e:
                     st.error(f"Error generating cover letter: {str(e)}")

@@ -13,7 +13,9 @@ from workflow.nodes import (
     export_pdf_node,
     human_feedback_node,
     cover_letter_generation_node,
-    export_cover_letter_pdf_node
+    export_cover_letter_pdf_node,
+    review_cover_letter_node,
+    revise_cover_letter_node
 )
 
 
@@ -168,16 +170,59 @@ def create_cover_letter_workflow() -> StateGraph:
     """
     Create workflow for cover letter generation (optional final step).
 
+    Flow:
+    1. generate_cover_letter (Agent 7 writes)
+    2. review_cover_letter (Agent 8 reviews)
+    3. END (waits for user to optionally provide feedback and trigger revision)
+
     Returns:
         Compiled LangGraph workflow
     """
     workflow = StateGraph(WorkflowState)
 
     workflow.add_node("generate_cover_letter", cover_letter_generation_node)
-    workflow.add_node("export_cover_letter", export_cover_letter_pdf_node)
+    workflow.add_node("review_cover_letter", review_cover_letter_node)
 
     workflow.set_entry_point("generate_cover_letter")
-    workflow.add_edge("generate_cover_letter", "export_cover_letter")
+    workflow.add_edge("generate_cover_letter", "review_cover_letter")
+    workflow.add_edge("review_cover_letter", END)
+
+    return workflow
+
+
+def create_cover_letter_revision_workflow() -> StateGraph:
+    """
+    Create workflow for cover letter revision (after review and user feedback).
+
+    Flow:
+    1. revise_cover_letter (Agent 7 revises based on Agent 8 feedback + user feedback)
+    2. END (returns to user for approval)
+
+    Returns:
+        Compiled LangGraph workflow
+    """
+    workflow = StateGraph(WorkflowState)
+
+    workflow.add_node("revise_cover_letter", revise_cover_letter_node)
+
+    workflow.set_entry_point("revise_cover_letter")
+    workflow.add_edge("revise_cover_letter", END)
+
+    return workflow
+
+
+def create_cover_letter_export_workflow() -> StateGraph:
+    """
+    Create workflow for cover letter PDF export (final step).
+
+    Returns:
+        Compiled LangGraph workflow
+    """
+    workflow = StateGraph(WorkflowState)
+
+    workflow.add_node("export_cover_letter", export_cover_letter_pdf_node)
+
+    workflow.set_entry_point("export_cover_letter")
     workflow.add_edge("export_cover_letter", END)
 
     return workflow
@@ -189,3 +234,5 @@ modification_workflow = create_modification_workflow().compile()
 optimization_application_workflow = create_optimization_application_workflow().compile()
 export_workflow = create_export_workflow().compile()
 cover_letter_workflow = create_cover_letter_workflow().compile()
+cover_letter_revision_workflow = create_cover_letter_revision_workflow().compile()
+cover_letter_export_workflow = create_cover_letter_export_workflow().compile()

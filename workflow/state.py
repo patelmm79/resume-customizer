@@ -66,6 +66,13 @@ class WorkflowState(TypedDict):
     cover_letter_summary: Optional[str]
     generate_cover_letter: Optional[bool]
 
+    # Agent 8 outputs (Cover Letter Review)
+    cover_letter_review: Optional[Dict]  # Review feedback from Agent 8
+    cover_letter_revision_needed: Optional[bool]  # Whether revision is needed
+    cover_letter_revised: Optional[str]  # Revised cover letter
+    cover_letter_revision_notes: Optional[str]  # Notes on what was revised
+    user_cover_letter_feedback: Optional[str]  # User's additional feedback
+
     # Final outputs
     pdf_path: Optional[str]
     pdf_bytes: Optional[bytes]
@@ -130,6 +137,14 @@ def create_initial_state(
         cover_letter=None,
         cover_letter_summary=None,
         generate_cover_letter=False,
+        cover_letter_review=None,
+        cover_letter_revision_needed=None,
+        cover_letter_revised=None,
+        cover_letter_revision_notes=None,
+        user_cover_letter_feedback=None,
+        optimization_suggestions=None,
+        optimization_analysis=None,
+        word_count_before_optimization=None,
         pdf_path=None,
         pdf_bytes=None,
         cover_letter_pdf_path=None,

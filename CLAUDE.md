@@ -95,10 +95,32 @@ This application implements a **multi-agent system with LangGraph orchestration*
          │
          ▼
 ┌─────────────────┐
-│  Agent 7:       │ → Cover Letter (Optional)
-│  Cover Letter   │ → Cover Letter PDF
+│  Agent 7:       │ → Cover Letter Draft
+│  Write Letter   │
 │  [Node]         │
 └────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  Agent 8:       │ → Review Feedback
+│  Review Letter  │ → Critical/Content/Minor Issues
+│  [Node]         │ → Strengths
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────┐
+│  HUMAN          │ ← User reviews feedback & adds notes
+│  [Checkpoint]   │
+└────────┬────────┘
+         │
+    ┌────┴─────┐
+    ▼          ▼
+[Revise]   [Approve & Export]
+    │          │
+    ▼          ▼
+Agent 7    Cover Letter PDF
+Revises
+(loop back)
          │
          ▼
 ┌─────────────┐
@@ -186,12 +208,14 @@ This application implements a **multi-agent system with LangGraph orchestration*
   - Ensure ATS-friendly formatting
 - **LangGraph Node**: `export_pdf_node`
 
-### Agent 7: Cover Letter Generator (Optional)
+### Agent 7: Cover Letter Writer (Optional)
 - **Input**: Optimized resume (markdown), job description
-- **Output**:
-  - Tailored cover letter (markdown)
+- **Output (Generation Phase)**:
+  - Tailored cover letter draft (markdown)
   - Cover letter summary (approach and key points)
-  - Cover letter PDF
+- **Output (Revision Phase)**:
+  - Revised cover letter (markdown)
+  - Revision notes (what was changed)
 - **Responsibilities**:
   - Generate personalized cover letter based on resume and job
   - Highlight candidate's most relevant qualifications
@@ -199,8 +223,27 @@ This application implements a **multi-agent system with LangGraph orchestration*
   - Create cohesive narrative about candidate's career
   - Show enthusiasm and cultural fit
   - Keep it concise (250-350 words, 3-4 paragraphs)
-  - Export to professional PDF format
-- **LangGraph Node**: `cover_letter_generation_node` and `export_cover_letter_pdf_node`
+  - Revise based on Agent 8 feedback + user feedback
+  - Preserve identified strengths while fixing issues
+- **LangGraph Nodes**: `cover_letter_generation_node`, `revise_cover_letter_node`
+
+### Agent 8: Cover Letter Reviewer (Optional)
+- **Input**: Cover letter draft, job description, resume (for context)
+- **Output**:
+  - Overall quality assessment
+  - Critical issues (must fix - dealbreakers)
+  - Content issues (should fix - weakens letter)
+  - Minor issues (nice to fix - polish)
+  - Strengths (what works well)
+  - Revision needed flag + priority level
+- **Responsibilities**:
+  - Review cover letter for quality and professionalism
+  - Identify factual errors, placeholder text, incorrect dates
+  - Flag content problems (too long, weak opening, generic statements)
+  - Suggest improvements for tone, formatting, word choice
+  - Highlight effective elements to preserve
+  - Determine if revision is critical, moderate, minor, or unnecessary
+- **LangGraph Node**: `review_cover_letter_node`
 
 ## LangGraph Integration
 
@@ -218,7 +261,9 @@ The workflow uses a **typed state dictionary** (`WorkflowState`) that tracks:
 2. **Modification Workflow**: Modify → Rescore → Suggest Optimizations → END
 3. **Optimization Application Workflow**: Apply Optimizations → Validate → END
 4. **Export Workflow**: Export → END
-5. **Cover Letter Workflow** (Optional): Generate Cover Letter → Export Cover Letter PDF → END
+5. **Cover Letter Workflow** (Optional): Generate Cover Letter → Review → END
+6. **Cover Letter Revision Workflow** (Optional): Revise (with feedback) → END
+7. **Cover Letter Export Workflow** (Optional): Export PDF → END
 
 Each phase can be invoked independently with human-in-the-loop checkpoints between phases.
 
@@ -255,7 +300,8 @@ resume-customizer/
 │   ├── agent_4_validator.py   # Formatting validation
 │   ├── agent_5_optimizer.py   # Length optimization
 │   ├── agent_6_freeform.py    # Freeform editing
-│   └── agent_7_cover_letter.py # Cover letter generation
+│   ├── agent_7_cover_letter.py # Cover letter generation & revision
+│   └── agent_8_reviewer.py    # Cover letter review & feedback
 ├── workflow/
 │   ├── __init__.py
 │   ├── state.py               # LangGraph state definitions
@@ -323,7 +369,10 @@ resume-customizer/
 11. **Checkpoint**: Review validation results and approve
 12. Export to PDF
 13. **Optional**: Generate a tailored cover letter with Agent 7
-14. Download both resume and cover letter as PDFs
+14. Agent 8 automatically reviews the cover letter for quality
+15. **Checkpoint**: Review feedback, optionally add your own notes
+16. Either revise cover letter (loops back to step 14) or approve & export
+17. Download both resume and cover letter as PDFs
 
 ### Programmatic Usage (LangGraph)
 

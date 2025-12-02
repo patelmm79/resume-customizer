@@ -6,6 +6,7 @@ from agents.agent_2_modifier import ResumeModifierAgent
 from agents.agent_4_validator import ResumeValidatorAgent
 from agents.agent_5_optimizer import ResumeOptimizerAgent
 from agents.agent_7_cover_letter import CoverLetterAgent
+from agents.agent_8_reviewer import review_cover_letter
 from utils.job_scraper import JobScraper
 from utils.pdf_exporter import PDFExporter
 
@@ -410,6 +411,110 @@ def export_cover_letter_pdf_node(state: WorkflowState) -> Dict[str, Any]:
     except Exception as e:
         return {
             "error": f"Cover letter PDF export failed: {str(e)}",
+            "current_stage": "error",
+            "messages": [{"role": "system", "content": f"Error: {str(e)}"}]
+        }
+
+
+def review_cover_letter_node(state: WorkflowState) -> Dict[str, Any]:
+    """
+    Agent 8: Review cover letter for quality and issues.
+
+    Args:
+        state: Current workflow state
+
+    Returns:
+        Updated state with review feedback
+    """
+    try:
+        # Get the cover letter to review
+        cover_letter = state.get("cover_letter")
+        if not cover_letter:
+            raise ValueError("No cover letter found to review")
+
+        # Get resume for context
+        final_resume = state.get("freeform_resume") or state.get("optimized_resume") or state.get("modified_resume")
+        if not final_resume:
+            raise ValueError("No resume found in state")
+
+        # Review the cover letter
+        review_result = review_cover_letter(
+            cover_letter=cover_letter,
+            job_description=state["job_description"],
+            resume=final_resume
+        )
+
+        # Determine if revision is needed
+        revision_needed = review_result.get("revision_needed", False)
+        revision_priority = review_result.get("revision_priority", "none")
+
+        return {
+            "cover_letter_review": review_result,
+            "cover_letter_revision_needed": revision_needed,
+            "current_stage": "cover_letter_reviewed",
+            "messages": [{
+                "role": "ai",
+                "content": f"Agent 8: Cover letter reviewed. Revision needed: {revision_needed} (Priority: {revision_priority})"
+            }]
+        }
+    except Exception as e:
+        return {
+            "error": f"Cover letter review failed: {str(e)}",
+            "current_stage": "error",
+            "messages": [{"role": "system", "content": f"Error: {str(e)}"}]
+        }
+
+
+def revise_cover_letter_node(state: WorkflowState) -> Dict[str, Any]:
+    """
+    Agent 7 (Revision): Revise cover letter based on reviewer feedback and user input.
+
+    Args:
+        state: Current workflow state
+
+    Returns:
+        Updated state with revised cover letter
+    """
+    try:
+        # Get required data
+        original_cover_letter = state.get("cover_letter")
+        review_feedback = state.get("cover_letter_review")
+        user_feedback = state.get("user_cover_letter_feedback", "")
+
+        if not original_cover_letter:
+            raise ValueError("No cover letter found to revise")
+
+        if not review_feedback:
+            raise ValueError("No review feedback found")
+
+        # Get resume for context
+        final_resume = state.get("freeform_resume") or state.get("optimized_resume") or state.get("modified_resume")
+        if not final_resume:
+            raise ValueError("No resume found in state")
+
+        # Revise the cover letter
+        agent = CoverLetterAgent()
+        revision_result = agent.revise_cover_letter(
+            original_cover_letter=original_cover_letter,
+            reviewer_feedback=review_feedback,
+            resume_content=final_resume,
+            job_description=state["job_description"],
+            user_feedback=user_feedback
+        )
+
+        return {
+            "cover_letter_revised": revision_result["cover_letter"],
+            "cover_letter_revision_notes": revision_result["revision_notes"],
+            "cover_letter": revision_result["cover_letter"],  # Update main cover letter
+            "current_stage": "cover_letter_revised",
+            "messages": [{
+                "role": "ai",
+                "content": "Agent 7: Cover letter revised based on feedback"
+            }]
+        }
+    except Exception as e:
+        return {
+            "error": f"Cover letter revision failed: {str(e)}",
             "current_stage": "error",
             "messages": [{"role": "system", "content": f"Error: {str(e)}"}]
         }
