@@ -1,5 +1,5 @@
 """Agent 5: Resume Length Optimizer."""
-from typing import Dict
+from typing import Dict, List
 from utils.agent_helper import get_agent_llm_client
 from utils.resume_validator import ResumeStructureValidator
 from utils.resume_standards import get_optimization_prompt_prefix

@@ -2,6 +2,7 @@
 from typing import Dict, List
 from utils.agent_helper import get_agent_llm_client
 from utils.resume_validator import ResumeStructureValidator
+from utils.resume_standards import get_modification_prompt_prefix
 
 
 class ResumeModifierAgent:
@@ -37,78 +38,16 @@ class ResumeModifierAgent:
         if not selected_suggestions:
             return original_resume
 
-        system_prompt = """You are an expert resume writer and editor. Your job is to:
-1. Modify a resume based on specific suggestions
-2. Maintain professional markdown formatting
-3. Keep the resume to approximately 1 page (aim for 500-700 words)
-4. Optimize for ATS (Applicant Tracking Systems)
-5. Use strong action verbs and quantifiable achievements
-6. Ensure the resume is tailored to the target job
+        # Get centralized standards
+        standards_prefix = get_modification_prompt_prefix()
 
-Description of resume structure:
-
-- The header of the resume contains the candidate name, contact information, and most likely a headline that describes the candidate in no more than 10 words.
-- The sections of the resume include:
---Summary: This section is a paragraph that summarizes the candidate and his experience.
---Experience: This section shows the job history of the candidate.  See below for additional description of Experience section
---Skills: This section is a list of key technical and strategic skills.
---Key Achievements: This section is a set of 2-3 bullet points that outlines the candidate's key achievements.
---Education: This section lists the candidate's education history, focusing on degrees obtained.
---Certifications: This section lists the certifications obtained by the candidate. 
-
-Description of Experience section:
-- The following is an example of one job in Markdown format:
-"**Advisor in Data Science and AI** | <span style="color: #1a73e8;">**Freelance**</span> | New York, NY, USA | *Mar 2025 - Present*\
-*Provided strategic advice & built solutions to accelerate digital transformation, automation, and cost control using agentic AI.*
-* Built an LLM service for less than $2 per day by containerizing open-source LLM, using Gemma from Hugging Face and deploying on Google Cloud Run.
-* Created agentic AI application that triggers GitHub issues automatically by analyzing application logs, which flagged 4 problems and potential solutions.
-* Devised an agentic AI web search summary tool to accelerate company research from 4 hours to 5 minutes,  Used LangGraph for agent orchestration, and Claude code as coding assistant."
---Row 1 contains the job title, company, location, and date range. CRITICAL: This row MUST end with a backslash "\" character. We will call this row "job metadata".
---Row 2 contains a high-level description of the company and the role, and is marked in *italics*. CRITICAL: This row must appear IMMEDIATELY after Row 1 with NO blank lines in between. The backslash "\" at the end of Row 1 creates the line break. We will call this row "job headline".
---Rows 3, 4, and 5 are bullet points listing achievements in the role. The number of bullet points can vary between 1 and 10. We will call these "job bullet points".  
-
-
-
-
-
-IMPORTANT CONSTRAINTS:
-- Keep it concise - prioritize relevance over length
-- Remove or minimize irrelevant information
-- Focus on making changes to the Experience, Skills, and Summary sections.  Also adapt the headline.
-- Use bullet points for readability
-- Maintain proper markdown structure
-- Focus on impact and results
-- Do not modify the Education section
-- PRESERVE all section separators (*** horizontal rules) from the original resume exactly as they appear
+        system_prompt = f"""{standards_prefix}
 
 CRITICAL RULES FOR SKILLS:
 - ONLY add skills that are EXPLICITLY listed in the suggestions provided
 - DO NOT add any skills that are not in the approved suggestions list
 - DO NOT infer or assume additional skills should be added
 - If a skill is not in the suggestions, it must NOT appear in the modified resume unless it was already in the original resume
-
-GUIDANCE FOR SUMMARY SECTION:
-- Craft a summary that bests aligns with the stated job description, emphasizing relevant qualifications and incorporating key responsibilities and skills from the job description.  Ensure each bullet point best describes the action taken and the result achieved.
-
-GUIDANCE FOR EXPERIENCES SECTION:
-- Polish the description of the three most recent positions to showcase how the experience best aligns with the requirements of the role.
-
-CRITICAL RULES FOR EXPERIENCE SECTION (ABSOLUTELY NON-NEGOTIABLE):
-- ALWAYS preserve the backslash "\" at the end of job metadata (Row 1). This is MANDATORY.
-- The job headline (Row 2 in italics) MUST appear on the very next line after job metadata with NO blank lines in between.
-- The correct format is: **Title** | **Company** | Location | *Dates*\ (note the backslash at end)
-                          *Job headline in italics immediately on next line*
-- **NEVER REMOVE THE JOB HEADLINE UNDER ANY CIRCUMSTANCES** - even if you remove all job bullet points, the job headline MUST remain. This is the highest priority rule.
-- DO NOT insert blank lines between job metadata and job headline - they must be consecutive lines.
-- Every job entry MUST have: (1) job metadata line ending with \, (2) job headline in italics on the next line, (3) optional bullet points. The job headline is NEVER optional.
-
-FORMATTING REQUIREMENTS:
-- Each job entry MUST be on its own separate line
-- Use CONSISTENT formatting: **Job Title** | <span style="color: #1a73e8;">**Company**</span> | Location | *Dates*
-- Include ONE blank line after each job entry (standard markdown, not <br> tags)
-- Never combine multiple jobs on the same line
-- Do NOT use HTML <br> tags - use standard markdown blank lines only.
-- Maintain proper markdown structure with clear line breaks
 
 Return ONLY the modified resume in markdown format. Do not include any explanations or comments."""
 

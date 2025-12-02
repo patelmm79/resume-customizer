@@ -1,6 +1,7 @@
 """Agent 1: Resume Scorer and Analyzer."""
 from typing import Dict, List
 from utils.agent_helper import get_agent_llm_client
+import re
 
 
 class ResumeScorerAgent:
@@ -9,6 +10,74 @@ class ResumeScorerAgent:
     def __init__(self):
         """Initialize the scorer agent."""
         self.client = get_agent_llm_client()
+        self.max_job_description_chars = 30000  # ~7500 tokens (4 chars per token average)
+
+    def _truncate_job_description(self, job_description: str) -> str:
+        """
+        Intelligently truncate job description if too long.
+
+        Args:
+            job_description: Original job description
+
+        Returns:
+            Truncated job description preserving key information
+        """
+        if len(job_description) <= self.max_job_description_chars:
+            return job_description
+
+        print(f"[INFO] Job description is {len(job_description)} chars, truncating to {self.max_job_description_chars}")
+
+        # Extract key sections using common patterns
+        sections = {
+            'responsibilities': [],
+            'requirements': [],
+            'qualifications': [],
+            'skills': [],
+            'other': []
+        }
+
+        lines = job_description.split('\n')
+        current_section = 'other'
+
+        for line in lines:
+            line_lower = line.lower().strip()
+
+            # Detect section headers
+            if any(keyword in line_lower for keyword in ['responsibilities', 'duties', 'what you\'ll do']):
+                current_section = 'responsibilities'
+            elif any(keyword in line_lower for keyword in ['requirements', 'required', 'must have']):
+                current_section = 'requirements'
+            elif any(keyword in line_lower for keyword in ['qualifications', 'experience', 'background']):
+                current_section = 'qualifications'
+            elif any(keyword in line_lower for keyword in ['skills', 'technical', 'technologies']):
+                current_section = 'skills'
+
+            # Add line to current section
+            if line.strip():
+                sections[current_section].append(line)
+
+        # Prioritize important sections and truncate
+        result = []
+        char_budget = self.max_job_description_chars
+
+        # Priority order: requirements > skills > qualifications > responsibilities > other
+        priority_sections = ['requirements', 'skills', 'qualifications', 'responsibilities', 'other']
+
+        for section_name in priority_sections:
+            section_content = '\n'.join(sections[section_name])
+            if section_content and char_budget > 0:
+                if len(section_content) <= char_budget:
+                    result.append(section_content)
+                    char_budget -= len(section_content)
+                else:
+                    # Truncate this section
+                    result.append(section_content[:char_budget] + "\n[... truncated ...]")
+                    char_budget = 0
+                    break
+
+        truncated = '\n'.join(result)
+        print(f"[INFO] Truncated job description to {len(truncated)} chars")
+        return truncated
 
     def analyze_and_score(
         self,
@@ -28,6 +97,9 @@ class ResumeScorerAgent:
                 - analysis: str
                 - suggestions: List[Dict] with 'id', 'text', and 'category'
         """
+        # Truncate job description if too long
+        job_description = self._truncate_job_description(job_description)
+
         system_prompt = """You are an expert resume analyzer and career coach. Your job is to:
 1. Carefully compare a resume against a job description
 2. Provide a compatibility score from 1-100 (where 100 is perfect match)
@@ -112,10 +184,36 @@ Skills not checked will NOT be added to the resume"""
                 temperature=0.7
             )
 
-            return self._parse_response(response)
+            print(f"[DEBUG] Raw LLM response length: {len(response)} chars")
+            print(f"[DEBUG] Response preview: {response[:500]}...")
+
+            result = self._parse_response(response)
+            print(f"[DEBUG] Parsed - Score: {result['score']}, Analysis length: {len(result['analysis'])}, Suggestions: {len(result['suggestions'])}")
+
+            return result
 
         except Exception as e:
             raise Exception(f"Error in resume analysis: {str(e)}")
+
+    def _extract_suggestions_from_text(self, text: str) -> list:
+        """Extract suggestions from unstructured text."""
+        suggestions = []
+        # Look for bulleted lists or numbered lists
+        lines = text.split('\n')
+        for line in lines:
+            line = line.strip()
+            if line.startswith('-') or line.startswith('•') or re.match(r'^\d+\.', line):
+                # This looks like a suggestion
+                suggestion_text = re.sub(r'^[-•\d.]\s*', '', line).strip()
+                if len(suggestion_text) > 10:  # Filter out very short lines
+                    suggestions.append({
+                        "id": len(suggestions),
+                        "text": suggestion_text,
+                        "category": "General",
+                        "selected": True,
+                        "edited_text": suggestion_text
+                    })
+        return suggestions
 
     def _parse_response(self, response: str) -> Dict:
         """
@@ -127,87 +225,99 @@ Skills not checked will NOT be added to the resume"""
         Returns:
             Structured dictionary with score, analysis, and suggestions
         """
-        lines = response.strip().split('\n')
-
         score = None
         analysis = []
         suggestions = []
-        current_section = None
 
-        for line in lines:
-            line = line.strip()
+        # Check if response follows the expected format
+        if "SCORE:" in response and "SUGGESTIONS:" in response:
+            # Structured format parsing
+            lines = response.strip().split('\n')
+            current_section = None
 
-            if line.startswith("SCORE:"):
-                score_text = line.replace("SCORE:", "").strip()
-                try:
-                    score = int(score_text)
-                except ValueError:
-                    # Try to extract first number
-                    import re
-                    match = re.search(r'\d+', score_text)
-                    if match:
-                        score = int(match.group())
-                    else:
-                        score = 5  # Default
-                current_section = "score"
+            for line in lines:
+                line = line.strip()
 
-            elif line.startswith("ANALYSIS:"):
-                current_section = "analysis"
+                if line.startswith("SCORE:"):
+                    score_text = line.replace("SCORE:", "").strip()
+                    try:
+                        score = int(score_text)
+                    except ValueError:
+                        match = re.search(r'\d+', score_text)
+                        if match:
+                            score = int(match.group())
+                    current_section = "score"
 
-            elif line.startswith("SUGGESTIONS:"):
-                current_section = "suggestions"
+                elif line.startswith("ANALYSIS:"):
+                    current_section = "analysis"
+                    analysis_text = line.replace("ANALYSIS:", "").strip()
+                    if analysis_text:
+                        analysis.append(analysis_text)
 
-            elif line and current_section == "analysis" and not line.startswith("SUGGESTIONS:"):
-                analysis.append(line)
+                elif line.startswith("SUGGESTIONS:"):
+                    current_section = "suggestions"
 
-            elif line and current_section == "suggestions" and line.startswith("-"):
-                # Parse suggestion with category
-                suggestion_text = line[1:].strip()  # Remove leading '-'
+                elif line and current_section == "analysis":
+                    analysis.append(line)
 
-                # Extract category if present
-                category = "General"
-                if suggestion_text.startswith("[CATEGORY:"):
-                    end_bracket = suggestion_text.find("]")
-                    if end_bracket != -1:
-                        category = suggestion_text[10:end_bracket].strip()
-                        suggestion_text = suggestion_text[end_bracket + 1:].strip()
+                elif line and current_section == "suggestions" and line.startswith("-"):
+                    # Parse structured suggestion
+                    suggestion_text = line[1:].strip()
+                    category = "General"
 
-                # Extract DESCRIPTION and SUGGESTED_TEXT if present
-                description = None
-                suggested_text = None
+                    if suggestion_text.startswith("[CATEGORY:"):
+                        end_bracket = suggestion_text.find("]")
+                        if end_bracket != -1:
+                            category = suggestion_text[10:end_bracket].strip()
+                            suggestion_text = suggestion_text[end_bracket + 1:].strip()
 
-                if "[DESCRIPTION:" in suggestion_text:
-                    # Extract description
-                    desc_start = suggestion_text.find("[DESCRIPTION:") + 13
-                    desc_end = suggestion_text.find("]", desc_start)
-                    if desc_end != -1:
-                        description = suggestion_text[desc_start:desc_end].strip()
-                        suggestion_text = suggestion_text[desc_end + 1:].strip()
+                    description = None
+                    suggested_text = None
 
-                if "[SUGGESTED_TEXT:" in suggestion_text:
-                    # Extract suggested text
-                    text_start = suggestion_text.find("[SUGGESTED_TEXT:") + 16
-                    text_end = suggestion_text.find("]", text_start)
-                    if text_end != -1:
-                        suggested_text = suggestion_text[text_start:text_end].strip()
-                        suggestion_text = suggestion_text[text_end + 1:].strip()
+                    if "[DESCRIPTION:" in suggestion_text:
+                        desc_start = suggestion_text.find("[DESCRIPTION:") + 13
+                        desc_end = suggestion_text.find("]", desc_start)
+                        if desc_end != -1:
+                            description = suggestion_text[desc_start:desc_end].strip()
+                            suggestion_text = suggestion_text[desc_end + 1:].strip()
 
-                # If we have both description and suggested_text, use description for display
-                if description and suggested_text:
-                    display_text = description
-                    edited_text = suggested_text
-                else:
-                    # For simple suggestions (like Skills), just use the text as-is
-                    display_text = suggestion_text
-                    edited_text = suggestion_text
+                    if "[SUGGESTED_TEXT:" in suggestion_text:
+                        text_start = suggestion_text.find("[SUGGESTED_TEXT:") + 16
+                        text_end = suggestion_text.find("]", text_start)
+                        if text_end != -1:
+                            suggested_text = suggestion_text[text_start:text_end].strip()
 
-                suggestions.append({
-                    "id": len(suggestions),
-                    "text": display_text,
-                    "category": category,
-                    "selected": True,  # Default to selected
-                    "edited_text": edited_text  # Pre-populate with suggested text
-                })
+                    display_text = description if description and suggested_text else suggestion_text
+                    edited_text = suggested_text if suggested_text else suggestion_text
+
+                    suggestions.append({
+                        "id": len(suggestions),
+                        "text": display_text,
+                        "category": category,
+                        "selected": True,
+                        "edited_text": edited_text
+                    })
+        else:
+            # Fallback: conversational format
+            print("[DEBUG] Response not in expected format, using fallback parsing")
+
+            # Extract score
+            score_match = re.search(r'(?:score|rating).*?(\d+)(?:/100|\s+out of 100)', response, re.IGNORECASE)
+            if score_match:
+                score = int(score_match.group(1))
+            else:
+                numbers = re.findall(r'\b(\d+)\b', response)
+                for num in numbers:
+                    n = int(num)
+                    if 1 <= n <= 100:
+                        score = n
+                        break
+
+            # Use entire response as analysis
+            analysis = [response]
+
+            # Extract suggestions
+            suggestions = self._extract_suggestions_from_text(response)
 
         # Ensure score is valid
         if score is None or score < 1 or score > 100:
@@ -215,7 +325,7 @@ Skills not checked will NOT be added to the resume"""
 
         return {
             "score": score,
-            "analysis": "\n".join(analysis),
+            "analysis": "\n".join(analysis) if analysis else "Analysis not available",
             "suggestions": suggestions
         }
 
@@ -237,6 +347,9 @@ Skills not checked will NOT be added to the resume"""
                 - score: int (1-100)
                 - analysis: str (brief evaluation)
         """
+        # Truncate job description if too long
+        job_description = self._truncate_job_description(job_description)
+
         system_prompt = """You are an expert resume analyzer. Your job is to:
 1. Carefully compare a resume against a job description
 2. Provide a compatibility score from 1-100 (where 100 is perfect match)
