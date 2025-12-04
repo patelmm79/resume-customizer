@@ -157,16 +157,25 @@ Format rules:
         for line in lines:
             line = line.strip()
 
-            # Support both "ANALYSIS:" and "# ANALYSIS" formats
-            if line.startswith("ANALYSIS:") or line.upper() == "# ANALYSIS":
+            # Support multiple header formats: "ANALYSIS:", "# ANALYSIS", "## ANALYSIS"
+            if (line.startswith("ANALYSIS:") or
+                line.upper().startswith("# ANALYSIS") or
+                line.upper().startswith("## ANALYSIS") or
+                "ANALYSIS" in line.upper() and (line.startswith("#") or line.startswith("**"))):
                 current_section = "analysis"
-                analysis_text = line.replace("ANALYSIS:", "").replace("# ANALYSIS", "").strip()
+                # Strip all markdown formatting
+                analysis_text = re.sub(r'^#+\s*', '', line)  # Remove leading #'s
+                analysis_text = re.sub(r'\*\*', '', analysis_text)  # Remove bold
+                analysis_text = analysis_text.replace("ANALYSIS:", "").replace("ANALYSIS", "").strip()
                 if analysis_text:
                     analysis = analysis_text
                 continue
 
-            # Support both "SUGGESTIONS:" and "# SUGGESTIONS" formats
-            elif line.startswith("SUGGESTIONS:") or line.upper() == "# SUGGESTIONS":
+            # Support multiple header formats: "SUGGESTIONS:", "# SUGGESTIONS", "## SUGGESTIONS"
+            elif (line.startswith("SUGGESTIONS:") or
+                  line.upper().startswith("# SUGGESTIONS") or
+                  line.upper().startswith("## SUGGESTIONS") or
+                  "SUGGESTIONS" in line.upper() and (line.startswith("#") or line.startswith("**"))):
                 current_section = "suggestions"
                 continue
 
@@ -189,13 +198,19 @@ Format rules:
                 description = suggestion_text
                 location = ""
 
-                # Extract CATEGORY - support both [CATEGORY: X] and **CATEGORY: X** formats
+                # Extract CATEGORY - support multiple formats
                 if "[CATEGORY:" in suggestion_text:
                     cat_match = re.search(r'\[CATEGORY:\s*([^\]]+)\]', suggestion_text)
                     if cat_match:
                         category = cat_match.group(1).strip()
+                elif "**CATEGORY:**" in suggestion_text:
+                    # Match **CATEGORY:** followed by text until | or next **
+                    cat_match = re.search(r'\*\*CATEGORY:\*\*\s*([^\|\*]+)', suggestion_text)
+                    if cat_match:
+                        category = cat_match.group(1).strip()
                 elif "**CATEGORY:" in suggestion_text:
-                    cat_match = re.search(r'\*\*CATEGORY:\s*([^\*]+)\*\*', suggestion_text)
+                    # Match **CATEGORY: (without closing **)
+                    cat_match = re.search(r'\*\*CATEGORY:\s*([^\|\*]+)', suggestion_text)
                     if cat_match:
                         category = cat_match.group(1).strip()
                 elif "CATEGORY:" in suggestion_text:
@@ -204,14 +219,19 @@ Format rules:
                     if cat_match:
                         category = cat_match.group(1).strip()
 
-                # Extract DESCRIPTION - support both [DESCRIPTION: X] and **DESCRIPTION: X** formats
+                # Extract DESCRIPTION - support multiple formats
                 if "[DESCRIPTION:" in suggestion_text:
                     desc_match = re.search(r'\[DESCRIPTION:\s*([^\]]+)\]', suggestion_text)
                     if desc_match:
                         description = desc_match.group(1).strip()
+                elif "**DESCRIPTION:**" in suggestion_text:
+                    # Match **DESCRIPTION:** ... up to next | or **
+                    desc_match = re.search(r'\*\*DESCRIPTION:\*\*\s*([^\|]+?)(?:\s*\||\s*\*\*|$)', suggestion_text)
+                    if desc_match:
+                        description = desc_match.group(1).strip()
                 elif "**DESCRIPTION:" in suggestion_text:
-                    # Match **DESCRIPTION:** ... up to next | or end
-                    desc_match = re.search(r'\*\*DESCRIPTION:\*\*\s*([^\|]+)', suggestion_text)
+                    # Match **DESCRIPTION: (without closing **)
+                    desc_match = re.search(r'\*\*DESCRIPTION:\s*([^\|]+?)(?:\s*\||\s*\*\*|$)', suggestion_text)
                     if desc_match:
                         description = desc_match.group(1).strip()
                 elif "DESCRIPTION:" in suggestion_text:
@@ -220,14 +240,19 @@ Format rules:
                     if desc_match:
                         description = desc_match.group(1).strip()
 
-                # Extract LOCATION - support both [LOCATION: X] and **LOCATION: X** formats
+                # Extract LOCATION - support multiple formats
                 if "[LOCATION:" in suggestion_text:
                     loc_match = re.search(r'\[LOCATION:\s*([^\]]+)\]', suggestion_text)
                     if loc_match:
                         location = loc_match.group(1).strip()
-                elif "**LOCATION:" in suggestion_text:
+                elif "**LOCATION:**" in suggestion_text:
                     # Match **LOCATION:** ... to end of line
                     loc_match = re.search(r'\*\*LOCATION:\*\*\s*(.+?)$', suggestion_text)
+                    if loc_match:
+                        location = loc_match.group(1).strip()
+                elif "**LOCATION:" in suggestion_text:
+                    # Match **LOCATION: (without closing **)
+                    loc_match = re.search(r'\*\*LOCATION:\s*(.+?)$', suggestion_text)
                     if loc_match:
                         location = loc_match.group(1).strip()
                 elif "LOCATION:" in suggestion_text:
