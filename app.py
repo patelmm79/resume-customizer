@@ -147,6 +147,35 @@ with st.sidebar:
     st.markdown("## 📄 Resume Customizer")
     st.caption("*AI-Powered Resume Optimization with LangGraph*")
     st.divider()
+
+    # Debug Mode Toggle
+    debug_mode = st.toggle("🐛 Debug Mode", value=False, help="Enable debug logging and detailed error messages")
+
+    if debug_mode:
+        st.caption("⚠️ Debug mode enabled")
+        # Set environment variable for debug mode
+        import os
+        os.environ['DEBUG_MODE'] = '1'
+
+        # Show debug info if we have workflow state
+        if st.session_state.workflow_state:
+            with st.expander("🔍 Debug Info", expanded=False):
+                st.json({
+                    "current_stage": st.session_state.workflow_state.get("current_stage"),
+                    "initial_score": st.session_state.workflow_state.get("initial_score"),
+                    "new_score": st.session_state.workflow_state.get("new_score"),
+                    "optimized_resume_exists": st.session_state.workflow_state.get("optimized_resume") is not None,
+                    "optimized_resume_round2_exists": st.session_state.workflow_state.get("optimized_resume_round2") is not None,
+                    "final_score": st.session_state.workflow_state.get("final_score"),
+                    "word_count_after": st.session_state.workflow_state.get("word_count_after"),
+                    "word_count_after_round2": st.session_state.workflow_state.get("word_count_after_round2"),
+                    "error": st.session_state.workflow_state.get("error"),
+                })
+    else:
+        import os
+        os.environ['DEBUG_MODE'] = '0'
+
+    st.divider()
     st.header("⚙️ LLM Configuration")
 
     # Import model configuration (get fresh list to support dynamic .env config)
