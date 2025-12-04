@@ -38,17 +38,28 @@ def get_current_stage():
     return st.session_state.workflow_state.get("current_stage", "input")
 
 
-# Header
-st.title("📄 Resume Customizer")
-st.markdown("### AI-Powered Resume Optimization with LangGraph")
+# Compact Header
+header_col1, header_col2 = st.columns([1, 3])
+with header_col1:
+    st.markdown("## 📄 Resume Customizer")
+with header_col2:
+    st.markdown("*AI-Powered Resume Optimization with LangGraph*")
 
-# Score Tracker (persistent across all stages after initial scoring)
+# Score Tracker - ALWAYS VISIBLE (persistent across all stages after initial scoring)
 if st.session_state.workflow_state and st.session_state.workflow_state.get("initial_score") is not None:
     state = st.session_state.workflow_state
-    score_cols = st.columns([2, 2, 2, 2, 2])
+
+    st.markdown("---")
+    st.markdown("#### 📊 Score Evolution")
+
+    score_cols = st.columns(5)
 
     with score_cols[0]:
-        st.metric("Initial Score", f"{state['initial_score']}/100", help="Original resume compatibility")
+        st.metric(
+            "Initial Score",
+            f"{state['initial_score']}/100",
+            help="Original resume compatibility with job description"
+        )
 
     with score_cols[1]:
         if state.get("new_score") is not None:
@@ -59,28 +70,32 @@ if st.session_state.workflow_state and st.session_state.workflow_state.get("init
                 delta=f"+{improvement}" if improvement > 0 else str(improvement),
                 help="Score after applying Agent 1 suggestions"
             )
+        else:
+            st.metric("After Modifications", "—", help="Not yet calculated")
 
     with score_cols[2]:
-        if state.get("word_count_after") is not None:
-            word_change = state.get("words_removed", 0)
+        # After optimization - show the SCORE at this stage (same as new_score since optimization doesn't change score)
+        if state.get("new_score") is not None:
             st.metric(
                 "After Optimization",
-                f"{state['word_count_after']} words",
-                delta=f"-{word_change}" if word_change > 0 else "No change",
-                delta_color="inverse",
-                help="Word count after Round 1 optimization"
+                f"{state['new_score']}/100",
+                delta="0" if state.get("optimized_resume") else None,
+                help="Score maintained after optimization (conciseness improved)"
             )
+        else:
+            st.metric("After Optimization", "—", help="Not yet calculated")
 
     with score_cols[3]:
-        if state.get("word_count_after_round2") is not None:
-            word_change_r2 = state.get("words_removed_round2", 0)
+        # After Round 2 - show the SCORE (still same as new_score)
+        if state.get("optimized_resume_round2") is not None:
             st.metric(
                 "After Round 2",
-                f"{state['word_count_after_round2']} words",
-                delta=f"-{word_change_r2}" if word_change_r2 > 0 else "No change",
-                delta_color="inverse",
-                help="Word count after Round 2 optimization"
+                f"{state['new_score']}/100",
+                delta="0",
+                help="Score maintained after Round 2 optimization"
             )
+        else:
+            st.metric("After Round 2", "—", help="Not yet calculated")
 
     with score_cols[4]:
         if state.get("final_score") is not None:
@@ -89,8 +104,10 @@ if st.session_state.workflow_state and st.session_state.workflow_state.get("init
                 "Final Score",
                 f"{state['final_score']}/100",
                 delta=f"+{total_improvement}" if total_improvement > 0 else str(total_improvement),
-                help="Final compatibility score"
+                help="Final compatibility score after all edits"
             )
+        else:
+            st.metric("Final Score", "—", help="Not yet calculated")
 
 st.divider()
 
