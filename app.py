@@ -41,6 +41,57 @@ def get_current_stage():
 # Header
 st.title("📄 Resume Customizer")
 st.markdown("### AI-Powered Resume Optimization with LangGraph")
+
+# Score Tracker (persistent across all stages after initial scoring)
+if st.session_state.workflow_state and st.session_state.workflow_state.get("initial_score") is not None:
+    state = st.session_state.workflow_state
+    score_cols = st.columns([2, 2, 2, 2, 2])
+
+    with score_cols[0]:
+        st.metric("Initial Score", f"{state['initial_score']}/100", help="Original resume compatibility")
+
+    with score_cols[1]:
+        if state.get("new_score") is not None:
+            improvement = state['new_score'] - state['initial_score']
+            st.metric(
+                "After Modifications",
+                f"{state['new_score']}/100",
+                delta=f"+{improvement}" if improvement > 0 else str(improvement),
+                help="Score after applying Agent 1 suggestions"
+            )
+
+    with score_cols[2]:
+        if state.get("word_count_after") is not None:
+            word_change = state.get("words_removed", 0)
+            st.metric(
+                "After Optimization",
+                f"{state['word_count_after']} words",
+                delta=f"-{word_change}" if word_change > 0 else "No change",
+                delta_color="inverse",
+                help="Word count after Round 1 optimization"
+            )
+
+    with score_cols[3]:
+        if state.get("word_count_after_round2") is not None:
+            word_change_r2 = state.get("words_removed_round2", 0)
+            st.metric(
+                "After Round 2",
+                f"{state['word_count_after_round2']} words",
+                delta=f"-{word_change_r2}" if word_change_r2 > 0 else "No change",
+                delta_color="inverse",
+                help="Word count after Round 2 optimization"
+            )
+
+    with score_cols[4]:
+        if state.get("final_score") is not None:
+            total_improvement = state['final_score'] - state['initial_score']
+            st.metric(
+                "Final Score",
+                f"{state['final_score']}/100",
+                delta=f"+{total_improvement}" if total_improvement > 0 else str(total_improvement),
+                help="Final compatibility score"
+            )
+
 st.divider()
 
 # Sidebar
@@ -107,18 +158,21 @@ with st.sidebar:
         "awaiting_selection": "4. Select Suggestions",
         "modification": "5. Modifying Resume",
         "rescoring": "6. Second Scoring",
-        "optimization": "7. Analyzing Length",
-        "awaiting_optimization_selection": "8. Select Optimizations",
-        "applying_optimizations": "9. Applying Optimizations",
-        "validation": "10. Validating Format",
-        "awaiting_approval": "11. Review & Approve",
-        "freeform_editing": "12. Final Edits (Optional)",
-        "final_scoring": "13. Final Score",
-        "export": "14. Exporting PDF",
-        "cover_letter_ready": "15. Cover Letter Generated",
-        "cover_letter_reviewed": "16. Cover Letter Reviewed",
-        "cover_letter_revised": "17. Cover Letter Revised",
-        "completed": "16. Completed",
+        "optimization": "7. Analyzing Length (R1)",
+        "awaiting_optimization_selection": "8. Select Optimizations (R1)",
+        "applying_optimizations": "9. Applying Optimizations (R1)",
+        "optimization_round2": "10. Analyzing Length (R2)",
+        "awaiting_optimization_selection_round2": "11. Select Optimizations (R2)",
+        "applying_optimizations_round2": "12. Applying Optimizations (R2)",
+        "validation": "13. Validating Format",
+        "awaiting_approval": "14. Review & Approve",
+        "freeform_editing": "15. Final Edits (Optional)",
+        "final_scoring": "16. Final Score",
+        "export": "17. Exporting PDF",
+        "cover_letter_ready": "18. Cover Letter Generated",
+        "cover_letter_reviewed": "19. Cover Letter Reviewed",
+        "cover_letter_revised": "20. Cover Letter Revised",
+        "completed": "21. Completed",
         "error": "❌ Error"
     }
 
@@ -246,12 +300,11 @@ elif current_stage == "awaiting_selection":
         with st.expander(f"📌 {category} ({len(suggestions)} suggestions)", expanded=True):
             # Add Select All checkbox for this category
             select_all_key = f"select_all_{category.replace(' ', '_')}"
-            if select_all_key not in st.session_state:
-                st.session_state[select_all_key] = False
 
+            # Use checkbox with key - don't set value if using key
             select_all = st.checkbox(
                 "✅ Select All",
-                value=st.session_state[select_all_key],
+                value=False,  # Default to unselected for initial suggestions
                 key=select_all_key
             )
 
@@ -381,24 +434,40 @@ elif current_stage == "awaiting_optimization_selection":
     st.markdown("Select the optimizations you want to apply to make your resume more concise:")
 
     # Group suggestions by category
+    optimization_suggestions = state.get('optimization_suggestions', [])
+
+    # Debug mode (set via environment variable DEBUG_MODE=1)
+    import os
+    debug_mode = os.getenv('DEBUG_MODE', '0') == '1'
+
+    if debug_mode:
+        print(f"[UI DEBUG] Found {len(optimization_suggestions)} optimization suggestions in state")
+        if len(optimization_suggestions) > 0:
+            print(f"[UI DEBUG] First suggestion: {optimization_suggestions[0]}")
+
     categories = {}
-    for suggestion in state.get('optimization_suggestions', []):
-        category = suggestion['category']
+    for suggestion in optimization_suggestions:
+        category = suggestion.get('category', 'Unknown')
         if category not in categories:
             categories[category] = []
         categories[category].append(suggestion)
 
+    if debug_mode:
+        print(f"[UI DEBUG] Grouped into {len(categories)} categories: {list(categories.keys())}")
+        print(f"[UI DEBUG] Category counts: {[(cat, len(suggs)) for cat, suggs in categories.items()]}")
+
     # Display suggestions by category
     for category, suggestions in categories.items():
+        if debug_mode:
+            print(f"[UI DEBUG] Rendering category '{category}' with {len(suggestions)} suggestions")
         with st.expander(f"📌 {category} ({len(suggestions)} suggestions)", expanded=True):
             # Add Select All checkbox for this category
             select_all_key = f"select_all_opt_{category.replace(' ', '_')}"
-            if select_all_key not in st.session_state:
-                st.session_state[select_all_key] = True  # Default to selected for optimizations
 
+            # Use checkbox with key - don't set value if using key
             select_all = st.checkbox(
                 "✅ Select All",
-                value=st.session_state[select_all_key],
+                value=True,  # Default to selected for optimizations
                 key=select_all_key
             )
 
@@ -473,17 +542,168 @@ elif current_stage == "awaiting_optimization_selection":
                     st.code(traceback.format_exc())
 
 
-# Stage 9-10: Applying Optimizations, Validation
-elif current_stage in ["applying_optimizations", "validation"]:
-    st.header("Finalizing Resume...")
+# Stage 9-10: Applying Optimizations Round 1, Round 2 Analysis
+elif current_stage in ["applying_optimizations", "optimization_round2"]:
+    st.header("Processing Optimizations...")
     with st.spinner("Agents are working..."):
         if current_stage == "applying_optimizations":
-            st.info("Agent 5: Applying selected optimizations...")
+            st.info("Agent 5 (Round 1): Applying selected optimizations...")
+        elif current_stage == "optimization_round2":
+            st.info("Agent 5 (Round 2): Analyzing additional optimization opportunities...")
+
+
+# Stage 11: Round 2 Optimization Suggestion Selection
+elif current_stage == "awaiting_optimization_selection_round2":
+    state = st.session_state.workflow_state
+    st.header("Step 4: Select Additional Optimizations (Round 2)")
+
+    st.info("💡 After applying Round 1 optimizations, Agent 5 has identified additional opportunities to make your resume even more concise.")
+
+    # Display word count info
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        before_r1 = state.get('word_count_before', 0)
+        st.metric("Before Round 1", f"{before_r1} words")
+
+    with col2:
+        after_r1 = state.get('word_count_after', 0)
+        removed_r1 = state.get('words_removed', 0)
+        st.metric(
+            "After Round 1",
+            f"{after_r1} words",
+            delta=f"-{removed_r1}" if removed_r1 > 0 else "No change",
+            delta_color="inverse"
+        )
+
+    with col3:
+        target_words = 600
+        if after_r1 <= target_words:
+            st.success(f"✅ {after_r1} words (target: {target_words})")
+        else:
+            st.warning(f"⚠️ {after_r1} words (target: {target_words})")
+
+    st.divider()
+
+    # Display round 2 analysis
+    if state.get('optimization_analysis_round2'):
+        st.subheader("Round 2 Analysis")
+        st.info(state['optimization_analysis_round2'])
+
+    st.divider()
+
+    # Suggestions with checkboxes
+    st.subheader("Additional Optimization Suggestions")
+    st.markdown("Select additional optimizations to make your resume even more concise:")
+
+    # Group suggestions by category
+    optimization_suggestions_r2 = state.get('optimization_suggestions_round2', [])
+
+    if len(optimization_suggestions_r2) == 0:
+        st.success("✅ No additional optimizations suggested! Your resume is well-optimized.")
+        st.info("Click 'Skip Round 2' to proceed to validation.")
+    else:
+        categories = {}
+        for suggestion in optimization_suggestions_r2:
+            category = suggestion.get('category', 'Unknown')
+            if category not in categories:
+                categories[category] = []
+            categories[category].append(suggestion)
+
+        # Display suggestions by category
+        for category, suggestions in categories.items():
+            with st.expander(f"📌 {category} ({len(suggestions)} suggestions)", expanded=True):
+                # Add Select All checkbox for this category
+                select_all_key = f"select_all_opt_r2_{category.replace(' ', '_')}"
+
+                select_all = st.checkbox(
+                    "✅ Select All",
+                    value=True,  # Default to selected
+                    key=select_all_key
+                )
+
+                st.divider()
+
+                for suggestion in suggestions:
+                    # Use Select All state if checked, otherwise use suggestion's default
+                    default_value = select_all if select_all else suggestion.get('selected', True)
+
+                    # Display suggestion with location context
+                    suggestion_label = suggestion['text']
+                    if suggestion.get('location'):
+                        suggestion_label += f" (Location: {suggestion['location']})"
+
+                    suggestion['selected'] = st.checkbox(
+                        suggestion_label,
+                        value=default_value,
+                        key=f"opt_r2_suggestion_{suggestion['id']}"
+                    )
+
+        st.divider()
+
+        # Show estimated selections
+        selected_count = sum(1 for s in state.get('optimization_suggestions_round2', []) if s.get('selected', False))
+        if selected_count > 0:
+            st.info(f"✓ {selected_count} optimization(s) selected for Round 2")
+        else:
+            st.warning("No Round 2 optimizations selected.")
+
+    st.divider()
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        if st.button("⬅️ Back to Round 1", use_container_width=True):
+            st.session_state.workflow_state['current_stage'] = "awaiting_optimization_selection"
+            st.rerun()
+
+    with col2:
+        if st.button("⏭️ Skip Round 2", use_container_width=True):
+            # Deselect all Round 2 and continue
+            for suggestion in state.get('optimization_suggestions_round2', []):
+                suggestion['selected'] = False
+            st.session_state.workflow_state['optimization_suggestions_round2'] = state['optimization_suggestions_round2']
+
+            with st.spinner("Proceeding to validation..."):
+                try:
+                    updated_state = st.session_state.customizer.orchestrator.apply_optimizations_round2(
+                        st.session_state.workflow_state
+                    )
+                    st.session_state.workflow_state = updated_state
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error: {str(e)}")
+                    st.code(traceback.format_exc())
+
+    with col3:
+        if st.button("➡️ Apply Round 2 Optimizations", type="primary", use_container_width=True):
+            with st.spinner("Applying Round 2 optimizations..."):
+                try:
+                    # Update state with current selections
+                    st.session_state.workflow_state['optimization_suggestions_round2'] = state['optimization_suggestions_round2']
+
+                    # Continue workflow
+                    updated_state = st.session_state.customizer.orchestrator.apply_optimizations_round2(
+                        st.session_state.workflow_state
+                    )
+                    st.session_state.workflow_state = updated_state
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error applying Round 2 optimizations: {str(e)}")
+                    st.code(traceback.format_exc())
+
+
+# Stage 12-13: Applying Round 2 Optimizations, Validation
+elif current_stage in ["applying_optimizations_round2", "validation"]:
+    st.header("Finalizing Resume...")
+    with st.spinner("Agents are working..."):
+        if current_stage == "applying_optimizations_round2":
+            st.info("Agent 5 (Round 2): Applying selected optimizations...")
         elif current_stage == "validation":
             st.info("Agent 4: Validating formatting and consistency...")
 
 
-# Stage 9: Review Optimized Resume
+# Stage 14: Review Optimized Resume
 elif current_stage == "awaiting_approval":
     state = st.session_state.workflow_state
     st.header("Step 3: Review & Approve Optimized Resume")
@@ -516,37 +736,77 @@ elif current_stage == "awaiting_approval":
     # Display optimization info if available
     if state.get('optimized_resume'):
         st.subheader("Optimization Results")
-        col1, col2, col3 = st.columns(3)
 
-        with col1:
-            st.metric(
-                "Words Before",
-                state.get('word_count_before', 'N/A')
-            )
+        # Determine which resume version to use
+        has_round2 = state.get('optimized_resume_round2') is not None
+        final_word_count = state.get('word_count_after_round2') if has_round2 else state.get('word_count_after', 0)
 
-        with col2:
-            st.metric(
-                "Words After",
-                state.get('word_count_after', 'N/A'),
-                delta=f"-{state.get('words_removed', 0)}"
-            )
+        # Show word count progression
+        if has_round2:
+            col1, col2, col3, col4 = st.columns(4)
 
-        with col3:
-            word_target = 600  # Target word count
-            current_words = state.get('word_count_after', 0)
-            if current_words <= word_target:
-                st.success(f"✅ Within Target ({word_target} words)")
-            else:
-                st.warning(f"⚠️ Above Target ({word_target} words)")
+            with col1:
+                st.metric("Words Before", state.get('word_count_before', 'N/A'))
+
+            with col2:
+                r1_removed = state.get('words_removed', 0)
+                st.metric(
+                    "After Round 1",
+                    state.get('word_count_after', 'N/A'),
+                    delta=f"-{r1_removed}" if r1_removed > 0 else "No change",
+                    delta_color="inverse"
+                )
+
+            with col3:
+                r2_removed = state.get('words_removed_round2', 0)
+                st.metric(
+                    "After Round 2",
+                    final_word_count,
+                    delta=f"-{r2_removed}" if r2_removed > 0 else "No change",
+                    delta_color="inverse"
+                )
+
+            with col4:
+                word_target = 600
+                if final_word_count <= word_target:
+                    st.success(f"✅ Within Target")
+                else:
+                    st.warning(f"⚠️ Above Target")
+                st.caption(f"Target: {word_target} words")
+
+        else:
+            col1, col2, col3 = st.columns(3)
+
+            with col1:
+                st.metric("Words Before", state.get('word_count_before', 'N/A'))
+
+            with col2:
+                st.metric(
+                    "Words After",
+                    state.get('word_count_after', 'N/A'),
+                    delta=f"-{state.get('words_removed', 0)}"
+                )
+
+            with col3:
+                word_target = 600
+                current_words = state.get('word_count_after', 0)
+                if current_words <= word_target:
+                    st.success(f"✅ Within Target ({word_target} words)")
+                else:
+                    st.warning(f"⚠️ Above Target ({word_target} words)")
 
         if state.get('optimization_summary'):
-            with st.expander("Optimization Summary"):
+            with st.expander("Optimization Summary (Round 1)"):
                 st.info(state['optimization_summary'])
 
         if state.get('optimization_changes'):
-            with st.expander("Changes Made"):
+            with st.expander("Changes Made (Round 1)"):
                 for change in state['optimization_changes']:
                     st.markdown(f"- {change}")
+
+        if has_round2 and state.get('words_removed_round2', 0) > 0:
+            with st.expander("Round 2 Optimizations"):
+                st.info(f"Applied {state.get('words_removed_round2', 0)} additional word reductions")
 
         st.divider()
 
@@ -561,7 +821,12 @@ elif current_stage == "awaiting_approval":
     with col2:
         st.subheader("Optimized Resume")
         with st.expander("View Optimized", expanded=True):
-            final_resume = state.get('optimized_resume') or state['modified_resume']
+            # Use the most recent version
+            final_resume = (
+                state.get('optimized_resume_round2') or
+                state.get('optimized_resume') or
+                state['modified_resume']
+            )
             st.markdown(final_resume)
 
     st.divider()
@@ -755,8 +1020,13 @@ elif current_stage == "freeform_editing":
     if state.get('freeform_changes_history') is None:
         state['freeform_changes_history'] = []
 
-    # Get the current resume (use freeform if available, otherwise optimized)
-    current_resume = state.get('freeform_resume') or state.get('optimized_resume') or state['modified_resume']
+    # Get the current resume (use freeform if available, otherwise most recent version)
+    current_resume = (
+        state.get('freeform_resume') or
+        state.get('optimized_resume_round2') or
+        state.get('optimized_resume') or
+        state['modified_resume']
+    )
 
     # Display current resume
     col1, col2 = st.columns([1, 1])
@@ -868,8 +1138,13 @@ elif current_stage == "final_scoring":
         try:
             from agents.agent_1_scorer import ResumeScorerAgent
 
-            # Get the final resume
-            final_resume = state.get('freeform_resume') or state.get('optimized_resume') or state['modified_resume']
+            # Get the final resume (most recent version)
+            final_resume = (
+                state.get('freeform_resume') or
+                state.get('optimized_resume_round2') or
+                state.get('optimized_resume') or
+                state['modified_resume']
+            )
 
             # Calculate final score
             agent = ResumeScorerAgent()
@@ -1052,7 +1327,12 @@ elif current_stage in ["export", "completed"]:
 
     # Display final resume
     with st.expander("View Final Resume", expanded=True):
-        final_resume = state.get('freeform_resume') or state.get('optimized_resume') or state['modified_resume']
+        final_resume = (
+            state.get('freeform_resume') or
+            state.get('optimized_resume_round2') or
+            state.get('optimized_resume') or
+            state['modified_resume']
+        )
         st.markdown(final_resume)
 
     st.divider()
@@ -1076,6 +1356,78 @@ elif current_stage in ["export", "completed"]:
             help="Enter the desired filename for your Markdown file"
         )
 
+    # PDF Formatting Controls
+    st.markdown("#### PDF Formatting")
+    st.caption("Adjust these settings to fit your resume on one page. Decrease values to fit more content.")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        font_size = st.slider(
+            "Font Size (px)",
+            min_value=7.0,
+            max_value=12.0,
+            value=st.session_state.workflow_state.get('pdf_font_size', 9.5),
+            step=0.1,
+            key="pdf_font_size_slider",
+            help="Smaller font = more content per page. Default: 9.5px"
+        )
+
+    with col2:
+        line_height = st.slider(
+            "Line Height (em)",
+            min_value=1.0,
+            max_value=1.5,
+            value=st.session_state.workflow_state.get('pdf_line_height', 1.2),
+            step=0.05,
+            key="pdf_line_height_slider",
+            help="Smaller line height = tighter spacing. Default: 1.2em"
+        )
+
+    with col3:
+        page_margin = st.slider(
+            "Page Margin (in)",
+            min_value=0.3,
+            max_value=1.0,
+            value=st.session_state.workflow_state.get('pdf_page_margin', 0.75),
+            step=0.05,
+            key="pdf_page_margin_slider",
+            help="Smaller margin = more vertical space per page. Default: 0.75in"
+        )
+
+    with col4:
+        if st.button("🔄 Regenerate PDF", use_container_width=True, help="Apply formatting changes and regenerate PDF"):
+            with st.spinner("Regenerating PDF with new settings..."):
+                try:
+                    # Debug: Show what values we're using
+                    print(f"\n{'='*60}")
+                    print(f"[UI] REGENERATE PDF CLICKED")
+                    print(f"[UI] Slider values: font_size={font_size}, line_height={line_height}, page_margin={page_margin}")
+                    print(f"[UI] Before update - State contains: pdf_font_size={st.session_state.workflow_state.get('pdf_font_size')}, pdf_line_height={st.session_state.workflow_state.get('pdf_line_height')}, pdf_page_margin={st.session_state.workflow_state.get('pdf_page_margin')}")
+
+                    # Update state with new formatting options
+                    st.session_state.workflow_state['pdf_font_size'] = font_size
+                    st.session_state.workflow_state['pdf_line_height'] = line_height
+                    st.session_state.workflow_state['pdf_page_margin'] = page_margin
+
+                    print(f"[UI] After update - State contains: pdf_font_size={st.session_state.workflow_state.get('pdf_font_size')}, pdf_line_height={st.session_state.workflow_state.get('pdf_line_height')}, pdf_page_margin={st.session_state.workflow_state.get('pdf_page_margin')}")
+                    print(f"[UI] Calling orchestrator.export_resume()...")
+                    print(f"{'='*60}\n")
+
+                    # Re-export with new settings
+                    updated_state = st.session_state.customizer.orchestrator.export_resume(
+                        st.session_state.workflow_state
+                    )
+                    st.session_state.workflow_state = updated_state
+                    st.success(f"PDF regenerated! Font: {font_size}px, Line height: {line_height}em, Margin: {page_margin}in")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Error regenerating PDF: {str(e)}")
+                    import traceback
+                    st.code(traceback.format_exc())
+
+    st.divider()
+
     # Download buttons
     col1, col2 = st.columns(2)
 
@@ -1092,7 +1444,12 @@ elif current_stage in ["export", "completed"]:
             st.caption(f"PDF saved to: {state.get('pdf_path', 'N/A')}")
 
     with col2:
-        final_resume = state.get('freeform_resume') or state.get('optimized_resume') or state['modified_resume']
+        final_resume = (
+            state.get('freeform_resume') or
+            state.get('optimized_resume_round2') or
+            state.get('optimized_resume') or
+            state['modified_resume']
+        )
         if final_resume:
             st.download_button(
                 label="📝 Download Markdown",

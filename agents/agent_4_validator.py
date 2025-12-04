@@ -28,33 +28,40 @@ class ResumeValidatorAgent:
                 - recommendations: List[str]
                 - summary: str
         """
-        system_prompt = """You are an expert resume formatter and quality assurance specialist. Your job is to:
-1. Validate resume formatting for consistency and professionalism
-2. Check for appearance issues that might affect readability
-3. Identify inconsistencies in style, tone, or structure
-4. Ensure the resume follows best practices
+        system_prompt = """You are an expert resume formatting specialist. Your ONLY job is to:
+1. Check visual formatting and presentation
+2. Ensure consistency in styling
+3. Provide formatting recommendations
 
-Focus on:
-- **Formatting**: Consistent use of markdown, proper headers, spacing
-- **Length**: Should be concise (ideally 1 page / ~500-700 words)
-- **Consistency**: Consistent date formats, bullet points, tense usage
-- **Professionalism**: Appropriate tone, no typos, clear structure
-- **Readability**: Good flow, logical organization, easy to scan
-- **Completeness**: All sections properly formatted, no placeholder text
+Focus ONLY on:
+- **Markdown Formatting**: Proper use of headers (# ## ###), bold, italics
+- **Visual Consistency**: Consistent date formats (e.g., "Jan 2020 - Present" vs "2020-01 to now")
+- **Bullet Point Style**: Consistent bullet formatting throughout
+- **Section Structure**: Proper hierarchy and organization of sections
+- **Spacing**: Appropriate use of line breaks and whitespace
+- **Typography**: Consistent capitalization, punctuation
 
-Be thorough but constructive. Categorize issues by severity: Critical, Warning, or Info."""
+DO NOT:
+- Check content quality or relevance (that's handled elsewhere)
+- Comment on resume length (optimization handles this)
+- Suggest removing content
+- Analyze job fit or skills
 
-        user_prompt = f"""Please validate this resume for formatting, appearance, and consistency:
+You are strictly a formatting QA checker. Be thorough but focus only on visual presentation."""
+
+        user_prompt = f"""Please check this resume ONLY for formatting and visual presentation issues:
 
 RESUME:
 {resume_content}
 
-Provide a comprehensive validation report with:
+Focus on formatting ONLY - ignore content quality, length, or relevance.
 
-1. Overall validation score (1-100, where 100 is perfect)
-2. List of issues found (if any)
-3. Recommendations for improvement
-4. Summary assessment
+Provide a formatting validation report:
+
+1. Overall formatting score (1-100, where 100 is perfect formatting)
+2. List of formatting issues found (if any)
+3. Formatting recommendations
+4. Summary
 
 Format your response EXACTLY as follows:
 
@@ -63,18 +70,20 @@ VALIDATION_SCORE: [number from 1-100]
 ISSUES:
 - [CRITICAL/WARNING/INFO] [Category] Issue description here
 - [CRITICAL/WARNING/INFO] [Category] Another issue here
-(List all issues, or write "NONE" if no issues found)
+(List ONLY formatting issues, or write "NONE" if formatting is perfect)
+
+Categories should be: Markdown, Date Format, Bullet Style, Section Structure, Spacing, Typography
 
 RECOMMENDATIONS:
-- Recommendation 1
-- Recommendation 2
-(List recommendations. CRITICAL: ALWAYS include "Review the descriptions and condense them where possible to keep the resume concise" as one of the recommendations, even if the resume appears adequate in length)
+- Formatting recommendation 1
+- Formatting recommendation 2
+(List ONLY formatting recommendations. Do NOT suggest content changes or length reduction)
 
 SUMMARY:
-[Brief summary of validation results]
+[Brief summary of formatting quality]
 
 IS_VALID: [YES/NO]
-(YES if validation_score >= 80 and no CRITICAL issues, otherwise NO)"""
+(YES if validation_score >= 80 and no CRITICAL formatting issues, otherwise NO)"""
 
         try:
             response = self.client.generate_with_system_prompt(

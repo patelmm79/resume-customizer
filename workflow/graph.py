@@ -9,6 +9,8 @@ from workflow.nodes import (
     rescoring_node,
     optimization_node,
     apply_optimizations_node,
+    optimization_round2_node,
+    apply_optimizations_round2_node,
     validation_node,
     export_pdf_node,
     human_feedback_node,
@@ -132,7 +134,8 @@ def create_modification_workflow() -> StateGraph:
 
 def create_optimization_application_workflow() -> StateGraph:
     """
-    Create workflow for applying selected optimization suggestions.
+    Create workflow for applying selected optimization suggestions (Round 1).
+    After applying, moves to Round 2 suggestion phase.
 
     Returns:
         Compiled LangGraph workflow
@@ -140,10 +143,33 @@ def create_optimization_application_workflow() -> StateGraph:
     workflow = StateGraph(WorkflowState)
 
     workflow.add_node("apply_optimizations", apply_optimizations_node)
-    workflow.add_node("validation", validation_node)
+    workflow.add_node("optimization_round2", optimization_round2_node)
 
     workflow.set_entry_point("apply_optimizations")
-    workflow.add_edge("apply_optimizations", "validation")
+    # After applying round 1, immediately suggest round 2
+    workflow.add_edge("apply_optimizations", "optimization_round2")
+    # Round 2 node ends and waits for user selection
+    workflow.add_edge("optimization_round2", END)
+
+    return workflow
+
+
+def create_optimization_round2_application_workflow() -> StateGraph:
+    """
+    Create workflow for applying selected Round 2 optimization suggestions.
+    After applying, moves to validation.
+
+    Returns:
+        Compiled LangGraph workflow
+    """
+    workflow = StateGraph(WorkflowState)
+
+    workflow.add_node("apply_optimizations_round2", apply_optimizations_round2_node)
+    workflow.add_node("validation", validation_node)
+
+    workflow.set_entry_point("apply_optimizations_round2")
+    # After applying round 2, validate and end
+    workflow.add_edge("apply_optimizations_round2", "validation")
     workflow.add_edge("validation", END)
 
     return workflow
@@ -232,6 +258,7 @@ def create_cover_letter_export_workflow() -> StateGraph:
 analysis_workflow = create_workflow().compile()
 modification_workflow = create_modification_workflow().compile()
 optimization_application_workflow = create_optimization_application_workflow().compile()
+optimization_round2_application_workflow = create_optimization_round2_application_workflow().compile()
 export_workflow = create_export_workflow().compile()
 cover_letter_workflow = create_cover_letter_workflow().compile()
 cover_letter_revision_workflow = create_cover_letter_revision_workflow().compile()

@@ -8,10 +8,11 @@ from utils.resume_standards import get_optimization_prompt_prefix
 class ResumeOptimizerAgent:
     """Agent that optimizes resume length while maintaining score."""
 
-    def __init__(self):
+    def __init__(self, debug_mode: bool = False):
         """Initialize the optimizer agent."""
         self.client = get_agent_llm_client()
         self.validator = ResumeStructureValidator()
+        self.debug_mode = debug_mode
 
     def suggest_optimizations(
         self,
@@ -52,23 +53,34 @@ JOB DESCRIPTION:
 
 TARGET: 500-700 words (1 page)
 
+CRITICAL OPTIMIZATION PRIORITIES:
+1. **Older Roles (5+ years ago)**: ALWAYS suggest removing less relevant bullet points from older positions
+   - Keep only 2-3 most impactful bullets for older roles
+   - Remove bullets that don't directly relate to the target job
+   - NEVER suggest removing the job title/company/dates themselves
+
+2. **Redundancy**: Remove skills or phrases already covered elsewhere
+
+3. **Wordiness**: Condense verbose descriptions
+
 Please identify optimization opportunities and format your response EXACTLY as follows:
 
 ANALYSIS:
-[Brief analysis of optimization opportunities - which sections are too verbose, what could be condensed, etc.]
+[Brief analysis of optimization opportunities - which sections are too verbose, what could be condensed, etc. Specifically mention older roles that should be trimmed.]
 
 SUGGESTIONS:
-- [CATEGORY: Experience] [DESCRIPTION: Remove bullets 4-6 from role X (2015-2017) - older and less relevant] [LOCATION: Job title at Company]
+- [CATEGORY: Experience] [DESCRIPTION: Remove bullets 4-6 from role X (2015-2017) - older and less relevant to target role] [LOCATION: Job title at Company]
+- [CATEGORY: Experience] [DESCRIPTION: Remove bullet 3 from role Y (2016-2018) - outdated technology not in job description] [LOCATION: Job title at Company]
 - [CATEGORY: Skills] [DESCRIPTION: Remove redundant skills: X, Y, Z - not mentioned in job description] [LOCATION: Skills section]
-- [CATEGORY: Experience] [DESCRIPTION: Condense bullet 2 in role Y - too wordy, can reduce from 25 to 15 words] [LOCATION: Job title at Company]
+- [CATEGORY: Experience] [DESCRIPTION: Condense bullet 2 in role Z - too wordy, can reduce from 25 to 15 words] [LOCATION: Job title at Company]
 - [CATEGORY: Summary] [DESCRIPTION: Tighten summary - reduce from 80 to 50 words by removing redundant phrases] [LOCATION: Summary section]
 
 Format rules:
 - Each suggestion must have CATEGORY, DESCRIPTION, and LOCATION tags
 - Be specific about what to change and where
 - Focus on removing/condensing content, not adding
-- Prioritize older, less relevant content
-- NEVER suggest removing job headlines
+- **ALWAYS** suggest bullet point removal for roles 5+ years old
+- NEVER suggest removing job headlines (titles, companies, or date ranges)
 - Each suggestion should be independently selectable"""
 
         try:
@@ -78,7 +90,26 @@ Format rules:
                 temperature=0.4
             )
 
-            return self._parse_suggestions_response(response, resume_content)
+            # Debug output (only if debug_mode is enabled)
+            if self.debug_mode:
+                print(f"\n[Agent5 DEBUG] Response length: {len(response)} chars")
+                print(f"[Agent5 DEBUG] First 800 chars:\n{response[:800]}\n")
+
+            parsed_result = self._parse_suggestions_response(response, resume_content)
+
+            if self.debug_mode:
+                print(f"[Agent5 DEBUG] Parsed {len(parsed_result['suggestions'])} suggestions")
+                if len(parsed_result['suggestions']) == 0:
+                    print(f"[Agent5 DEBUG] NO SUGGESTIONS PARSED!")
+                    print(f"[Agent5 DEBUG] Checking format markers:")
+                    print(f"  - Contains 'ANALYSIS:': {'ANALYSIS:' in response}")
+                    print(f"  - Contains '# ANALYSIS': {'# ANALYSIS' in response}")
+                    print(f"  - Contains 'SUGGESTIONS:': {'SUGGESTIONS:' in response}")
+                    print(f"  - Contains '# SUGGESTIONS': {'# SUGGESTIONS' in response}")
+                    print(f"  - Contains '**CATEGORY:': {'**CATEGORY:' in response}")
+                    print(f"  - Contains '[CATEGORY:': {'[CATEGORY:' in response}")
+
+            return parsed_result
 
         except Exception as e:
             raise Exception(f"Optimization analysis failed: {str(e)}")
@@ -105,14 +136,16 @@ Format rules:
         for line in lines:
             line = line.strip()
 
-            if line.startswith("ANALYSIS:"):
+            # Support both "ANALYSIS:" and "# ANALYSIS" formats
+            if line.startswith("ANALYSIS:") or line.upper() == "# ANALYSIS":
                 current_section = "analysis"
-                analysis_text = line.replace("ANALYSIS:", "").strip()
+                analysis_text = line.replace("ANALYSIS:", "").replace("# ANALYSIS", "").strip()
                 if analysis_text:
                     analysis = analysis_text
                 continue
 
-            elif line.startswith("SUGGESTIONS:"):
+            # Support both "SUGGESTIONS:" and "# SUGGESTIONS" formats
+            elif line.startswith("SUGGESTIONS:") or line.upper() == "# SUGGESTIONS":
                 current_section = "suggestions"
                 continue
 
@@ -123,25 +156,62 @@ Format rules:
                 # Parse suggestion line
                 suggestion_text = line[1:].strip()
 
+                # Skip sub-bullets or examples that don't have proper tags
+                # Support both [CATEGORY:] and **CATEGORY:** formats
+                has_category_bracket = "[CATEGORY:" in suggestion_text
+                has_category_bold = "**CATEGORY:" in suggestion_text or "CATEGORY:" in suggestion_text
+
+                if not (has_category_bracket or has_category_bold):
+                    continue
+
                 category = "General"
                 description = suggestion_text
                 location = ""
 
-                # Extract CATEGORY
+                # Extract CATEGORY - support both [CATEGORY: X] and **CATEGORY: X** formats
                 if "[CATEGORY:" in suggestion_text:
                     cat_match = re.search(r'\[CATEGORY:\s*([^\]]+)\]', suggestion_text)
                     if cat_match:
                         category = cat_match.group(1).strip()
+                elif "**CATEGORY:" in suggestion_text:
+                    cat_match = re.search(r'\*\*CATEGORY:\s*([^\*]+)\*\*', suggestion_text)
+                    if cat_match:
+                        category = cat_match.group(1).strip()
+                elif "CATEGORY:" in suggestion_text:
+                    # Plain CATEGORY: without brackets or bold
+                    cat_match = re.search(r'CATEGORY:\s*([^\|]+)', suggestion_text)
+                    if cat_match:
+                        category = cat_match.group(1).strip()
 
-                # Extract DESCRIPTION
+                # Extract DESCRIPTION - support both [DESCRIPTION: X] and **DESCRIPTION: X** formats
                 if "[DESCRIPTION:" in suggestion_text:
                     desc_match = re.search(r'\[DESCRIPTION:\s*([^\]]+)\]', suggestion_text)
                     if desc_match:
                         description = desc_match.group(1).strip()
+                elif "**DESCRIPTION:" in suggestion_text:
+                    # Match **DESCRIPTION:** ... up to next | or end
+                    desc_match = re.search(r'\*\*DESCRIPTION:\*\*\s*([^\|]+)', suggestion_text)
+                    if desc_match:
+                        description = desc_match.group(1).strip()
+                elif "DESCRIPTION:" in suggestion_text:
+                    # Plain DESCRIPTION: without brackets or bold
+                    desc_match = re.search(r'DESCRIPTION:\s*(.+?)(?:\s*\|\s*(?:\*\*)?LOCATION:|$)', suggestion_text)
+                    if desc_match:
+                        description = desc_match.group(1).strip()
 
-                # Extract LOCATION
+                # Extract LOCATION - support both [LOCATION: X] and **LOCATION: X** formats
                 if "[LOCATION:" in suggestion_text:
                     loc_match = re.search(r'\[LOCATION:\s*([^\]]+)\]', suggestion_text)
+                    if loc_match:
+                        location = loc_match.group(1).strip()
+                elif "**LOCATION:" in suggestion_text:
+                    # Match **LOCATION:** ... to end of line
+                    loc_match = re.search(r'\*\*LOCATION:\*\*\s*(.+?)$', suggestion_text)
+                    if loc_match:
+                        location = loc_match.group(1).strip()
+                elif "LOCATION:" in suggestion_text:
+                    # Plain LOCATION: without brackets or bold
+                    loc_match = re.search(r'LOCATION:\s*(.+?)$', suggestion_text)
                     if loc_match:
                         location = loc_match.group(1).strip()
 

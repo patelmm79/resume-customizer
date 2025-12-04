@@ -156,7 +156,11 @@ def optimization_node(state: WorkflowState) -> Dict[str, Any]:
         Updated state with optimization suggestions
     """
     try:
-        agent = ResumeOptimizerAgent()
+        # Check for debug mode
+        import os
+        debug_mode = os.getenv('DEBUG_MODE', '0') == '1'
+
+        agent = ResumeOptimizerAgent(debug_mode=debug_mode)
         result = agent.suggest_optimizations(
             state["modified_resume"],
             state["job_description"],
@@ -231,7 +235,7 @@ def apply_optimizations_node(state: WorkflowState) -> Dict[str, Any]:
             "words_removed": words_removed,
             "optimization_summary": f"Applied {len(selected_suggestions)} optimization(s)",
             "optimization_changes": [s["text"] for s in selected_suggestions],
-            "current_stage": "validation",
+            "current_stage": "optimization_round2",
             "messages": [{
                 "role": "ai",
                 "content": f"Agent 5: Optimized resume from {word_count_before} to {word_count_after} words (-{words_removed} words)"
@@ -240,6 +244,124 @@ def apply_optimizations_node(state: WorkflowState) -> Dict[str, Any]:
     except Exception as e:
         return {
             "error": f"Optimization application failed: {str(e)}",
+            "current_stage": "error",
+            "messages": [{"role": "system", "content": f"Error: {str(e)}"}]
+        }
+
+
+def optimization_round2_node(state: WorkflowState) -> Dict[str, Any]:
+    """
+    Agent 5 Round 2: Suggest additional optimization opportunities after first round.
+
+    Args:
+        state: Current workflow state
+
+    Returns:
+        Updated state with second round optimization suggestions
+    """
+    try:
+        # Check for debug mode
+        import os
+        debug_mode = os.getenv('DEBUG_MODE', '0') == '1'
+
+        # Get previously applied suggestions to avoid repeating
+        previous_suggestions = state.get("optimization_suggestions", [])
+        previous_changes = [s["text"] for s in previous_suggestions if s.get("selected", False)]
+
+        agent = ResumeOptimizerAgent(debug_mode=debug_mode)
+
+        # Use optimized resume from round 1 as input
+        resume_to_optimize = state.get("optimized_resume") or state["modified_resume"]
+
+        result = agent.suggest_optimizations(
+            resume_to_optimize,
+            state["job_description"],
+            state["new_score"]
+        )
+
+        # Filter out suggestions that are too similar to round 1
+        filtered_suggestions = []
+        for suggestion in result["suggestions"]:
+            # Simple check: if suggestion text doesn't closely match any previous change
+            is_duplicate = any(
+                suggestion["text"].lower() in prev.lower() or prev.lower() in suggestion["text"].lower()
+                for prev in previous_changes
+            )
+            if not is_duplicate:
+                filtered_suggestions.append(suggestion)
+
+        return {
+            "optimization_suggestions_round2": filtered_suggestions,
+            "optimization_analysis_round2": result["analysis"],
+            "current_stage": "awaiting_optimization_selection_round2",
+            "messages": [{
+                "role": "ai",
+                "content": f"Agent 5 (Round 2): Found {len(filtered_suggestions)} additional optimization opportunities"
+            }]
+        }
+    except Exception as e:
+        return {
+            "error": f"Round 2 optimization analysis failed: {str(e)}",
+            "current_stage": "error",
+            "messages": [{"role": "system", "content": f"Error: {str(e)}"}]
+        }
+
+
+def apply_optimizations_round2_node(state: WorkflowState) -> Dict[str, Any]:
+    """
+    Agent 5 Round 2: Apply selected second round optimization suggestions.
+
+    Args:
+        state: Current workflow state with selected round 2 optimization suggestions
+
+    Returns:
+        Updated state with optimized resume from round 2
+    """
+    try:
+        agent = ResumeOptimizerAgent()
+
+        # Get selected round 2 suggestions
+        selected_suggestions = [
+            s for s in state.get("optimization_suggestions_round2", [])
+            if s.get("selected", False)
+        ]
+
+        resume_to_optimize = state.get("optimized_resume") or state["modified_resume"]
+
+        if not selected_suggestions:
+            # No round 2 optimizations selected, proceed to validation
+            return {
+                "optimized_resume_round2": resume_to_optimize,
+                "word_count_after_round2": len(resume_to_optimize.split()),
+                "words_removed_round2": 0,
+                "current_stage": "validation",
+                "messages": [{"role": "ai", "content": "Agent 5 (Round 2): No additional optimizations selected, proceeding to validation"}]
+            }
+
+        # Apply selected round 2 optimizations
+        optimized_resume = agent.apply_optimizations(
+            resume_to_optimize,
+            selected_suggestions,
+            state["job_description"]
+        )
+
+        word_count_before_r2 = len(resume_to_optimize.split())
+        word_count_after_r2 = len(optimized_resume.split())
+        words_removed_r2 = word_count_before_r2 - word_count_after_r2
+
+        return {
+            "optimized_resume_round2": optimized_resume,
+            "word_count_after_round2": word_count_after_r2,
+            "words_removed_round2": words_removed_r2,
+            "current_stage": "validation",
+            "messages": [{
+                "role": "ai",
+                "content": f"Agent 5 (Round 2): Further optimized resume from {word_count_before_r2} to {word_count_after_r2} words (-{words_removed_r2} words)"
+            }]
+        }
+    except Exception as e:
+        return {
+            "error": f"Round 2 optimization application failed: {str(e)}",
             "current_stage": "error",
             "messages": [{"role": "system", "content": f"Error: {str(e)}"}]
         }
@@ -257,8 +379,12 @@ def validation_node(state: WorkflowState) -> Dict[str, Any]:
     """
     try:
         agent = ResumeValidatorAgent()
-        # Use optimized resume if available, otherwise use modified resume
-        resume_to_validate = state.get("optimized_resume") or state["modified_resume"]
+        # Use the most recent version: round 2 > round 1 > modified
+        resume_to_validate = (
+            state.get("optimized_resume_round2") or
+            state.get("optimized_resume") or
+            state["modified_resume"]
+        )
         result = agent.validate_resume(resume_to_validate)
 
         return {
@@ -294,11 +420,30 @@ def export_pdf_node(state: WorkflowState) -> Dict[str, Any]:
     try:
         exporter = PDFExporter()
 
-        # Use freeform resume if available, otherwise optimized, otherwise modified
-        final_resume = state.get("freeform_resume") or state.get("optimized_resume") or state["modified_resume"]
+        # Use the most recent version: freeform > round2 > round1 > modified
+        final_resume = (
+            state.get("freeform_resume") or
+            state.get("optimized_resume_round2") or
+            state.get("optimized_resume") or
+            state["modified_resume"]
+        )
+
+        # Get PDF formatting options from state (with defaults)
+        font_size = state.get("pdf_font_size", 9.5)
+        line_height = state.get("pdf_line_height", 1.2)
+        page_margin = state.get("pdf_page_margin", 0.75)
+
+        # DEBUG: Always print what we're using
+        print(f"[export_pdf_node] Retrieved from state: font_size={font_size}, line_height={line_height}, page_margin={page_margin}")
+        print(f"[export_pdf_node] State keys: {list(state.keys())}")
 
         # Generate PDF bytes for download
-        pdf_bytes = exporter.markdown_to_pdf_bytes(final_resume)
+        pdf_bytes = exporter.markdown_to_pdf_bytes(
+            final_resume,
+            font_size=font_size,
+            line_height=line_height,
+            page_margin=page_margin
+        )
 
         # Optionally save to file
         pdf_path = exporter.markdown_to_pdf(final_resume)
@@ -396,8 +541,18 @@ def export_cover_letter_pdf_node(state: WorkflowState) -> Dict[str, Any]:
 
         exporter = PDFExporter()
 
+        # Get PDF formatting options from state (with defaults)
+        font_size = state.get("cover_letter_pdf_font_size", 9.5)
+        line_height = state.get("cover_letter_pdf_line_height", 1.2)
+        page_margin = state.get("cover_letter_pdf_page_margin", 0.75)
+
         # Generate PDF bytes for download
-        pdf_bytes = exporter.markdown_to_pdf_bytes(cover_letter)
+        pdf_bytes = exporter.markdown_to_pdf_bytes(
+            cover_letter,
+            font_size=font_size,
+            line_height=line_height,
+            page_margin=page_margin
+        )
 
         # Optionally save to file
         pdf_path = exporter.markdown_to_pdf(cover_letter, filename="cover_letter.pdf")

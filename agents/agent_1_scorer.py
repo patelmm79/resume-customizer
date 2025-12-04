@@ -113,6 +113,13 @@ Focus on:
 - Removing irrelevant information
 - Highlighting transferable skills
 
+CRITICAL - NEVER FABRICATE OR HALLUCINATE:
+- NEVER invent specific numbers, metrics, or facts not present in the original resume
+- NEVER add team sizes, percentages, dollar amounts, or timeframes that aren't already stated
+- If suggesting quantifiable achievements, use placeholders like "[X%]" or "[number]" that the user must fill in
+- ONLY rephrase, reframe, or reorganize information that already exists in the resume
+- When in doubt, suggest the addition without inventing specific details
+
 IMPORTANT for Skills:
 - Create a SEPARATE checklist item for EACH individual skill from the job description
 - ONLY suggest skills that are NOT already present in the resume (check the Skills section carefully)
@@ -123,10 +130,11 @@ IMPORTANT for Skills:
 IMPORTANT for Summary and Experience suggestions:
 - For Summary: Provide the ACTUAL suggested summary text, not just a description of what to change
 - For Experience: Provide the ACTUAL suggested bullet point or text, not just instructions
+- NEVER invent specific metrics - use placeholders like "[X%]", "[number]", "[timeframe]" for the user to fill in
 - Users will be able to edit this text before applying it
-- Make suggestions specific and ready-to-use
+- Make suggestions specific and ready-to-use, but truthful
 
-Be specific and actionable in your suggestions."""
+Be specific and actionable in your suggestions, but NEVER fabricate facts."""
 
         user_prompt = f"""Please analyze this resume against the job description and provide:
 
@@ -170,10 +178,14 @@ For Summary and Experience:
 - Use this format: [DESCRIPTION: Brief justification] [SUGGESTED_TEXT: Actual text to use]
 - DESCRIPTION: A brief phrase explaining why this change is suggested (shown in checkbox)
 - SUGGESTED_TEXT: The COMPLETE actual text to insert/replace (shown in text box)
-- For Summary: Provide a complete paragraph rewrite
-- For Experience: Provide a complete bullet point with metrics and impact
+- For Summary: Provide a complete paragraph rewrite based ONLY on facts from the resume
+- For Experience: Provide a complete bullet point based ONLY on existing information
+- NEVER INVENT metrics, numbers, team sizes, percentages, or timeframes not in the original resume
+- Use placeholders like "[X%]", "[number of team members]", "[timeframe]" when suggesting quantification
 - Do NOT write vague instructions - always provide concrete, ready-to-use text
 - Users will be able to edit the SUGGESTED_TEXT before applying it
+
+CRITICAL REMINDER: Do NOT fabricate any specific numbers or facts. Only rephrase what's already in the resume, or use placeholders for missing metrics.
 
 Skills not checked will NOT be added to the resume"""
 

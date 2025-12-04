@@ -16,12 +16,12 @@ Experienced data science leader with a strong background in implementing cloud s
 ***
 ## EXPERIENCE
 
-**Advisor in Data Science and AI** | <span style="color: #1a73e8;">**Freelance**</span> | New York, NY, US | *Mar 2025 - Present*\
+**Advisor in Data Science and AI** | <span style="color: #1a73e8;">**Freelance**</span> | New York, NY, USA | *Mar 2025 - Present*\
 *Provided strategic advice & built solutions to accelerate digital transformation, automation, and cost control using agentic AI.*
-* Built an LLM service with <$3 daily cost by containerizing open-source LLM, using Hugging Face-sourced LLMs (like Gemma and DeepSeek) and deploying on Google Cloud Run.
-* Created agentic AI application that triggers GitHub issues automatically by analyzing application logs & flagging 4 problems and potential solutions, saving software engineers 3 hours per week.  Integrates with Claude, Gemini, and  OpenAI-type LLMs.
-* Devised an agentic AI web search summary tool using LangGraph to accelerate company research from 4 hours to 5 minutes, integrating with Claude, Gemini, and OpenAI-type LLMs.
-
+* Built an LLM service for less than $2 per day by containerizing open-source LLM, using Gemma from Hugging Face and deploying on Google Cloud Run.
+* Created agentic AI application that triggers GitHub issues automatically by analyzing application logs, which flagged 4 problems and potential solutions.
+* Devised an agentic AI web search summary tool to accelerate company research from 4 hours to 5 minutes,  Used LangGraph for agent orchestration, and Claude code as coding assistant.
+* Used LangGraph for agent orchestration, Google Cloud Run for deployment, MCP for GitHub integration, and Claude & Gemini as coding assistants.
 
 **Senior Director of Data Science** | <span style="color: #1a73e8;">**Adara**</span>  | New York, NY, US | *Jan 2020 - Mar 2025*\
 *Adara provides programmatic media measurement and targeting products to the travel and tourism industry.*
@@ -36,13 +36,13 @@ Experienced data science leader with a strong background in implementing cloud s
 
 **Principal Consultant** | <span style="color: #1a73e8;">**Infosys**</span> | New York, NY, US | *Jan 2019 - Jan 2020*\
 *Infosys provides management & IT consulting services.  I led engagements for data science and engineering projects.*
-* Designed a comprehensive feature engineering & modeling platform, which cut time-to-production by 60%.
+* Designed a comprehensive feature engineering & modeling platform for Stanley Black & Decker's data science center of excellence, which cut time-to-production by 60%.
 * Managed Spark migration project which optimized data engineering cost by 75% for an asset management firm.
 
 **Lead Data Scientist**  | <span style="color: #1a73e8;">**North Analytics**</span> | New York, NY, US | *Jan 2017 - Jan 2019*\
 *Analytics & machine learning consulting firm (acquired). I served as data science expert for all consulting engagements.*
 * Boosted revenue growth by 8% for a toll road operator, using real-world A/B experimentation.
-* Slashed error rate of revenue prediction model service on AWS by 75% for an international supermarket chain.
+* Slashed error rate of revenue prediction model by 75% for an international supermarket chain.
 
 **Analytics Manager for Latin America** | <span style="color: #1a73e8;">**AIG**</span> | Miami, FL, US | *Dec 2014 - Jan 2017*\
 *I supported the data & analytics needs for AIG's Latin America personal insurance business, managing a team of 2 specialists.*
@@ -67,8 +67,10 @@ Experienced data science leader with a strong background in implementing cloud s
 ***
 ## EDUCATION
 
-**M.Sc., Development Studies** | <span style="color: #1a73e8;">**London School of Economics**</span> | London, UK | *Sep 2007 - Dec 2008*\
-**B.Sc., International Economics** | <span style="color: #1a73e8;">**Georgetown University**</span> | Washington, DC, US | *Sep 1997 - May 2001*
+* **M.Sc., Development Studies**
+London School of Economics, London, UK
+* **B.Sc., International Economics**
+Georgetown University, Washington, DC, US
 ***
 ## SKILLS
 
@@ -76,17 +78,14 @@ Experienced data science leader with a strong background in implementing cloud s
 * **Cloud Platforms & Tools:** Google Cloud (GCP), AWS, Cloud Run, Cloud Function, BigQuery
 * **Productivity:** Atlassian JIRA, Bitbucket, Confluence, GitHub
 * **Data Science & MLOps:** Vertex AI, Kubeflow, TensorFlow, Deep Learning, Scikit-learn, Pandas
-* **Generative & Agentic AI:** LangGraph, MCP, Claude, Gemini, OpenAI, LangChain, Hugging Face, Chroma
-* **Data Engineering:** Airflow, PySpark, dbt, Spark
+* **Generative & Agentic AI:** LangGraph, MCP, Claude, Gemini, LangChain, Hugging Face
+* **Data Engineering:** Airflow, PySpark, dbt
 * **Data Visualization & Business Intelligence:** Gradio, Streamlit, Looker, Tableau
-* **Data & AI Strategy:** Data & Analytics Product Roadmap, Data-Driven Decision-Making, Data Quality, Data-Driven Culture, Data Governance, Cloud Architecture, Data Architecture, Data Security, Data Lifecycle Management, Prompt Engineering, LLM Agents
+* **Data Strategy:** Data & Analytics Product Roadmap, Data-Driven Decision-Making, Data Quality, Data-Driven Culture, Data Governance, Cloud Architecture, Data Architecture, Data Security, Data Lifecycle Management
 * **Management:** Digital Transformation, Stakeholder Management, International Client Management, Change Management, Team Development, Risk Reduction, Business Development, Strategic Problem Solving, Teamwork, Strategic Thinking, Recurring Revenue Generation
 * **Languages:** Spanish (Proficient), Portuguese (Intermediate), French (Beginner)
 ***
 ## CERTIFICATIONS
-* Professional Machine Learning Engineer | <span style="color: #1a73e8;">**Google**</span>
-* AWS Generative AI Practitioner | <span style="color: #1a73e8;">**Amazon Web Services**</span>
-* Model Context Protocol - Advanced | <span style="color: #1a73e8;">**Anthropic**</span>
-* Data Warehousing | <span style="color: #1a73e8;">**Snowflake**</span>
-* GCP Databricks Platform Architect | <span style="color: #1a73e8;">**Databricks**</span>
-* Neo4j Certified Professional| <span style="color: #1a73e8;">**Neo4j**</span>
+* Professional Machine Learning Engineer (Google)
+* AWS Generative AI Practitioner (Amazon Web Services)
+* Model Context Protocol - Advanced (Anthropic)

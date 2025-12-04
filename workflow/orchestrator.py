@@ -5,6 +5,7 @@ from workflow.graph import (
     analysis_workflow,
     modification_workflow,
     optimization_application_workflow,
+    optimization_round2_application_workflow,
     export_workflow,
     cover_letter_workflow,
     cover_letter_revision_workflow,
@@ -25,6 +26,7 @@ class ResumeWorkflowOrchestrator:
         self.analysis_workflow = analysis_workflow
         self.modification_workflow = modification_workflow
         self.optimization_application_workflow = optimization_application_workflow
+        self.optimization_round2_application_workflow = optimization_round2_application_workflow
         self.export_workflow = export_workflow
         self.cover_letter_workflow = cover_letter_workflow
         self.cover_letter_revision_workflow = cover_letter_revision_workflow
@@ -76,16 +78,31 @@ class ResumeWorkflowOrchestrator:
 
     def apply_optimizations(self, state: WorkflowState) -> WorkflowState:
         """
-        Apply selected optimization suggestions (Agent 5 application + Agent 4 validation).
+        Apply selected optimization suggestions (Round 1) and suggest Round 2 optimizations.
 
         Args:
             state: Workflow state with selected optimization suggestions
 
         Returns:
-            Updated workflow state with optimized resume and validation
+            Updated workflow state with optimized resume and Round 2 suggestions
         """
-        # Run optimization application and validation workflow
+        # Run optimization application workflow (Round 1 + Round 2 suggestions)
         result = self.optimization_application_workflow.invoke(state)
+
+        return result
+
+    def apply_optimizations_round2(self, state: WorkflowState) -> WorkflowState:
+        """
+        Apply selected Round 2 optimization suggestions and validate.
+
+        Args:
+            state: Workflow state with selected Round 2 optimization suggestions
+
+        Returns:
+            Updated workflow state with fully optimized resume and validation
+        """
+        # Run Round 2 optimization application and validation workflow
+        result = self.optimization_round2_application_workflow.invoke(state)
 
         return result
 

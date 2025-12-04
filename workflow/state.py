@@ -36,8 +36,8 @@ class WorkflowState(TypedDict):
     reasoning: Optional[str]
 
     # Agent 5 outputs (Optimization)
-    optimization_suggestions: Optional[List[SuggestionDict]]  # Suggestions from Agent 5
-    optimization_analysis: Optional[str]  # Analysis of optimization opportunities
+    optimization_suggestions: Optional[List[SuggestionDict]]  # Suggestions from Agent 5 (Round 1)
+    optimization_analysis: Optional[str]  # Analysis of optimization opportunities (Round 1)
     word_count_before_optimization: Optional[int]  # Word count before optimization
     optimized_resume: Optional[str]  # Resume after applying optimizations
     word_count_before: Optional[int]  # Word count before applying selected optimizations
@@ -45,6 +45,13 @@ class WorkflowState(TypedDict):
     words_removed: Optional[int]  # Words removed by optimization
     optimization_summary: Optional[str]  # Summary of optimizations applied
     optimization_changes: Optional[List[str]]  # List of changes made
+
+    # Agent 5 Round 2 outputs
+    optimization_suggestions_round2: Optional[List[SuggestionDict]]  # Second round suggestions
+    optimization_analysis_round2: Optional[str]  # Second round analysis
+    optimized_resume_round2: Optional[str]  # Resume after second round
+    word_count_after_round2: Optional[int]  # Word count after round 2
+    words_removed_round2: Optional[int]  # Words removed in round 2
 
     # Agent 4 outputs (Validation)
     validation_score: Optional[int]
@@ -78,6 +85,11 @@ class WorkflowState(TypedDict):
     pdf_bytes: Optional[bytes]
     cover_letter_pdf_path: Optional[str]
     cover_letter_pdf_bytes: Optional[bytes]
+
+    # PDF formatting options (for regeneration)
+    pdf_font_size: Optional[float]
+    pdf_line_height: Optional[float]
+    pdf_page_margin: Optional[float]
 
     # Workflow control
     current_stage: str
@@ -145,10 +157,18 @@ def create_initial_state(
         optimization_suggestions=None,
         optimization_analysis=None,
         word_count_before_optimization=None,
+        optimization_suggestions_round2=None,
+        optimization_analysis_round2=None,
+        optimized_resume_round2=None,
+        word_count_after_round2=None,
+        words_removed_round2=None,
         pdf_path=None,
         pdf_bytes=None,
         cover_letter_pdf_path=None,
         cover_letter_pdf_bytes=None,
+        pdf_font_size=None,
+        pdf_line_height=None,
+        pdf_page_margin=None,
         current_stage="fetch_job" if job_url else "scoring",
         approved=False,
         error=None,

@@ -2,12 +2,12 @@
   "permissions": {
     "allow": [
       "Bash(python:*)",
+      "Bash(pip install:*)",
       "Bash(git add:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nRefactor: Replace ReportLab with markdown-pdf for PDF export\n\n- Replace ReportLab-based PDF generation with markdown-pdf package\n- Extract CSS styling to external file (utils/resume_style.css)\n- Simplify pdf_exporter.py from ~180 lines to ~94 lines\n- Update dependencies: remove markdown, reportlab, pillow; add markdown-pdf\n- Improve Agent 5 optimizer instructions for handling older job roles\n\nBenefits:\n- Cleaner, more maintainable code\n- Better separation of concerns (CSS in dedicated file)\n- Native markdown support without HTML conversion\n- Easier styling customization\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git push:*)",
-      "Bash(del test_validator.py)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nFeature: Add validation layer and editable suggestions for resume customization\n\n- Add programmatic validation layer (utils/resume_validator.py) to detect and fix structure issues\n- Validator scoped to Experience section only, ignores Education/Certifications\n- Auto-fixes missing backslashes, blank lines, and recovers missing job headlines\n- Integrate validator into Agent 2 (Modifier) and Agent 5 (Optimizer) with logging\n- Strengthen job headline preservation rules with bold emphasis and priority statements\n- Add editable text boxes for Summary and Experience suggestions in UI\n- Users can now customize suggestions before applying them\n- Agent 2 uses edited_text field when available for precise user control\n\nBenefits:\n- Safety net catches LLM mistakes programmatically without extra API calls\n- Transparent logging of issues found and fixes applied\n- Fine-grained user control over Summary and Experience modifications\n- Section-aware validation prevents false positives in Education section\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
-      "Bash(git commit -m \"$(cat <<''EOF''\nImprovement: Generate actionable text for Summary and Experience suggestions\n\n- Update Agent 1 to provide ACTUAL suggested text instead of instructions\n- Summary suggestions now include complete paragraph text\n- Experience suggestions now include full bullet points with metrics\n- Users can edit the pre-populated suggestions before applying\n- Skills continue to use simple \"Add skill: X\" format\n\nExample changes:\n- OLD: \"Rewrite summary to emphasize leadership\"\n- NEW: \"Results-driven leader with 10+ years managing cross-functional teams...\"\n\n- OLD: \"Quantify achievement in role X\"\n- NEW: \"Led team of 5 to deploy system processing 10M+ transactions daily, reducing costs by 35%\"\n\nBenefits:\n- Users see concrete examples they can immediately use or customize\n- Reduces cognitive load - no need to interpret vague instructions\n- Text boxes pre-filled with ready-to-use content\n- Maintains user control through editable text areas\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git push)",
+      "Bash(git commit:*)",
+      "Bash(cat:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []
