@@ -57,6 +57,7 @@ if st.session_state.workflow_state and st.session_state.workflow_state.get("init
                 padding: 1rem 0 !important;
                 margin-bottom: 1rem !important;
                 border-bottom: 2px solid var(--secondary-background-color) !important;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
             }
 
             /* Alternative approach - target the main block */
@@ -66,7 +67,14 @@ if st.session_state.workflow_state and st.session_state.workflow_state.get("init
                 background-color: var(--background-color) !important;
                 z-index: 999999 !important;
                 padding: 1rem 0 !important;
+                padding-bottom: 1.5rem !important;
                 border-bottom: 2px solid var(--secondary-background-color) !important;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            }
+
+            /* Add padding to main content to prevent overlap */
+            section[data-testid="stMain"] > div:first-child > div:first-child > div:nth-child(2) {
+                padding-top: 2rem !important;
             }
         </style>
         <div id="score-tracker-header"></div>
