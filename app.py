@@ -1399,6 +1399,11 @@ elif current_stage in ["export", "completed"]:
 
     st.success("Resume approved and exported successfully!")
 
+    # Go Back button
+    if st.button("⬅️ Go Back to Approval", use_container_width=False, help="Return to approval stage to make changes"):
+        st.session_state.workflow_state['current_stage'] = "awaiting_approval"
+        st.rerun()
+
     # Display final resume
     with st.expander("View Final Resume", expanded=True):
         final_resume = (

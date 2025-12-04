@@ -1,7 +1,6 @@
 """Agent 5: Resume Length Optimizer."""
 from typing import Dict, List
 from utils.agent_helper import get_agent_llm_client
-from utils.resume_validator import ResumeStructureValidator
 from utils.resume_standards import get_optimization_prompt_prefix
 
 
@@ -11,7 +10,6 @@ class ResumeOptimizerAgent:
     def __init__(self, debug_mode: bool = False):
         """Initialize the optimizer agent."""
         self.client = get_agent_llm_client()
-        self.validator = ResumeStructureValidator()
         self.debug_mode = debug_mode
 
     def suggest_optimizations(
@@ -310,18 +308,9 @@ Return ONLY the optimized resume in markdown format. Apply the selected optimiza
                 temperature=0.3
             )
 
-            # Validate and fix structure
-            validation_result = self.validator.validate_and_fix(
-                resume=optimized_resume,
-                original_resume=resume_content
-            )
-
-            if validation_result["fixes_applied"]:
-                print("\n✓ Structure fixes applied:")
-                for fix in validation_result["fixes_applied"]:
-                    print(f"   - {fix}")
-
-            return validation_result["fixed_resume"]
+            # NO AUTO-FIXES - Return the resume as-is from LLM
+            # Agent 4 will validate and report issues only
+            return optimized_resume
 
         except Exception as e:
             raise Exception(f"Failed to apply optimizations: {str(e)}")

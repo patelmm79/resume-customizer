@@ -1,7 +1,6 @@
 """Agent 2: Resume Modifier."""
 from typing import Dict, List
 from utils.agent_helper import get_agent_llm_client
-from utils.resume_validator import ResumeStructureValidator
 from utils.resume_standards import get_modification_prompt_prefix
 
 
@@ -11,7 +10,6 @@ class ResumeModifierAgent:
     def __init__(self):
         """Initialize the modifier agent."""
         self.client = get_agent_llm_client()
-        self.validator = ResumeStructureValidator()
 
     def modify_resume(
         self,
@@ -90,26 +88,9 @@ Return the complete modified resume in markdown format. Maintain the structure b
             # Clean up the response
             modified_resume = self._clean_resume(modified_resume)
 
-            # Validate and fix structure
-            validation_result = self.validator.validate_and_fix(
-                resume=modified_resume,
-                original_resume=original_resume
-            )
-
-            # Log any issues found
-            if validation_result["issues_found"]:
-                print("\n⚠️  Structure validation found issues:")
-                for issue in validation_result["issues_found"]:
-                    print(f"   - {issue}")
-
-            # Log fixes applied
-            if validation_result["fixes_applied"]:
-                print("\n✓ Structure fixes applied:")
-                for fix in validation_result["fixes_applied"]:
-                    print(f"   - {fix}")
-
-            # Return the fixed resume
-            return validation_result["fixed_resume"]
+            # NO AUTO-FIXES - Return resume as-is from LLM
+            # Agent 4 will validate and report issues only
+            return modified_resume
 
         except Exception as e:
             raise Exception(f"Error modifying resume: {str(e)}")
