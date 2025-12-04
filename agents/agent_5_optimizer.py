@@ -41,7 +41,12 @@ class ResumeOptimizerAgent:
 
 You are analyzing a resume to suggest optimizations. Your goal is to identify specific changes that would make the resume more concise without losing relevance or lowering the job match score.
 
-IMPORTANT: Do NOT make changes yourself. Only SUGGEST what could be optimized."""
+CRITICAL RULES:
+1. Do NOT make changes yourself. Only SUGGEST what could be optimized.
+2. NEVER EVER suggest removing entire job entries, roles, or positions from the Experience section.
+3. You can ONLY suggest removing individual bullet points within jobs, never the job itself.
+4. Job titles, company names, and date ranges must ALWAYS remain intact.
+5. Focus on trimming bullet points from older roles (5+ years ago) to save space."""
 
         user_prompt = f"""Analyze this resume and suggest specific optimizations to make it more concise while maintaining a compatibility score of {current_score}/100.
 
@@ -57,16 +62,31 @@ CRITICAL OPTIMIZATION PRIORITIES:
 1. **Older Roles (5+ years ago)**: ALWAYS suggest removing less relevant bullet points from older positions
    - Keep only 2-3 most impactful bullets for older roles
    - Remove bullets that don't directly relate to the target job
-   - NEVER suggest removing the job title/company/dates themselves
+   - ONLY remove individual bullet points, NEVER the job entry itself
 
 2. **Redundancy**: Remove skills or phrases already covered elsewhere
 
 3. **Wordiness**: Condense verbose descriptions
 
+❌ ABSOLUTELY FORBIDDEN - NEVER DO THIS:
+- NEVER suggest removing an entire job/role/position from Experience section
+- NEVER suggest removing job titles (e.g., "Software Engineer")
+- NEVER suggest removing company names (e.g., "Tech Corp")
+- NEVER suggest removing date ranges (e.g., "2015-2017")
+- NEVER say things like "Remove this role", "Remove this position", "Remove this job"
+
+✅ WHAT YOU CAN SUGGEST:
+- Remove specific bullet points within a role (e.g., "Remove bullet 3 from Senior Engineer role")
+- Condense bullet points to be more concise
+- Remove redundant skills or phrases
+- Tighten summaries
+
+Every job entry MUST remain with its title, company, and dates intact. You can only suggest removing or condensing the bullet points underneath.
+
 Please identify optimization opportunities and format your response EXACTLY as follows:
 
 ANALYSIS:
-[Brief analysis of optimization opportunities - which sections are too verbose, what could be condensed, etc. Specifically mention older roles that should be trimmed.]
+[Brief analysis of optimization opportunities - which sections are too verbose, what could be condensed, etc. Specifically mention older roles where BULLET POINTS should be trimmed.]
 
 SUGGESTIONS:
 - [CATEGORY: Experience] [DESCRIPTION: Remove bullets 4-6 from role X (2015-2017) - older and less relevant to target role] [LOCATION: Job title at Company]
@@ -77,10 +97,11 @@ SUGGESTIONS:
 
 Format rules:
 - Each suggestion must have CATEGORY, DESCRIPTION, and LOCATION tags
-- Be specific about what to change and where
-- Focus on removing/condensing content, not adding
+- Be specific about WHICH BULLETS to change and where
+- Focus on removing/condensing BULLET POINTS ONLY, never entire job entries
 - **ALWAYS** suggest bullet point removal for roles 5+ years old
 - NEVER suggest removing job headlines (titles, companies, or date ranges)
+- NEVER suggest removing entire positions/roles
 - Each suggestion should be independently selectable"""
 
         try:
