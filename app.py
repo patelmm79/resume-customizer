@@ -347,23 +347,17 @@ elif current_stage == "awaiting_selection":
                         )
 
                     with col2:
-                        # Only show text box if checkbox is selected
-                        if suggestion['selected']:
-                            # Text box shows the actual suggested text (pre-populated)
-                            suggestion['edited_text'] = st.text_area(
-                                f"Edit suggestion #{suggestion['id']}",
-                                value=suggestion.get('edited_text', suggestion['text']),
-                                height=100,
-                                key=f"edit_{suggestion['id']}",
-                                help="Edit the suggested text before applying",
-                                label_visibility="collapsed"
-                            )
-                        else:
-                            # Show a preview of the suggested text when not selected
-                            preview_text = suggestion.get('edited_text', suggestion['text'])
-                            if len(preview_text) > 100:
-                                preview_text = preview_text[:100] + "..."
-                            st.caption(f"💡 Suggested: {preview_text}")
+                        # ALWAYS show text box so user can see and edit the suggestion
+                        # Text box is editable if selected, read-only style if not
+                        suggestion['edited_text'] = st.text_area(
+                            f"Suggested text for #{suggestion['id']}",
+                            value=suggestion.get('edited_text', suggestion['text']),
+                            height=100,
+                            key=f"edit_{suggestion['id']}",
+                            help="Check the box to apply this suggestion (editable)",
+                            label_visibility="collapsed",
+                            disabled=not suggestion['selected']  # Disable editing when not selected
+                        )
                 else:
                     # For other categories, just show checkbox
                     suggestion['selected'] = st.checkbox(
