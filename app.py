@@ -38,19 +38,27 @@ def get_current_stage():
     return st.session_state.workflow_state.get("current_stage", "input")
 
 
-# Compact Header
-header_col1, header_col2 = st.columns([1, 3])
-with header_col1:
-    st.markdown("## 📄 Resume Customizer")
-with header_col2:
-    st.markdown("*AI-Powered Resume Optimization with LangGraph*")
-
-# Score Tracker - ALWAYS VISIBLE (persistent across all stages after initial scoring)
+# Score Tracker - STICKY AT TOP (persistent across all stages after initial scoring)
 if st.session_state.workflow_state and st.session_state.workflow_state.get("initial_score") is not None:
     state = st.session_state.workflow_state
 
-    st.markdown("---")
-    st.markdown("#### 📊 Score Evolution")
+    # Use container with custom CSS to make it sticky
+    st.markdown("""
+    <style>
+        /* Make the score tracker sticky at the top */
+        [data-testid="stVerticalBlock"] > [style*="flex-direction: column;"] > [data-testid="stVerticalBlock"] {
+            position: sticky;
+            top: 0;
+            background-color: var(--background-color);
+            z-index: 999;
+            padding-top: 1rem;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--secondary-background-color);
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+    st.markdown("### 📊 Score Evolution")
 
     score_cols = st.columns(5)
 
@@ -109,10 +117,14 @@ if st.session_state.workflow_state and st.session_state.workflow_state.get("init
         else:
             st.metric("Final Score", "—", help="Not yet calculated")
 
-st.divider()
+    st.divider()
 
 # Sidebar
 with st.sidebar:
+    # App Title and Description (moved to sidebar)
+    st.markdown("## 📄 Resume Customizer")
+    st.caption("*AI-Powered Resume Optimization with LangGraph*")
+    st.divider()
     st.header("⚙️ LLM Configuration")
 
     # Import model configuration (get fresh list to support dynamic .env config)
