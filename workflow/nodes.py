@@ -196,7 +196,11 @@ def apply_optimizations_node(state: WorkflowState) -> Dict[str, Any]:
         Updated state with optimized resume
     """
     try:
-        agent = ResumeOptimizerAgent()
+        # Check for debug mode
+        import os
+        debug_mode = os.getenv('DEBUG_MODE', '0') == '1'
+
+        agent = ResumeOptimizerAgent(debug_mode=debug_mode)
 
         # Get selected suggestions
         selected_suggestions = [
@@ -318,7 +322,11 @@ def apply_optimizations_round2_node(state: WorkflowState) -> Dict[str, Any]:
         Updated state with optimized resume from round 2
     """
     try:
-        agent = ResumeOptimizerAgent()
+        # Check for debug mode
+        import os
+        debug_mode = os.getenv('DEBUG_MODE', '0') == '1'
+
+        agent = ResumeOptimizerAgent(debug_mode=debug_mode)
 
         # Get selected round 2 suggestions
         selected_suggestions = [

@@ -50,6 +50,14 @@ All requested features have been successfully implemented and are ready for test
 - **NEVER** suggests removing job headlines (titles/companies/dates)
 - **Test**: Upload resume with old roles and verify suggestions target them
 
+### 7. **JSON Parser for Agent 5 Suggestions** ✅ NEW
+- Converted Agent 5 from unreliable regex parsing to robust JSON parsing
+- LLM now returns structured JSON: `{"analysis": "...", "suggestions": [...]}`
+- Parser handles markdown code blocks (```json wrapping) automatically
+- Fallback extraction if JSON has text before/after
+- Better debug output showing parse success/failure
+- **Test**: Enable debug mode and verify "JSON parsed successfully" message
+
 ### 6. **Persistent Score Tracker**
 - Beautiful metrics display at top of every page (after initial scoring)
 - Shows evolution: Initial Score → After Modifications → After Opt R1 → After Opt R2 → Final Score

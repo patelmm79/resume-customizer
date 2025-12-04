@@ -120,6 +120,29 @@
 
 ---
 
+## 7. Converted Agent 5 to JSON Parsing ✅
+
+**Problem**: Regex-based parser was fragile and failed when LLM used unexpected markdown formats (headers, bold, etc.). Led to "0 suggestions parsed" errors.
+
+**Fix Applied**:
+- Changed prompt to explicitly request JSON format: `{"analysis": "...", "suggestions": [...]}`
+- Rewrote `_parse_suggestions_response()` to use `json.loads()` instead of regex
+- Added automatic cleanup for markdown code blocks (```json wrapping)
+- Added fallback extraction for JSON embedded in text
+- Enhanced debug output to show parsing status
+- Graceful error handling with clear error messages
+
+**Benefits**:
+- Reliable parsing of structured data
+- No complex regex patterns to maintain
+- Better error messages when parsing fails
+- Handles edge cases automatically
+
+**Files Modified**:
+- `agents/agent_5_optimizer.py` - Replaced parser method (lines 154-256)
+
+---
+
 ## ✅ All Changes Completed!
 
 ### Testing Checklist:
@@ -130,6 +153,7 @@
 5. **Round 2 Optimization**: Test the full two-round optimization flow
 6. **Score Tracker**: Verify persistent score display shows evolution correctly
 7. **Resume Versions**: Ensure the final exported PDF uses the most recent version (round 2 > round 1 > modified)
+8. **JSON Parser**: Enable debug mode and verify optimization suggestions parse correctly (should see "JSON parsed successfully: N suggestions")
 
 ### Optional Future Enhancements:
 1. Update CLAUDE.md documentation with detailed two-round optimization flow

@@ -148,21 +148,6 @@ RESUME:
 JOB DESCRIPTION:
 {job_description}
 
-Please format your response EXACTLY as follows:
-
-SCORE: [number from 1-100]
-
-ANALYSIS:
-[Your detailed analysis here]
-
-SUGGESTIONS:
-- [CATEGORY: Skills] Add skill: Python
-- [CATEGORY: Skills] Add skill: Docker
-- [CATEGORY: Skills] Add skill: Kubernetes
-- [CATEGORY: Summary] [DESCRIPTION: Emphasize cloud architecture and leadership experience] [SUGGESTED_TEXT: Results-driven Data Scientist with 8+ years of experience building ML pipelines and deploying models at scale. Proven track record of reducing infrastructure costs by 40% through optimization and driving data-driven decision making across cross-functional teams.]
-- [CATEGORY: Experience] [DESCRIPTION: Quantify achievement in recent engineering role] [SUGGESTED_TEXT: Led a team of 5 engineers to architect and deploy a real-time fraud detection system processing 10M+ transactions daily, reducing false positives by 35% and saving $2M annually.]
-(Continue with more suggestions as needed)
-
 CRITICAL FORMAT REQUIREMENTS:
 
 For Skills:
@@ -175,7 +160,6 @@ For Skills:
 - Format: "Add skill: [Skill Name]"
 
 For Summary and Experience:
-- Use this format: [DESCRIPTION: Brief justification] [SUGGESTED_TEXT: Actual text to use]
 - DESCRIPTION: A brief phrase explaining why this change is suggested (shown in checkbox)
 - SUGGESTED_TEXT: The COMPLETE actual text to insert/replace (shown in text box)
 - For Summary: Provide a complete paragraph rewrite based ONLY on facts from the resume
@@ -187,7 +171,40 @@ For Summary and Experience:
 
 CRITICAL REMINDER: Do NOT fabricate any specific numbers or facts. Only rephrase what's already in the resume, or use placeholders for missing metrics.
 
-Skills not checked will NOT be added to the resume"""
+Please provide your response in VALID JSON format ONLY (no markdown, no code blocks, just pure JSON):
+
+{{
+  "score": 72,
+  "analysis": "Your detailed analysis explaining the score, what matches well, and what could be improved.",
+  "suggestions": [
+    {{
+      "category": "Skills",
+      "text": "Add skill: Python",
+      "suggested_text": "Add skill: Python"
+    }},
+    {{
+      "category": "Skills",
+      "text": "Add skill: Docker",
+      "suggested_text": "Add skill: Docker"
+    }},
+    {{
+      "category": "Summary",
+      "text": "Emphasize cloud architecture and leadership experience",
+      "suggested_text": "Results-driven Data Scientist with 8+ years of experience building ML pipelines and deploying models at scale. Proven track record of reducing infrastructure costs by [X%] through optimization."
+    }},
+    {{
+      "category": "Experience",
+      "text": "Quantify achievement in recent engineering role",
+      "suggested_text": "Led a team of [number] engineers to architect and deploy a real-time fraud detection system processing [volume] transactions daily."
+    }}
+  ]
+}}
+
+CRITICAL:
+- Return ONLY valid JSON, no markdown formatting, no ```json code blocks
+- Each suggestion must have category, text, and suggested_text fields
+- Use placeholders like [X%], [number], [timeframe] for metrics not in the original resume
+- Skills not checked by user will NOT be added to the resume"""
 
         try:
             response = self.client.generate_with_system_prompt(
@@ -207,139 +224,106 @@ Skills not checked will NOT be added to the resume"""
         except Exception as e:
             raise Exception(f"Error in resume analysis: {str(e)}")
 
-    def _extract_suggestions_from_text(self, text: str) -> list:
-        """Extract suggestions from unstructured text."""
-        suggestions = []
-        # Look for bulleted lists or numbered lists
-        lines = text.split('\n')
-        for line in lines:
-            line = line.strip()
-            if line.startswith('-') or line.startswith('•') or re.match(r'^\d+\.', line):
-                # This looks like a suggestion
-                suggestion_text = re.sub(r'^[-•\d.]\s*', '', line).strip()
-                if len(suggestion_text) > 10:  # Filter out very short lines
-                    suggestions.append({
-                        "id": len(suggestions),
-                        "text": suggestion_text,
-                        "category": "General",
-                        "selected": True,
-                        "edited_text": suggestion_text
-                    })
-        return suggestions
-
     def _parse_response(self, response: str) -> Dict:
         """
         Parse the LLM response into structured data.
 
         Args:
-            response: Raw LLM response
+            response: Raw LLM response (expected as JSON)
 
         Returns:
             Structured dictionary with score, analysis, and suggestions
         """
-        score = None
-        analysis = []
-        suggestions = []
+        import json
 
-        # Check if response follows the expected format
-        if "SCORE:" in response and "SUGGESTIONS:" in response:
-            # Structured format parsing
-            lines = response.strip().split('\n')
-            current_section = None
+        # Clean up response - remove markdown code blocks if present
+        cleaned_response = response.strip()
 
-            for line in lines:
-                line = line.strip()
+        # Remove ```json and ``` markers if present
+        if cleaned_response.startswith("```"):
+            first_newline = cleaned_response.find('\n')
+            if first_newline != -1:
+                cleaned_response = cleaned_response[first_newline + 1:]
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3].strip()
 
-                if line.startswith("SCORE:"):
-                    score_text = line.replace("SCORE:", "").strip()
-                    try:
-                        score = int(score_text)
-                    except ValueError:
-                        match = re.search(r'\d+', score_text)
-                        if match:
-                            score = int(match.group())
-                    current_section = "score"
+        print(f"[DEBUG] Cleaned response first 500 chars:\n{cleaned_response[:500]}\n")
 
-                elif line.startswith("ANALYSIS:"):
-                    current_section = "analysis"
-                    analysis_text = line.replace("ANALYSIS:", "").strip()
-                    if analysis_text:
-                        analysis.append(analysis_text)
+        try:
+            # Parse JSON
+            parsed = json.loads(cleaned_response)
 
-                elif line.startswith("SUGGESTIONS:"):
-                    current_section = "suggestions"
+            score = parsed.get("score", 50)
+            analysis = parsed.get("analysis", "Analysis not available")
+            raw_suggestions = parsed.get("suggestions", [])
 
-                elif line and current_section == "analysis":
-                    analysis.append(line)
+            # Convert to internal format
+            suggestions = []
+            for idx, suggestion in enumerate(raw_suggestions):
+                suggestions.append({
+                    "id": idx,
+                    "text": suggestion.get("text", ""),
+                    "category": suggestion.get("category", "General"),
+                    "selected": True,
+                    "edited_text": suggestion.get("suggested_text", suggestion.get("text", ""))
+                })
 
-                elif line and current_section == "suggestions" and line.startswith("-"):
-                    # Parse structured suggestion
-                    suggestion_text = line[1:].strip()
-                    category = "General"
+            print(f"[DEBUG] JSON parsed successfully: {len(suggestions)} suggestions")
 
-                    if suggestion_text.startswith("[CATEGORY:"):
-                        end_bracket = suggestion_text.find("]")
-                        if end_bracket != -1:
-                            category = suggestion_text[10:end_bracket].strip()
-                            suggestion_text = suggestion_text[end_bracket + 1:].strip()
+            # Ensure score is valid
+            if score is None or score < 1 or score > 100:
+                score = 50
 
-                    description = None
-                    suggested_text = None
+            return {
+                "score": score,
+                "analysis": analysis,
+                "suggestions": suggestions
+            }
 
-                    if "[DESCRIPTION:" in suggestion_text:
-                        desc_start = suggestion_text.find("[DESCRIPTION:") + 13
-                        desc_end = suggestion_text.find("]", desc_start)
-                        if desc_end != -1:
-                            description = suggestion_text[desc_start:desc_end].strip()
-                            suggestion_text = suggestion_text[desc_end + 1:].strip()
+        except json.JSONDecodeError as e:
+            print(f"[DEBUG] JSON parse failed: {str(e)}")
+            print(f"[DEBUG] Attempting fallback parsing...")
 
-                    if "[SUGGESTED_TEXT:" in suggestion_text:
-                        text_start = suggestion_text.find("[SUGGESTED_TEXT:") + 16
-                        text_end = suggestion_text.find("]", text_start)
-                        if text_end != -1:
-                            suggested_text = suggestion_text[text_start:text_end].strip()
+            # Fallback: Try to extract JSON from text
+            json_match = re.search(r'\{[\s\S]*\}', cleaned_response)
+            if json_match:
+                try:
+                    parsed = json.loads(json_match.group(0))
+                    score = parsed.get("score", 50)
+                    analysis = parsed.get("analysis", "Analysis not available")
+                    raw_suggestions = parsed.get("suggestions", [])
 
-                    display_text = description if description and suggested_text else suggestion_text
-                    edited_text = suggested_text if suggested_text else suggestion_text
+                    suggestions = []
+                    for idx, suggestion in enumerate(raw_suggestions):
+                        suggestions.append({
+                            "id": idx,
+                            "text": suggestion.get("text", ""),
+                            "category": suggestion.get("category", "General"),
+                            "selected": True,
+                            "edited_text": suggestion.get("suggested_text", suggestion.get("text", ""))
+                        })
 
-                    suggestions.append({
-                        "id": len(suggestions),
-                        "text": display_text,
-                        "category": category,
-                        "selected": True,
-                        "edited_text": edited_text
-                    })
-        else:
-            # Fallback: conversational format
-            print("[DEBUG] Response not in expected format, using fallback parsing")
+                    print(f"[DEBUG] Fallback successful: {len(suggestions)} suggestions")
 
-            # Extract score
-            score_match = re.search(r'(?:score|rating).*?(\d+)(?:/100|\s+out of 100)', response, re.IGNORECASE)
-            if score_match:
-                score = int(score_match.group(1))
-            else:
-                numbers = re.findall(r'\b(\d+)\b', response)
-                for num in numbers:
-                    n = int(num)
-                    if 1 <= n <= 100:
-                        score = n
-                        break
+                    if score is None or score < 1 or score > 100:
+                        score = 50
 
-            # Use entire response as analysis
-            analysis = [response]
+                    return {
+                        "score": score,
+                        "analysis": analysis,
+                        "suggestions": suggestions
+                    }
+                except json.JSONDecodeError:
+                    pass
 
-            # Extract suggestions
-            suggestions = self._extract_suggestions_from_text(response)
+            # If all parsing fails, return minimal result
+            print(f"[DEBUG] All parsing methods failed")
 
-        # Ensure score is valid
-        if score is None or score < 1 or score > 100:
-            score = 50
-
-        return {
-            "score": score,
-            "analysis": "\n".join(analysis) if analysis else "Analysis not available",
-            "suggestions": suggestions
-        }
+            return {
+                "score": 50,
+                "analysis": "Failed to parse response. Please try again.",
+                "suggestions": []
+            }
 
     def score_only(
         self,

@@ -83,26 +83,42 @@ CRITICAL OPTIMIZATION PRIORITIES:
 
 Every job entry MUST remain with its title, company, and dates intact. You can only suggest removing or condensing the bullet points underneath.
 
-Please identify optimization opportunities and format your response EXACTLY as follows:
+Please provide your response in VALID JSON format ONLY (no markdown, no code blocks, just pure JSON):
 
-ANALYSIS:
-[Brief analysis of optimization opportunities - which sections are too verbose, what could be condensed, etc. Specifically mention older roles where BULLET POINTS should be trimmed.]
+{{
+  "analysis": "Brief analysis of optimization opportunities - which sections are too verbose, what could be condensed, etc. Specifically mention older roles where BULLET POINTS should be trimmed.",
+  "suggestions": [
+    {{
+      "category": "Experience",
+      "description": "Remove bullets 4-6 from role X (2015-2017) - older and less relevant to target role",
+      "location": "Job title at Company"
+    }},
+    {{
+      "category": "Experience",
+      "description": "Remove bullet 3 from role Y (2016-2018) - outdated technology not in job description",
+      "location": "Job title at Company"
+    }},
+    {{
+      "category": "Skills",
+      "description": "Remove redundant skills: X, Y, Z - not mentioned in job description",
+      "location": "Skills section"
+    }},
+    {{
+      "category": "Experience",
+      "description": "Condense bullet 2 in role Z - too wordy, can reduce from 25 to 15 words",
+      "location": "Job title at Company"
+    }}
+  ]
+}}
 
-SUGGESTIONS:
-- [CATEGORY: Experience] [DESCRIPTION: Remove bullets 4-6 from role X (2015-2017) - older and less relevant to target role] [LOCATION: Job title at Company]
-- [CATEGORY: Experience] [DESCRIPTION: Remove bullet 3 from role Y (2016-2018) - outdated technology not in job description] [LOCATION: Job title at Company]
-- [CATEGORY: Skills] [DESCRIPTION: Remove redundant skills: X, Y, Z - not mentioned in job description] [LOCATION: Skills section]
-- [CATEGORY: Experience] [DESCRIPTION: Condense bullet 2 in role Z - too wordy, can reduce from 25 to 15 words] [LOCATION: Job title at Company]
-- [CATEGORY: Summary] [DESCRIPTION: Tighten summary - reduce from 80 to 50 words by removing redundant phrases] [LOCATION: Summary section]
-
-Format rules:
-- Each suggestion must have CATEGORY, DESCRIPTION, and LOCATION tags
+CRITICAL:
+- Return ONLY valid JSON, no markdown formatting, no ```json code blocks
+- Each suggestion must have category, description, and location fields
 - Be specific about WHICH BULLETS to change and where
 - Focus on removing/condensing BULLET POINTS ONLY, never entire job entries
 - **ALWAYS** suggest bullet point removal for roles 5+ years old
 - NEVER suggest removing job headlines (titles, companies, or date ranges)
-- NEVER suggest removing entire positions/roles
-- Each suggestion should be independently selectable"""
+- NEVER suggest removing entire positions/roles"""
 
         try:
             response = self.client.generate_with_system_prompt(
@@ -140,140 +156,104 @@ Format rules:
         Parse suggestions response into structured data.
 
         Args:
-            response: Raw LLM response with suggestions
+            response: Raw LLM response with suggestions (expected as JSON)
             resume_content: Original resume
 
         Returns:
             Dictionary with suggestions and analysis
         """
+        import json
         import re
 
-        analysis = ""
-        suggestions = []
-        current_section = None
+        # Clean up response - remove markdown code blocks if present
+        cleaned_response = response.strip()
 
-        lines = response.strip().split('\n')
+        # Remove ```json and ``` markers if present
+        if cleaned_response.startswith("```"):
+            # Find first newline after opening ```
+            first_newline = cleaned_response.find('\n')
+            if first_newline != -1:
+                cleaned_response = cleaned_response[first_newline + 1:]
 
-        for line in lines:
-            line = line.strip()
+            # Remove closing ```
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3].strip()
 
-            # Support multiple header formats: "ANALYSIS:", "# ANALYSIS", "## ANALYSIS"
-            if (line.startswith("ANALYSIS:") or
-                line.upper().startswith("# ANALYSIS") or
-                line.upper().startswith("## ANALYSIS") or
-                "ANALYSIS" in line.upper() and (line.startswith("#") or line.startswith("**"))):
-                current_section = "analysis"
-                # Strip all markdown formatting
-                analysis_text = re.sub(r'^#+\s*', '', line)  # Remove leading #'s
-                analysis_text = re.sub(r'\*\*', '', analysis_text)  # Remove bold
-                analysis_text = analysis_text.replace("ANALYSIS:", "").replace("ANALYSIS", "").strip()
-                if analysis_text:
-                    analysis = analysis_text
-                continue
+        if self.debug_mode:
+            print(f"[Agent5 DEBUG] Cleaned response first 500 chars:\n{cleaned_response[:500]}\n")
 
-            # Support multiple header formats: "SUGGESTIONS:", "# SUGGESTIONS", "## SUGGESTIONS"
-            elif (line.startswith("SUGGESTIONS:") or
-                  line.upper().startswith("# SUGGESTIONS") or
-                  line.upper().startswith("## SUGGESTIONS") or
-                  "SUGGESTIONS" in line.upper() and (line.startswith("#") or line.startswith("**"))):
-                current_section = "suggestions"
-                continue
+        try:
+            # Parse JSON
+            parsed = json.loads(cleaned_response)
 
-            if current_section == "analysis" and line:
-                analysis += "\n" + line
+            # Extract analysis and suggestions
+            analysis = parsed.get("analysis", "")
+            raw_suggestions = parsed.get("suggestions", [])
 
-            elif current_section == "suggestions" and line.startswith("-"):
-                # Parse suggestion line
-                suggestion_text = line[1:].strip()
-
-                # Skip sub-bullets or examples that don't have proper tags
-                # Support both [CATEGORY:] and **CATEGORY:** formats
-                has_category_bracket = "[CATEGORY:" in suggestion_text
-                has_category_bold = "**CATEGORY:" in suggestion_text or "CATEGORY:" in suggestion_text
-
-                if not (has_category_bracket or has_category_bold):
-                    continue
-
-                category = "General"
-                description = suggestion_text
-                location = ""
-
-                # Extract CATEGORY - support multiple formats
-                if "[CATEGORY:" in suggestion_text:
-                    cat_match = re.search(r'\[CATEGORY:\s*([^\]]+)\]', suggestion_text)
-                    if cat_match:
-                        category = cat_match.group(1).strip()
-                elif "**CATEGORY:**" in suggestion_text:
-                    # Match **CATEGORY:** followed by text until | or next **
-                    cat_match = re.search(r'\*\*CATEGORY:\*\*\s*([^\|\*]+)', suggestion_text)
-                    if cat_match:
-                        category = cat_match.group(1).strip()
-                elif "**CATEGORY:" in suggestion_text:
-                    # Match **CATEGORY: (without closing **)
-                    cat_match = re.search(r'\*\*CATEGORY:\s*([^\|\*]+)', suggestion_text)
-                    if cat_match:
-                        category = cat_match.group(1).strip()
-                elif "CATEGORY:" in suggestion_text:
-                    # Plain CATEGORY: without brackets or bold
-                    cat_match = re.search(r'CATEGORY:\s*([^\|]+)', suggestion_text)
-                    if cat_match:
-                        category = cat_match.group(1).strip()
-
-                # Extract DESCRIPTION - support multiple formats
-                if "[DESCRIPTION:" in suggestion_text:
-                    desc_match = re.search(r'\[DESCRIPTION:\s*([^\]]+)\]', suggestion_text)
-                    if desc_match:
-                        description = desc_match.group(1).strip()
-                elif "**DESCRIPTION:**" in suggestion_text:
-                    # Match **DESCRIPTION:** ... up to next | or **
-                    desc_match = re.search(r'\*\*DESCRIPTION:\*\*\s*([^\|]+?)(?:\s*\||\s*\*\*|$)', suggestion_text)
-                    if desc_match:
-                        description = desc_match.group(1).strip()
-                elif "**DESCRIPTION:" in suggestion_text:
-                    # Match **DESCRIPTION: (without closing **)
-                    desc_match = re.search(r'\*\*DESCRIPTION:\s*([^\|]+?)(?:\s*\||\s*\*\*|$)', suggestion_text)
-                    if desc_match:
-                        description = desc_match.group(1).strip()
-                elif "DESCRIPTION:" in suggestion_text:
-                    # Plain DESCRIPTION: without brackets or bold
-                    desc_match = re.search(r'DESCRIPTION:\s*(.+?)(?:\s*\|\s*(?:\*\*)?LOCATION:|$)', suggestion_text)
-                    if desc_match:
-                        description = desc_match.group(1).strip()
-
-                # Extract LOCATION - support multiple formats
-                if "[LOCATION:" in suggestion_text:
-                    loc_match = re.search(r'\[LOCATION:\s*([^\]]+)\]', suggestion_text)
-                    if loc_match:
-                        location = loc_match.group(1).strip()
-                elif "**LOCATION:**" in suggestion_text:
-                    # Match **LOCATION:** ... to end of line
-                    loc_match = re.search(r'\*\*LOCATION:\*\*\s*(.+?)$', suggestion_text)
-                    if loc_match:
-                        location = loc_match.group(1).strip()
-                elif "**LOCATION:" in suggestion_text:
-                    # Match **LOCATION: (without closing **)
-                    loc_match = re.search(r'\*\*LOCATION:\s*(.+?)$', suggestion_text)
-                    if loc_match:
-                        location = loc_match.group(1).strip()
-                elif "LOCATION:" in suggestion_text:
-                    # Plain LOCATION: without brackets or bold
-                    loc_match = re.search(r'LOCATION:\s*(.+?)$', suggestion_text)
-                    if loc_match:
-                        location = loc_match.group(1).strip()
-
+            # Convert to internal format with id and selected fields
+            suggestions = []
+            for idx, suggestion in enumerate(raw_suggestions):
                 suggestions.append({
-                    "id": len(suggestions),
-                    "text": description,
-                    "category": category,
-                    "location": location,
+                    "id": idx,
+                    "text": suggestion.get("description", ""),
+                    "category": suggestion.get("category", "General"),
+                    "location": suggestion.get("location", ""),
                     "selected": True  # Default to selected
                 })
 
-        return {
-            "suggestions": suggestions,
-            "analysis": analysis.strip(),
-            "current_word_count": len(resume_content.split())
-        }
+            if self.debug_mode:
+                print(f"[Agent5 DEBUG] JSON parsed successfully: {len(suggestions)} suggestions")
+
+            return {
+                "suggestions": suggestions,
+                "analysis": analysis.strip(),
+                "current_word_count": len(resume_content.split())
+            }
+
+        except json.JSONDecodeError as e:
+            if self.debug_mode:
+                print(f"[Agent5 DEBUG] JSON parse failed: {str(e)}")
+                print(f"[Agent5 DEBUG] Attempting fallback parsing...")
+
+            # Fallback: Try to extract JSON from text
+            # Sometimes LLM includes text before/after JSON
+            json_match = re.search(r'\{[\s\S]*\}', cleaned_response)
+            if json_match:
+                try:
+                    parsed = json.loads(json_match.group(0))
+                    analysis = parsed.get("analysis", "")
+                    raw_suggestions = parsed.get("suggestions", [])
+
+                    suggestions = []
+                    for idx, suggestion in enumerate(raw_suggestions):
+                        suggestions.append({
+                            "id": idx,
+                            "text": suggestion.get("description", ""),
+                            "category": suggestion.get("category", "General"),
+                            "location": suggestion.get("location", ""),
+                            "selected": True
+                        })
+
+                    if self.debug_mode:
+                        print(f"[Agent5 DEBUG] Fallback successful: {len(suggestions)} suggestions")
+
+                    return {
+                        "suggestions": suggestions,
+                        "analysis": analysis.strip(),
+                        "current_word_count": len(resume_content.split())
+                    }
+                except json.JSONDecodeError:
+                    pass
+
+            # If all parsing fails, return empty result with error in analysis
+            if self.debug_mode:
+                print(f"[Agent5 DEBUG] All parsing methods failed")
+
+            return {
+                "suggestions": [],
+                "analysis": "Failed to parse optimization suggestions. Please try again.",
+                "current_word_count": len(resume_content.split())
+            }
 
     def apply_optimizations(
         self,
