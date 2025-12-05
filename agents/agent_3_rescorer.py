@@ -54,28 +54,33 @@ Please provide:
 2. Key improvements you notice compared to the original
 3. Any remaining concerns or areas for improvement
 4. A recommendation (Ready to Submit / Needs More Work)
+5. **CRITICAL**: If the new score is LOWER than the original score, you MUST explain why in the "score_drop_explanation" field
 
-Format your response EXACTLY as follows:
+Please provide your response in VALID JSON format ONLY (no markdown, no code blocks, just pure JSON):
 
-NEW_SCORE: [number from 1-100]
+{{
+  "new_score": 85,
+  "comparison": "Brief comparison of how the resume has changed",
+  "improvements": [
+    "Added specific technical skills mentioned in job description",
+    "Quantified achievements with metrics",
+    "Improved professional summary alignment"
+  ],
+  "concerns": [
+    "Could add more leadership examples",
+    "Missing certification XYZ"
+  ],
+  "recommendation": "Ready to Submit",
+  "reasoning": "Explanation of why ready or needs work",
+  "score_drop_explanation": "ONLY IF NEW SCORE < ORIGINAL: Detailed explanation of why score dropped despite changes. What specific issues caused the lower score? What did the changes negatively impact?"
+}}
 
-COMPARISON:
-[Brief comparison of improvement]
-
-IMPROVEMENTS:
-- Improvement 1
-- Improvement 2
-- Improvement 3
-(Continue as needed)
-
-REMAINING_CONCERNS:
-- Concern 1 (if any)
-- Concern 2 (if any)
-
-RECOMMENDATION: [Ready to Submit / Needs More Work]
-
-REASONING:
-[Explain your recommendation]"""
+CRITICAL:
+- Return ONLY valid JSON, no markdown formatting, no ```json code blocks
+- new_score must be 1-100
+- recommendation must be either "Ready to Submit" or "Needs More Work"
+- **If new_score < {original_score}, you MUST provide detailed score_drop_explanation**
+- Be consistent in your scoring - don't drop scores without clear justification"""
 
         try:
             response = self.client.generate_with_system_prompt(
@@ -94,87 +99,91 @@ REASONING:
         Parse the LLM response into structured data.
 
         Args:
-            response: Raw LLM response
+            response: Raw LLM response (expected as JSON)
             original_score: Original score for comparison
 
         Returns:
             Structured dictionary with rescoring results
         """
-        lines = response.strip().split('\n')
+        import json
+        import re
 
-        new_score = None
-        comparison = []
-        improvements = []
-        concerns = []
-        recommendation = "Needs More Work"
-        reasoning = []
+        # Clean up response - remove markdown code blocks if present
+        cleaned = response.strip()
 
-        current_section = None
+        if cleaned.startswith("```"):
+            first_newline = cleaned.find('\n')
+            if first_newline != -1:
+                cleaned = cleaned[first_newline + 1:]
+            if cleaned.endswith("```"):
+                cleaned = cleaned[:-3].strip()
 
-        for line in lines:
-            line = line.strip()
+        try:
+            # Parse JSON
+            parsed = json.loads(cleaned)
 
-            if line.startswith("NEW_SCORE:"):
-                score_text = line.replace("NEW_SCORE:", "").strip()
-                try:
-                    new_score = int(score_text)
-                except ValueError:
-                    import re
-                    match = re.search(r'\d+', score_text)
-                    if match:
-                        new_score = int(match.group())
-                    else:
-                        new_score = original_score + 1
-                current_section = "score"
+            new_score = parsed.get("new_score", original_score + 5)
+            score_improvement = new_score - original_score
 
-            elif line.startswith("COMPARISON:"):
-                current_section = "comparison"
+            result = {
+                "new_score": new_score,
+                "original_score": original_score,
+                "score_improvement": score_improvement,
+                "comparison": parsed.get("comparison", "Resume has been updated."),
+                "improvements": parsed.get("improvements", []),
+                "concerns": parsed.get("concerns", []),
+                "recommendation": parsed.get("recommendation", "Needs More Work"),
+                "reasoning": parsed.get("reasoning", "See improvements above.")
+            }
 
-            elif line.startswith("IMPROVEMENTS:"):
-                current_section = "improvements"
-
-            elif line.startswith("REMAINING_CONCERNS:"):
-                current_section = "concerns"
-
-            elif line.startswith("RECOMMENDATION:"):
-                rec_text = line.replace("RECOMMENDATION:", "").strip()
-                if "Ready" in rec_text or "ready" in rec_text:
-                    recommendation = "Ready to Submit"
+            # CRITICAL: If score dropped, include explanation
+            if new_score < original_score:
+                score_drop = parsed.get("score_drop_explanation", "")
+                if score_drop:
+                    result["score_drop_explanation"] = score_drop
                 else:
-                    recommendation = "Needs More Work"
-                current_section = "recommendation"
+                    # Force LLM to explain if it didn't provide one
+                    result["score_drop_explanation"] = "Score decreased without explanation - this may indicate scoring inconsistency."
 
-            elif line.startswith("REASONING:"):
-                current_section = "reasoning"
+            return result
 
-            elif line and current_section == "comparison":
-                if not line.startswith(("IMPROVEMENTS:", "NEW_SCORE:", "REMAINING_CONCERNS:", "RECOMMENDATION:", "REASONING:")):
-                    comparison.append(line)
+        except json.JSONDecodeError as e:
+            print(f"[Agent3 DEBUG] JSON parse failed: {str(e)}")
 
-            elif line and current_section == "improvements" and line.startswith("-"):
-                improvements.append(line[1:].strip())
+            # Fallback: Extract JSON from text
+            json_match = re.search(r'\{[\s\S]*\}', cleaned)
+            if json_match:
+                try:
+                    parsed = json.loads(json_match.group(0))
+                    new_score = parsed.get("new_score", original_score + 5)
+                    score_improvement = new_score - original_score
 
-            elif line and current_section == "concerns" and line.startswith("-"):
-                concerns.append(line[1:].strip())
+                    result = {
+                        "new_score": new_score,
+                        "original_score": original_score,
+                        "score_improvement": score_improvement,
+                        "comparison": parsed.get("comparison", "Resume has been updated."),
+                        "improvements": parsed.get("improvements", []),
+                        "concerns": parsed.get("concerns", []),
+                        "recommendation": parsed.get("recommendation", "Needs More Work"),
+                        "reasoning": parsed.get("reasoning", "See improvements above.")
+                    }
 
-            elif line and current_section == "reasoning":
-                if not line.startswith(("IMPROVEMENTS:", "NEW_SCORE:", "REMAINING_CONCERNS:", "RECOMMENDATION:", "COMPARISON:")):
-                    reasoning.append(line)
+                    if new_score < original_score:
+                        result["score_drop_explanation"] = parsed.get("score_drop_explanation", "Score decreased without explanation.")
 
-        # Ensure new_score is valid
-        if new_score is None or new_score < 1 or new_score > 100:
-            new_score = min(100, original_score + 5)
+                    return result
+                except json.JSONDecodeError:
+                    pass
 
-        # Calculate improvement
-        score_improvement = new_score - original_score
-
-        return {
-            "new_score": new_score,
-            "original_score": original_score,
-            "score_improvement": score_improvement,
-            "comparison": "\n".join(comparison) if comparison else "Resume has been updated based on suggestions.",
-            "improvements": improvements,
-            "concerns": concerns,
-            "recommendation": recommendation,
-            "reasoning": "\n".join(reasoning) if reasoning else "See improvements above."
-        }
+            # If all parsing fails, return safe defaults
+            return {
+                "new_score": original_score + 5,
+                "original_score": original_score,
+                "score_improvement": 5,
+                "comparison": "Unable to parse scoring response.",
+                "improvements": [],
+                "concerns": ["Scoring error - please try again"],
+                "recommendation": "Needs More Work",
+                "reasoning": "Parsing failed."
+            }

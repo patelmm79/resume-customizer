@@ -494,6 +494,11 @@ elif current_stage == "awaiting_optimization_selection":
         else:
             st.warning(f"⚠️ {current_words} words (target: {target_words})")
 
+    # CRITICAL: Show score drop explanation if score decreased
+    if state.get('score_improvement', 0) < 0 and state.get('score_drop_explanation'):
+        st.error(f"⚠️ **Score Decreased by {abs(state['score_improvement'])} points**")
+        st.warning(f"**Explanation:** {state['score_drop_explanation']}")
+
     st.divider()
 
     # Display optimization analysis
@@ -1439,6 +1444,14 @@ elif current_stage in ["export", "completed"]:
     st.markdown("#### PDF Formatting")
     st.caption("Adjust these settings to fit your resume on one page. Decrease values to fit more content.")
 
+    # Ensure PDF formatting defaults are set in state
+    if 'pdf_font_size' not in st.session_state.workflow_state:
+        st.session_state.workflow_state['pdf_font_size'] = 9.5
+    if 'pdf_line_height' not in st.session_state.workflow_state:
+        st.session_state.workflow_state['pdf_line_height'] = 1.2
+    if 'pdf_page_margin' not in st.session_state.workflow_state:
+        st.session_state.workflow_state['pdf_page_margin'] = 0.75
+
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
@@ -1446,7 +1459,7 @@ elif current_stage in ["export", "completed"]:
             "Font Size (px)",
             min_value=7.0,
             max_value=12.0,
-            value=st.session_state.workflow_state.get('pdf_font_size', 9.5),
+            value=float(st.session_state.workflow_state['pdf_font_size']),
             step=0.1,
             key="pdf_font_size_slider",
             help="Smaller font = more content per page. Default: 9.5px"
@@ -1457,7 +1470,7 @@ elif current_stage in ["export", "completed"]:
             "Line Height (em)",
             min_value=1.0,
             max_value=1.5,
-            value=st.session_state.workflow_state.get('pdf_line_height', 1.2),
+            value=float(st.session_state.workflow_state['pdf_line_height']),
             step=0.05,
             key="pdf_line_height_slider",
             help="Smaller line height = tighter spacing. Default: 1.2em"
@@ -1468,7 +1481,7 @@ elif current_stage in ["export", "completed"]:
             "Page Margin (in)",
             min_value=0.3,
             max_value=1.0,
-            value=st.session_state.workflow_state.get('pdf_page_margin', 0.75),
+            value=float(st.session_state.workflow_state['pdf_page_margin']),
             step=0.05,
             key="pdf_page_margin_slider",
             help="Smaller margin = more vertical space per page. Default: 0.75in"
