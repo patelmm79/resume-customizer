@@ -38,108 +38,88 @@ def get_current_stage():
     return st.session_state.workflow_state.get("current_stage", "input")
 
 
+# Custom CSS for sticky score tracker
+st.markdown("""
+<style>
+    /* Make score tracker container sticky */
+    div[data-testid="stVerticalBlock"] > div:has(div.score-tracker-container) {
+        position: sticky !important;
+        top: 3.5rem !important;
+        z-index: 999 !important;
+        background-color: var(--background-color) !important;
+        padding: 1rem 0 !important;
+        margin-bottom: 2rem !important;
+        border-bottom: 2px solid var(--secondary-background-color) !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Score Tracker - STICKY AT TOP (persistent across all stages after initial scoring)
 if st.session_state.workflow_state and st.session_state.workflow_state.get("initial_score") is not None:
     state = st.session_state.workflow_state
 
-    # Create sticky container with more specific CSS targeting
-    score_container = st.container()
+    # Score tracker container with marker class
+    st.markdown('<div class="score-tracker-container"></div>', unsafe_allow_html=True)
+    st.markdown("### 📊 Score Evolution")
 
-    with score_container:
-        st.markdown("""
-        <style>
-            /* Make the score tracker sticky */
-            .element-container:has(#score-tracker-header) {
-                position: sticky !important;
-                top: 0 !important;
-                background-color: var(--background-color) !important;
-                z-index: 999999 !important;
-                padding: 1rem 0 !important;
-                margin-bottom: 1rem !important;
-                border-bottom: 2px solid var(--secondary-background-color) !important;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-            }
+    score_cols = st.columns(5)
 
-            /* Alternative approach - target the main block */
-            section[data-testid="stMain"] > div:first-child > div:first-child > div:first-child {
-                position: sticky !important;
-                top: 0 !important;
-                background-color: var(--background-color) !important;
-                z-index: 999999 !important;
-                padding: 1rem 0 !important;
-                padding-bottom: 1.5rem !important;
-                border-bottom: 2px solid var(--secondary-background-color) !important;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-            }
+    with score_cols[0]:
+        st.metric(
+            "Initial Score",
+            f"{state['initial_score']}/100",
+            help="Original resume compatibility with job description"
+        )
 
-            /* Add padding to main content to prevent overlap */
-            section[data-testid="stMain"] > div:first-child > div:first-child > div:nth-child(2) {
-                padding-top: 2rem !important;
-            }
-        </style>
-        <div id="score-tracker-header"></div>
-        """, unsafe_allow_html=True)
-
-        st.markdown("### 📊 Score Evolution")
-
-        score_cols = st.columns(5)
-
-        with score_cols[0]:
+    with score_cols[1]:
+        if state.get("new_score") is not None:
+            improvement = state['new_score'] - state['initial_score']
             st.metric(
-                "Initial Score",
-                f"{state['initial_score']}/100",
-                help="Original resume compatibility with job description"
+                "After Modifications",
+                f"{state['new_score']}/100",
+                delta=f"+{improvement}" if improvement > 0 else str(improvement),
+                help="Score after applying Agent 1 suggestions"
             )
+        else:
+            st.metric("After Modifications", "—", help="Not yet calculated")
 
-        with score_cols[1]:
-            if state.get("new_score") is not None:
-                improvement = state['new_score'] - state['initial_score']
-                st.metric(
-                    "After Modifications",
-                    f"{state['new_score']}/100",
-                    delta=f"+{improvement}" if improvement > 0 else str(improvement),
-                    help="Score after applying Agent 1 suggestions"
-                )
-            else:
-                st.metric("After Modifications", "—", help="Not yet calculated")
+    with score_cols[2]:
+        # After optimization - show the SCORE at this stage (same as new_score since optimization doesn't change score)
+        if state.get("new_score") is not None:
+            st.metric(
+                "After Optimization",
+                f"{state['new_score']}/100",
+                delta="0" if state.get("optimized_resume") else None,
+                help="Score maintained after optimization (conciseness improved)"
+            )
+        else:
+            st.metric("After Optimization", "—", help="Not yet calculated")
 
-        with score_cols[2]:
-            # After optimization - show the SCORE at this stage (same as new_score since optimization doesn't change score)
-            if state.get("new_score") is not None:
-                st.metric(
-                    "After Optimization",
-                    f"{state['new_score']}/100",
-                    delta="0" if state.get("optimized_resume") else None,
-                    help="Score maintained after optimization (conciseness improved)"
-                )
-            else:
-                st.metric("After Optimization", "—", help="Not yet calculated")
+    with score_cols[3]:
+        # After Round 2 - show the SCORE (still same as new_score)
+        if state.get("optimized_resume_round2") is not None:
+            st.metric(
+                "After Round 2",
+                f"{state['new_score']}/100",
+                delta="0",
+                help="Score maintained after Round 2 optimization"
+            )
+        else:
+            st.metric("After Round 2", "—", help="Not yet calculated")
 
-        with score_cols[3]:
-            # After Round 2 - show the SCORE (still same as new_score)
-            if state.get("optimized_resume_round2") is not None:
-                st.metric(
-                    "After Round 2",
-                    f"{state['new_score']}/100",
-                    delta="0",
-                    help="Score maintained after Round 2 optimization"
-                )
-            else:
-                st.metric("After Round 2", "—", help="Not yet calculated")
+    with score_cols[4]:
+        if state.get("final_score") is not None:
+            total_improvement = state['final_score'] - state['initial_score']
+            st.metric(
+                "Final Score",
+                f"{state['final_score']}/100",
+                delta=f"+{total_improvement}" if total_improvement > 0 else str(total_improvement),
+                help="Final compatibility score after all edits"
+            )
+        else:
+            st.metric("Final Score", "—", help="Not yet calculated")
 
-        with score_cols[4]:
-            if state.get("final_score") is not None:
-                total_improvement = state['final_score'] - state['initial_score']
-                st.metric(
-                    "Final Score",
-                    f"{state['final_score']}/100",
-                    delta=f"+{total_improvement}" if total_improvement > 0 else str(total_improvement),
-                    help="Final compatibility score after all edits"
-                )
-            else:
-                st.metric("Final Score", "—", help="Not yet calculated")
-
-        st.divider()
+    st.divider()
 
 # Sidebar
 with st.sidebar:
