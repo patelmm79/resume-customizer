@@ -299,7 +299,19 @@ Return ONLY the optimized resume in markdown format. Apply the selected optimiza
 - Maintaining all formatting standards
 - Preserving job headlines
 - Keeping all backslashes in metadata lines
-- Not removing content that wasn't suggested for removal"""
+- Not removing content that wasn't suggested for removal
+
+❌ ABSOLUTELY FORBIDDEN - DO NOT TOUCH FORMATTING:
+- NEVER change bold formatting (** or <b> tags)
+- NEVER change italic formatting (* or <i> tags)
+- NEVER change colors (HTML color tags or CSS)
+- NEVER change font sizes, styles, or any visual formatting
+- NEVER remove user's custom HTML/CSS formatting
+- PRESERVE ALL existing formatting EXACTLY as it appears in the original
+- Your ONLY job is to apply content optimizations (remove bullets, condense text)
+- Formatting changes are STRICTLY FORBIDDEN and handled by a different agent
+
+Return the optimized resume with ALL ORIGINAL FORMATTING PRESERVED EXACTLY. Only apply the content optimizations that were approved."""
 
         try:
             optimized_resume = self.client.generate_with_system_prompt(

@@ -76,7 +76,17 @@ CRITICAL INSTRUCTIONS:
 - If no skill suggestions were approved, do not modify the skills section beyond what's already there
 - **ABSOLUTE REQUIREMENT**: Every job entry MUST retain its job headline (the italicized line after the job metadata). NEVER remove job headlines, even when removing bullet points.
 
-Return the complete modified resume in markdown format. Maintain the structure but apply all suggestions while keeping it concise and focused on relevance to the job."""
+❌ ABSOLUTELY FORBIDDEN - DO NOT TOUCH FORMATTING:
+- NEVER change bold formatting (** or <b> tags)
+- NEVER change italic formatting (* or <i> tags)
+- NEVER change colors (HTML color tags or CSS)
+- NEVER change font sizes, styles, or any visual formatting
+- NEVER remove user's custom HTML/CSS formatting
+- PRESERVE ALL existing formatting EXACTLY as it appears in the original
+- Your ONLY job is to modify CONTENT based on approved suggestions
+- Formatting changes are STRICTLY FORBIDDEN and handled by a different agent
+
+Return the complete modified resume in markdown format with ALL ORIGINAL FORMATTING PRESERVED EXACTLY. Only change the content based on approved suggestions."""
 
         try:
             modified_resume = self.client.generate_with_system_prompt(
