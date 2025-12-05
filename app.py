@@ -1444,12 +1444,12 @@ elif current_stage in ["export", "completed"]:
     st.markdown("#### PDF Formatting")
     st.caption("Adjust these settings to fit your resume on one page. Decrease values to fit more content.")
 
-    # Ensure PDF formatting defaults are set in state
-    if 'pdf_font_size' not in st.session_state.workflow_state:
+    # Ensure PDF formatting defaults are set in state (handle None values too)
+    if not st.session_state.workflow_state.get('pdf_font_size'):
         st.session_state.workflow_state['pdf_font_size'] = 9.5
-    if 'pdf_line_height' not in st.session_state.workflow_state:
+    if not st.session_state.workflow_state.get('pdf_line_height'):
         st.session_state.workflow_state['pdf_line_height'] = 1.2
-    if 'pdf_page_margin' not in st.session_state.workflow_state:
+    if not st.session_state.workflow_state.get('pdf_page_margin'):
         st.session_state.workflow_state['pdf_page_margin'] = 0.75
 
     col1, col2, col3, col4 = st.columns(4)
