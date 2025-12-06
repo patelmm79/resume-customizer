@@ -123,16 +123,29 @@ class CustomLLMClient(LLMClient):
 
         api_key = os.getenv("CUSTOM_LLM_API_KEY")
         base_url = os.getenv("CUSTOM_LLM_BASE_URL")
+        # Check if using X-API-Key header (for vLLM deployments)
+        use_x_api_key = os.getenv("CUSTOM_LLM_USE_X_API_KEY", "false").lower() == "true"
 
         if not api_key:
             raise ValueError("CUSTOM_LLM_API_KEY not found in environment variables")
         if not base_url:
             raise ValueError("CUSTOM_LLM_BASE_URL not found in environment variables")
 
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url=base_url
-        )
+        # Configure client based on authentication method
+        if use_x_api_key:
+            # Use X-API-Key header (for vLLM NGC containers)
+            self.client = OpenAI(
+                api_key="dummy",  # OpenAI client requires this, but we'll override with X-API-Key
+                base_url=base_url,
+                default_headers={"X-API-Key": api_key}
+            )
+        else:
+            # Use standard Bearer token authentication
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url=base_url
+            )
+
         self.model_name = model_name or os.getenv("CUSTOM_LLM_MODEL", "default-model")
 
     def generate_with_system_prompt(
