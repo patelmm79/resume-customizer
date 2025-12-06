@@ -131,7 +131,8 @@ class CustomLLMClient(LLMClient):
 
         self.client = OpenAI(
             api_key=api_key,
-            base_url=base_url
+            base_url=base_url,
+            default_headers={"X-API-Key": api_key}
         )
         self.model_name = model_name or os.getenv("CUSTOM_LLM_MODEL", "default-model")
 
