@@ -49,20 +49,20 @@ resource "null_resource" "wait_for_run_runtime_sa" {
     command = <<EOT
 #!/bin/sh
 set -e
-PROJECT=${var.project}
+PROJECT="${var.project}"
 PN=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
-SA="service-${PN}@gcp-sa-run.iam.gserviceaccount.com"
-echo "Waiting for Cloud Run runtime service account: ${SA}"
+SA="service-$${PN}@gcp-sa-run.iam.gserviceaccount.com"
+echo "Waiting for Cloud Run runtime service account: $${SA}"
 COUNT=0
 while [ $COUNT -lt 60 ]; do
   if gcloud iam service-accounts describe "$SA" --project="$PROJECT" >/dev/null 2>&1; then
-    echo "Found ${SA}"
+    echo "Found $${SA}"
     exit 0
   fi
   COUNT=$((COUNT+1))
   sleep 5
 done
-echo "Timed out waiting for ${SA}; proceeding and hope it is created later"
+echo "Timed out waiting for $${SA}; proceeding and hope it is created later"
 exit 0
 EOT
     interpreter = ["/bin/sh", "-c"]
