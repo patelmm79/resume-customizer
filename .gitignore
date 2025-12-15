@@ -50,3 +50,6 @@ data/resumes/*.pdf
 
 # Temporary files
 *.tmp
+
+# Terraform local variables (keep secrets out of git)
+terraform/terraform.tfvars
