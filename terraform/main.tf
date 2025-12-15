@@ -38,6 +38,27 @@ resource "google_artifact_registry_repository" "repo" {
   description = "Repository for resume-customizer images"
 }
 
+# Ensure Cloud Run service account and Cloud Run runtime have read access to the repo
+data "google_project" "project" {
+  project_id = var.project
+}
+
+resource "google_artifact_registry_repository_iam_member" "repo_reader_sa" {
+  project    = var.project
+  location   = var.region
+  repository = google_artifact_registry_repository.repo.repository_id
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:${google_service_account.cloudrun_sa.email}"
+}
+
+resource "google_artifact_registry_repository_iam_member" "repo_reader_run_agent" {
+  project    = var.project
+  location   = var.region
+  repository = google_artifact_registry_repository.repo.repository_id
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-run.iam.gserviceaccount.com"
+}
+
 # Service account for Cloud Run (optional - can use default)
 resource "google_service_account" "cloudrun_sa" {
   account_id   = "resume-customizer-sa"

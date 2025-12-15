@@ -71,4 +71,29 @@ Cloud Build GitHub trigger via Terraform
 
 4. Apply Terraform; the trigger will be created and will run `cloudbuild.yaml` on pushes to the configured branch if your project is already connected to GitHub via the Cloud Build GitHub App. If you have not installed the GitHub App, you can either install it or create the trigger manually in the Cloud Console.
 
-Notes on permissions: If you want Terraform to create a GitHub-connected trigger, ensure the Cloud Build GitHub App is installed and authorized for your repository via the Cloud Console first. Alternatively use GitHub Actions or manual triggers.
+Permissions notes and common errors
+- If you see an error like `artifactregistry.repositories.downloadArtifacts denied` when creating the Cloud Run service, the Cloud Run runtime (and/or the Cloud Run service account) does not have read access to the Artifact Registry repository. To fix this Terraform now adds IAM bindings to grant `roles/artifactregistry.reader` to:
+	- the service account created for Cloud Run (`resume-customizer-sa`), and
+	- the Cloud Run runtime service agent (`service-<PROJECT_NUMBER>@gcp-sa-run.iam.gserviceaccount.com`).
+
+- If you still see permission errors after `terraform apply`, run the following to verify the project number and that bindings exist:
+
+```bash
+gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)'
+gcloud artifacts repositories describe ${REPO} --location=${REGION}
+gcloud projects get-iam-policy ${PROJECT_ID} --format=json | jq '.bindings[] | select(.role=="roles/artifactregistry.reader")'
+```
+
+If bindings are missing, add them manually (example):
+
+```bash
+# grant repo reader to the Cloud Run service account
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+	--member="serviceAccount:resume-customizer-sa@${PROJECT_ID}.iam.gserviceaccount.com" \
+	--role="roles/artifactregistry.reader"
+
+# grant repo reader to Cloud Run runtime agent (use project number from describe)
+gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+	--member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-run.iam.gserviceaccount.com" \
+	--role="roles/artifactregistry.reader"
+```
