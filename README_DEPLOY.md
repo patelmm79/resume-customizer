@@ -35,7 +35,7 @@ gcloud builds submit --config cloudbuild.yaml --substitutions=_IMAGE=${IMAGE},_S
 
 Deploy infra with Terraform
 
-1. Initialize Terraform in the `infra/` folder:
+1. Initialize Terraform in the `terraform/` folder:
 
 ```bash
 cd infra
@@ -67,7 +67,7 @@ Cloud Build GitHub trigger via Terraform
 
 2. Obtain the GitHub App installation id for the repository. You can find this in the GitHub app installation details or via the GitHub API.
 
-3. Configure the GitHub trigger variables in `infra/terraform.tfvars` (see `infra/terraform.tfvars.example`). Set `github_owner`, `github_repo`, `github_branch`, and `github_installation_id`.
+3. Configure the GitHub trigger variables in `terraform/terraform.tfvars` (see `terraform/terraform.tfvars.example`). Set `github_owner`, `github_repo`, `github_branch`, and `github_installation_id`.
 
 4. Apply Terraform; the trigger will be created and will run `cloudbuild.yaml` on pushes to the configured branch.
 
