@@ -1,6 +1,8 @@
 """Agent 4: Resume Formatting Validator."""
-from typing import Dict, List
+from typing import Dict, List, Optional
 from utils.agent_helper import get_agent_llm_client
+from agents.schemas import ValidationSchema
+import inspect
 
 
 class ResumeValidatorAgent:
@@ -9,6 +11,23 @@ class ResumeValidatorAgent:
     def __init__(self):
         """Initialize the validator agent."""
         self.client = get_agent_llm_client()
+
+    def _get_response_format(self, schema_class) -> Optional[Dict]:
+        """Build response_format parameter for structured output."""
+        try:
+            response_format = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema_class.__name__,
+                    "schema": schema_class.model_json_schema(),
+                    "strict": True,
+                },
+            }
+            print(f"[DEBUG AGENT4] Built response_format for {schema_class.__name__}")
+            return response_format
+        except Exception as e:
+            print(f"[DEBUG AGENT4] Could not build response_format: {e}")
+            return None
 
     def validate_resume(
         self,
@@ -56,41 +75,71 @@ RESUME:
 
 Focus on formatting ONLY - ignore content quality, length, or relevance.
 
-Provide a formatting validation report:
+Provide a formatting validation report in JSON format:
 
-1. Overall formatting score (1-100, where 100 is perfect formatting)
-2. List of formatting issues found (if any)
-3. Formatting recommendations
-4. Summary
-
-Format your response EXACTLY as follows:
-
-VALIDATION_SCORE: [number from 1-100]
-
-ISSUES:
-- [CRITICAL/WARNING/INFO] [Category] Issue description here
-- [CRITICAL/WARNING/INFO] [Category] Another issue here
-(List ONLY formatting issues, or write "NONE" if formatting is perfect)
+{{
+  "validation_score": 95,
+  "is_valid": true,
+  "issues": [
+    {{
+      "severity": "WARNING",
+      "category": "Date Format",
+      "description": "Inconsistent date formats in Experience section"
+    }},
+    {{
+      "severity": "INFO",
+      "category": "Bullet Style",
+      "description": "Mix of bullet styles (- and *)"
+    }}
+  ],
+  "recommendations": [
+    "Standardize date format to 'Mon YYYY - Mon YYYY'",
+    "Use consistent bullet style throughout"
+  ],
+  "summary": "Overall formatting is good with minor inconsistencies"
+}}
 
 Categories should be: Markdown, Date Format, Bullet Style, Section Structure, Spacing, Typography
+Severity levels: CRITICAL, WARNING, INFO
+is_valid should be true if validation_score >= 80 and no CRITICAL issues
 
-RECOMMENDATIONS:
-- Formatting recommendation 1
-- Formatting recommendation 2
-(List ONLY formatting recommendations. Do NOT suggest content changes or length reduction)
-
-SUMMARY:
-[Brief summary of formatting quality]
-
-IS_VALID: [YES/NO]
-(YES if validation_score >= 80 and no CRITICAL formatting issues, otherwise NO)"""
+CRITICAL:
+- Return ONLY valid JSON, no markdown formatting, no ```json code blocks
+- validation_score must be 1-100
+- Focus ONLY on formatting issues, not content"""
 
         try:
-            response = self.client.generate_with_system_prompt(
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                temperature=0.4  # Lower temperature for consistent validation
-            )
+            # Try to use structured output if client supports it
+            response_format = self._get_response_format(ValidationSchema)
+
+            # Check if client supports response_format parameter
+            sig = inspect.signature(self.client.generate_with_system_prompt)
+            supports_response_format = 'response_format' in sig.parameters
+
+            # Detect reasoning models - disable structured output for them
+            model_name = getattr(self.client, 'model_name', '').lower()
+            is_reasoning_model = any(x in model_name for x in ['r1', 'o1', 'reasoning'])
+
+            if is_reasoning_model:
+                print(f"[INFO AGENT4] Detected reasoning model ({model_name})")
+                print(f"[INFO AGENT4] Disabling structured output to allow reasoning")
+                supports_response_format = False
+
+            if supports_response_format and response_format:
+                print(f"[DEBUG AGENT4] Using structured output mode")
+                response = self.client.generate_with_system_prompt(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    temperature=0.4,
+                    response_format=response_format
+                )
+            else:
+                print(f"[DEBUG AGENT4] Using traditional prompt mode")
+                response = self.client.generate_with_system_prompt(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    temperature=0.4
+                )
 
             return self._parse_response(response)
 
@@ -102,100 +151,106 @@ IS_VALID: [YES/NO]
         Parse the LLM response into structured data.
 
         Args:
-            response: Raw LLM response
+            response: Raw LLM response (expected as JSON)
 
         Returns:
             Structured dictionary with validation results
         """
-        lines = response.strip().split('\n')
+        import json
+        import re
 
-        validation_score = 80  # Default
-        issues = []
-        recommendations = []
-        summary = ""
-        is_valid = True
-        current_section = None
+        # Clean up response - remove markdown code blocks if present
+        cleaned_response = response.strip()
 
-        for line in lines:
-            line = line.strip()
+        # Remove ```json and ``` markers if present
+        if cleaned_response.startswith("```"):
+            first_newline = cleaned_response.find('\n')
+            if first_newline != -1:
+                cleaned_response = cleaned_response[first_newline + 1:]
+            if cleaned_response.endswith("```"):
+                cleaned_response = cleaned_response[:-3].strip()
 
-            if line.startswith("VALIDATION_SCORE:"):
-                score_text = line.replace("VALIDATION_SCORE:", "").strip()
+        print(f"[DEBUG AGENT4] Cleaned response first 500 chars:\n{cleaned_response[:500]}\n")
+
+        try:
+            # Parse JSON
+            parsed = json.loads(cleaned_response)
+
+            validation_score = parsed.get("validation_score", 80)
+            is_valid = parsed.get("is_valid", True)
+            issues = parsed.get("issues", [])
+            recommendations = parsed.get("recommendations", [])
+            summary = parsed.get("summary", "Validation completed.")
+
+            print(f"[DEBUG AGENT4] JSON parsed successfully: score={validation_score}, issues={len(issues)}")
+
+            # Ensure score is valid
+            if validation_score < 1 or validation_score > 100:
+                validation_score = 80
+
+            # Check for critical issues (override is_valid if needed)
+            has_critical = any(issue.get("severity") == "CRITICAL" for issue in issues)
+            if has_critical or validation_score < 80:
+                is_valid = False
+
+            return {
+                "validation_score": validation_score,
+                "is_valid": is_valid,
+                "issues": issues,
+                "recommendations": recommendations,
+                "summary": summary,
+                "critical_count": sum(1 for i in issues if i.get("severity") == "CRITICAL"),
+                "warning_count": sum(1 for i in issues if i.get("severity") == "WARNING"),
+                "info_count": sum(1 for i in issues if i.get("severity") == "INFO")
+            }
+
+        except json.JSONDecodeError as e:
+            print(f"[DEBUG AGENT4] JSON parse failed: {str(e)}")
+            print(f"[DEBUG AGENT4] Attempting fallback parsing...")
+
+            # Fallback: Try to extract JSON from text
+            json_match = re.search(r'\{[\s\S]*\}', cleaned_response)
+            if json_match:
                 try:
-                    validation_score = int(score_text)
-                except ValueError:
-                    import re
-                    match = re.search(r'\d+', score_text)
-                    if match:
-                        validation_score = int(match.group())
-                current_section = "score"
+                    parsed = json.loads(json_match.group(0))
+                    validation_score = parsed.get("validation_score", 80)
+                    is_valid = parsed.get("is_valid", True)
+                    issues = parsed.get("issues", [])
+                    recommendations = parsed.get("recommendations", [])
+                    summary = parsed.get("summary", "Validation completed.")
 
-            elif line.startswith("ISSUES:"):
-                current_section = "issues"
+                    print(f"[DEBUG AGENT4] Fallback successful: score={validation_score}")
 
-            elif line.startswith("RECOMMENDATIONS:"):
-                current_section = "recommendations"
+                    if validation_score < 1 or validation_score > 100:
+                        validation_score = 80
 
-            elif line.startswith("SUMMARY:"):
-                current_section = "summary"
+                    has_critical = any(issue.get("severity") == "CRITICAL" for issue in issues)
+                    if has_critical or validation_score < 80:
+                        is_valid = False
 
-            elif line.startswith("IS_VALID:"):
-                valid_text = line.replace("IS_VALID:", "").strip().upper()
-                is_valid = "YES" in valid_text
-                current_section = "is_valid"
+                    return {
+                        "validation_score": validation_score,
+                        "is_valid": is_valid,
+                        "issues": issues,
+                        "recommendations": recommendations,
+                        "summary": summary,
+                        "critical_count": sum(1 for i in issues if i.get("severity") == "CRITICAL"),
+                        "warning_count": sum(1 for i in issues if i.get("severity") == "WARNING"),
+                        "info_count": sum(1 for i in issues if i.get("severity") == "INFO")
+                    }
+                except json.JSONDecodeError:
+                    pass
 
-            elif line and current_section == "issues" and line.startswith("-"):
-                issue_text = line[1:].strip()
+            # If all parsing fails, return minimal result
+            print(f"[DEBUG AGENT4] All parsing methods failed")
 
-                # Skip "NONE" placeholder
-                if issue_text.upper() == "NONE":
-                    continue
-
-                # Parse severity and category
-                severity = "INFO"
-                category = "General"
-                description = issue_text
-
-                # Extract [SEVERITY] [Category]
-                import re
-                severity_match = re.match(r'\[(CRITICAL|WARNING|INFO)\]\s*\[([^\]]+)\]\s*(.+)', issue_text, re.IGNORECASE)
-                if severity_match:
-                    severity = severity_match.group(1).upper()
-                    category = severity_match.group(2).strip()
-                    description = severity_match.group(3).strip()
-
-                issues.append({
-                    "severity": severity,
-                    "category": category,
-                    "description": description
-                })
-
-            elif line and current_section == "recommendations" and line.startswith("-"):
-                rec_text = line[1:].strip()
-                if rec_text.upper() != "NONE":
-                    recommendations.append(rec_text)
-
-            elif line and current_section == "summary" and not line.startswith(("ISSUES:", "RECOMMENDATIONS:", "VALIDATION_SCORE:", "IS_VALID:")):
-                summary += line + " "
-
-        # Ensure validation score is in range
-        if validation_score < 1:
-            validation_score = 1
-        elif validation_score > 100:
-            validation_score = 100
-
-        # Check for critical issues
-        has_critical = any(issue["severity"] == "CRITICAL" for issue in issues)
-        if has_critical or validation_score < 80:
-            is_valid = False
-
-        return {
-            "validation_score": validation_score,
-            "is_valid": is_valid,
-            "issues": issues,
-            "recommendations": recommendations,
-            "summary": summary.strip() if summary else "Validation completed.",
-            "critical_count": sum(1 for i in issues if i["severity"] == "CRITICAL"),
-            "warning_count": sum(1 for i in issues if i["severity"] == "WARNING"),
-            "info_count": sum(1 for i in issues if i["severity"] == "INFO")
-        }
+            return {
+                "validation_score": 50,
+                "is_valid": False,
+                "issues": [{"severity": "CRITICAL", "category": "Parsing", "description": "Failed to parse validation response"}],
+                "recommendations": ["Please try validation again"],
+                "summary": "Validation parsing failed.",
+                "critical_count": 1,
+                "warning_count": 0,
+                "info_count": 0
+            }

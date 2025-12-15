@@ -8,7 +8,15 @@
       "Bash(git commit:*)",
       "Bash(cat:*)",
       "Bash(curl:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "WebFetch(domain:github.com)",
+      "Bash(\"venv/Scripts/python.exe\" test_auth.py)",
+      "Bash(\"venv/Scripts/python.exe\" test_vllm.py)",
+      "Bash(\"venv/Scripts/python.exe\" test_reasoning_extraction.py)",
+      "Bash(\"venv/Scripts/python.exe\" test_all_providers_extraction.py)",
+      "Bash(grep:*)",
+      "Bash(\"venv/Scripts/python.exe\" test_structured_output.py)",
+      "Bash(ls:*)"
     ],
     "deny": [],
     "ask": []

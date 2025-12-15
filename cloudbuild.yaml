@@ -1,0 +1,31 @@
+steps:
+  # Build container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', '${_IMAGE}', '.']
+
+  # Push container image to Artifact Registry (or Container Registry if used)
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', '${_IMAGE}']
+
+  # Deploy to Cloud Run using gcloud
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'bash'
+    args:
+      - '-c'
+      - |
+        set -e
+        gcloud run deploy ${_SERVICE_NAME} \
+          --image=${_IMAGE} \
+          --region=${_REGION} \
+          --platform=managed \
+          --allow-unauthenticated
+
+substitutions:
+  _SERVICE_NAME: 'resume-customizer'
+  _REGION: 'us-central1'
+  _IMAGE: ''
+
+images:
+  - '${_IMAGE}'
+
+timeout: 1200s

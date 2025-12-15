@@ -2,6 +2,26 @@
 
 An intelligent, multi-agent AI system orchestrated by **LangGraph** that analyzes, optimizes, and tailors resumes to specific job descriptions using multiple LLM providers (Gemini, Claude, or custom/local LLMs).
 
+## 🎉 NEW: Structured Output Support
+
+**ALL AI models now work with this application!** We've implemented JSON Schema-based structured output using the `response_format` parameter.
+
+### ✅ Now Fully Supported
+- **DeepSeek R1** ✅ (reasoning models now work!)
+- **OpenAI o1** ✅ (reasoning models now work!)
+- **Gemini 2.0 Flash** (fast, reliable, free tier)
+- **Claude Sonnet 4.5** (highest quality)
+- **GPT-4o / GPT-4o Mini** (excellent balance)
+
+### How It Works
+Instead of relying on prompt engineering, we use **JSON Schema validation** via the `response_format` parameter. This **guarantees** valid JSON output from any model, including reasoning models that previously only returned plain text.
+
+**📖 See [STRUCTURED_OUTPUT_UPDATE.md](STRUCTURED_OUTPUT_UPDATE.md) for complete details on this breakthrough.**
+
+**📖 See [MODEL_SELECTION_GUIDE.md](MODEL_SELECTION_GUIDE.md) for model comparison and setup instructions.**
+
+**📚 For the original debugging journey, see [LESSONS_LEARNED.md](LESSONS_LEARNED.md).**
+
 ## Features
 
 - **LangGraph Orchestration**: Stateful workflow with human-in-the-loop checkpoints
@@ -328,6 +348,17 @@ Description
 
 ## Troubleshooting
 
+### "Failed to parse response" Error
+**Cause**: You're using an incompatible reasoning model (DeepSeek R1, OpenAI o1, etc.)
+
+**Solution**:
+1. Open the Streamlit sidebar
+2. Switch to **Gemini** or **Claude** provider
+3. Select a compatible model (see [MODEL_SELECTION_GUIDE.md](MODEL_SELECTION_GUIDE.md))
+4. Try again
+
+**Why it happens**: Reasoning models output thinking process in plain text instead of JSON format. See [LESSONS_LEARNED.md](LESSONS_LEARNED.md) for technical details.
+
 ### LLM Configuration Issues
 - **"❌ Missing API Key"**: Check that your `.env` file contains the correct API key
 - **Gemini errors**: Verify your API key at https://makersuite.google.com/app/apikey
@@ -335,6 +366,7 @@ Description
 - **Custom LLM errors**: Check that `CUSTOM_LLM_BASE_URL` is accessible and model is running
 - Check your API quota and limits
 - Ensure you have internet connectivity (unless using local LLMs)
+- **Wrong model selected**: See [MODEL_SELECTION_GUIDE.md](MODEL_SELECTION_GUIDE.md) for compatible models
 
 ### PDF Generation Issues
 - PDF export uses ReportLab (pure Python, no system dependencies required)

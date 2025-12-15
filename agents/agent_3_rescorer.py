@@ -1,6 +1,8 @@
 """Agent 3: Resume Re-scorer and Approval."""
-from typing import Dict
-from utils.gemini_client import GeminiClient
+from typing import Dict, Optional
+from utils.agent_helper import get_agent_llm_client
+from agents.schemas import RescoreSchema
+import inspect
 
 
 class ResumeRescorerAgent:
@@ -8,7 +10,24 @@ class ResumeRescorerAgent:
 
     def __init__(self):
         """Initialize the rescorer agent."""
-        self.client = GeminiClient()
+        self.client = get_agent_llm_client()
+
+    def _get_response_format(self, schema_class) -> Optional[Dict]:
+        """Build response_format parameter for structured output."""
+        try:
+            response_format = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema_class.__name__,
+                    "schema": schema_class.model_json_schema(),
+                    "strict": True,
+                },
+            }
+            print(f"[DEBUG AGENT3] Built response_format for {schema_class.__name__}")
+            return response_format
+        except Exception as e:
+            print(f"[DEBUG AGENT3] Could not build response_format: {e}")
+            return None
 
     def rescore_resume(
         self,
@@ -83,11 +102,37 @@ CRITICAL:
 - Be consistent in your scoring - don't drop scores without clear justification"""
 
         try:
-            response = self.client.generate_with_system_prompt(
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                temperature=0.6
-            )
+            # Try to use structured output if client supports it
+            response_format = self._get_response_format(RescoreSchema)
+
+            # Check if client supports response_format parameter
+            sig = inspect.signature(self.client.generate_with_system_prompt)
+            supports_response_format = 'response_format' in sig.parameters
+
+            # Detect reasoning models - disable structured output for them
+            model_name = getattr(self.client, 'model_name', '').lower()
+            is_reasoning_model = any(x in model_name for x in ['r1', 'o1', 'reasoning'])
+
+            if is_reasoning_model:
+                print(f"[INFO AGENT3] Detected reasoning model ({model_name})")
+                print(f"[INFO AGENT3] Disabling structured output to allow reasoning")
+                supports_response_format = False
+
+            if supports_response_format and response_format:
+                print(f"[DEBUG AGENT3] Using structured output mode")
+                response = self.client.generate_with_system_prompt(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    temperature=0.6,
+                    response_format=response_format
+                )
+            else:
+                print(f"[DEBUG AGENT3] Using traditional prompt mode")
+                response = self.client.generate_with_system_prompt(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    temperature=0.6
+                )
 
             return self._parse_response(response, original_score)
 

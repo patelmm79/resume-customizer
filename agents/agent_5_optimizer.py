@@ -1,7 +1,9 @@
 """Agent 5: Resume Length Optimizer."""
-from typing import Dict, List
+from typing import Dict, List, Optional
 from utils.agent_helper import get_agent_llm_client
 from utils.resume_standards import get_optimization_prompt_prefix
+from agents.schemas import OptimizationAnalysisSchema, OptimizedResumeSchema
+import inspect
 
 
 class ResumeOptimizerAgent:
@@ -11,6 +13,25 @@ class ResumeOptimizerAgent:
         """Initialize the optimizer agent."""
         self.client = get_agent_llm_client()
         self.debug_mode = debug_mode
+
+    def _get_response_format(self, schema_class) -> Optional[Dict]:
+        """Build response_format parameter for structured output."""
+        try:
+            response_format = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema_class.__name__,
+                    "schema": schema_class.model_json_schema(),
+                    "strict": True,
+                },
+            }
+            if self.debug_mode:
+                print(f"[Agent5 DEBUG] Built response_format for {schema_class.__name__}")
+            return response_format
+        except Exception as e:
+            if self.debug_mode:
+                print(f"[Agent5 DEBUG] Could not build response_format: {e}")
+            return None
 
     def suggest_optimizations(
         self,
@@ -119,11 +140,30 @@ CRITICAL:
 - NEVER suggest removing entire positions/roles"""
 
         try:
-            response = self.client.generate_with_system_prompt(
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                temperature=0.4
-            )
+            # Try to use structured output if client supports it
+            response_format = self._get_response_format(OptimizationAnalysisSchema)
+
+            # Check if client supports response_format parameter
+            sig = inspect.signature(self.client.generate_with_system_prompt)
+            supports_response_format = 'response_format' in sig.parameters
+
+            if supports_response_format and response_format:
+                if self.debug_mode:
+                    print(f"[Agent5 DEBUG] Using structured output mode")
+                response = self.client.generate_with_system_prompt(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    temperature=0.4,
+                    response_format=response_format
+                )
+            else:
+                if self.debug_mode:
+                    print(f"[Agent5 DEBUG] Using traditional prompt mode (no structured output)")
+                response = self.client.generate_with_system_prompt(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    temperature=0.4
+                )
 
             # Debug output (only if debug_mode is enabled)
             if self.debug_mode:

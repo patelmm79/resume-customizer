@@ -8,10 +8,13 @@ import sys
 def get_agent_llm_client() -> LLMClient:
     """
     Get the appropriate LLM client based on user's selection in Streamlit.
-    Falls back to Gemini if not in Streamlit context.
+    MUST use the selected provider - will raise error if no provider is configured.
 
     Returns:
         LLMClient instance configured for the selected provider/model
+
+    Raises:
+        ValueError: If no LLM provider is configured in session state
     """
     provider = None
     model = None
@@ -48,6 +51,11 @@ def get_agent_llm_client() -> LLMClient:
         import traceback
         traceback.print_exc(file=sys.stderr)
 
-    # Fallback to Gemini client for backward compatibility
-    print("[DEBUG] WARNING: Using fallback Gemini client (no provider in session state)")
-    return GeminiClient()
+    # ERROR: No provider configured - do NOT fall back
+    error_msg = (
+        "No LLM provider configured in session state. "
+        "Please select an LLM provider in the Streamlit sidebar before running agents. "
+        "Check that your .env file has the necessary API keys configured."
+    )
+    print(f"[ERROR] {error_msg}")
+    raise ValueError(error_msg)

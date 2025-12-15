@@ -1,7 +1,10 @@
-"""Agent 1: Resume Scorer and Analyzer."""
-from typing import Dict, List
+"""Agent 1: Resume Scorer and Analyzer - VERSION 3.0 with structured output."""
+from typing import Dict, List, Optional
 from utils.agent_helper import get_agent_llm_client
+from agents.schemas import ResumeAnalysisSchema, ResumeScoreSchema
 import re
+
+print("[MODULE LOAD] agent_1_scorer.py loaded - VERSION 3.0 with structured output")
 
 
 class ResumeScorerAgent:
@@ -10,7 +13,36 @@ class ResumeScorerAgent:
     def __init__(self):
         """Initialize the scorer agent."""
         self.client = get_agent_llm_client()
+        print(f"[DEBUG AGENT1] Client type: {type(self.client).__name__}")
+        print(f"[DEBUG AGENT1] Client module: {type(self.client).__module__}")
+        print(f"[DEBUG AGENT1] Has extraction method: {hasattr(self.client, '_extract_response_from_reasoning_output')}")
+        print(f"[DEBUG AGENT1] Supports response_format: {hasattr(self.client, 'generate_with_system_prompt') and 'response_format' in self.client.generate_with_system_prompt.__code__.co_varnames}")
         self.max_job_description_chars = 30000  # ~7500 tokens (4 chars per token average)
+
+    def _get_response_format(self, schema_class) -> Optional[Dict]:
+        """
+        Build response_format parameter for structured output.
+
+        Args:
+            schema_class: Pydantic model class (e.g., ResumeAnalysisSchema)
+
+        Returns:
+            Dictionary for response_format parameter, or None if not supported
+        """
+        try:
+            response_format = {
+                "type": "json_schema",
+                "json_schema": {
+                    "name": schema_class.__name__,
+                    "schema": schema_class.model_json_schema(),
+                    "strict": True,
+                },
+            }
+            print(f"[DEBUG AGENT1] Built response_format for {schema_class.__name__}")
+            return response_format
+        except Exception as e:
+            print(f"[DEBUG AGENT1] Could not build response_format: {e}")
+            return None
 
     def _truncate_job_description(self, job_description: str) -> str:
         """
@@ -207,11 +239,45 @@ CRITICAL:
 - Skills not checked by user will NOT be added to the resume"""
 
         try:
-            response = self.client.generate_with_system_prompt(
-                system_prompt=system_prompt,
-                user_prompt=user_prompt,
-                temperature=0.7
-            )
+            # Try to use structured output if client supports it
+            response_format = self._get_response_format(ResumeAnalysisSchema)
+
+            # Check if client supports response_format parameter
+            import inspect
+            sig = inspect.signature(self.client.generate_with_system_prompt)
+            supports_response_format = 'response_format' in sig.parameters
+
+            # IMPORTANT: Disable structured output for reasoning models
+            # Reasoning models (R1, o1) need to think freely before formatting
+            # Structured output prevents their deep reasoning capability
+            model_name = getattr(self.client, 'model_name', '').lower()
+            is_reasoning_model = any(x in model_name for x in ['r1', 'o1', 'reasoning'])
+
+            if is_reasoning_model:
+                print(f"[INFO AGENT1] Detected reasoning model ({model_name})")
+                print(f"[INFO AGENT1] Disabling structured output to allow reasoning")
+                print(f"[INFO AGENT1] Using controlled reasoning budget (45-60 second target)")
+                supports_response_format = False  # Force traditional mode
+
+            if supports_response_format and response_format:
+                print(f"[DEBUG AGENT1] Using structured output mode")
+                response = self.client.generate_with_system_prompt(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    temperature=0.7,
+                    response_format=response_format
+                )
+            else:
+                print(f"[DEBUG AGENT1] Using traditional prompt mode")
+                # Let client auto-calculate max_tokens based on available context
+                # This prevents truncation with large inputs
+                print(f"[DEBUG AGENT1] Using auto-calculated max_tokens (based on input size)")
+                response = self.client.generate_with_system_prompt(
+                    system_prompt=system_prompt,
+                    user_prompt=user_prompt,
+                    temperature=0.7,
+                    max_tokens=None  # Auto-calculate based on available context
+                )
 
             print(f"[DEBUG] Raw LLM response length: {len(response)} chars")
             print(f"[DEBUG] Response preview: {response[:500]}...")
