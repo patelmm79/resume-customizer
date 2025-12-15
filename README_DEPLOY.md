@@ -38,7 +38,7 @@ Deploy infra with Terraform
 1. Initialize Terraform in the `terraform/` folder:
 
 ```bash
-cd infra
+cd terraform
 terraform init
 ```
 
@@ -97,3 +97,8 @@ gcloud projects add-iam-policy-binding ${PROJECT_ID} \
 	--member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-run.iam.gserviceaccount.com" \
 	--role="roles/artifactregistry.reader"
 ```
+
+Note on the Cloud Run runtime service account: the service account `service-<PROJECT_NUMBER>@gcp-sa-run.iam.gserviceaccount.com` is a Google-managed runtime agent that may be created only after the Cloud Run API is enabled and the Cloud Run service is first created or the service agent is provisioned. If Terraform attempts to bind IAM to that account before it exists you'll see an error like "service account ... does not exist". The Terraform configuration now includes a local wait loop that polls for that service account before applying the repository IAM binding; ensure you have `gcloud` installed and authenticated when running `terraform apply` so the wait can succeed.
+
+Trigger creation errors (invalid argument)
+- If the Cloud Build trigger creation fails with "invalid argument", confirm that your project is connected to GitHub via the Cloud Build GitHub App in the Cloud Console (Cloud Build -> Connections). Terraform assumes a pre-existing GitHub connection; if you prefer Terraform to manage the connection you'll need to create a Cloud Build connection resource first or create the trigger manually in the console.

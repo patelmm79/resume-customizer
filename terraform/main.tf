@@ -43,6 +43,32 @@ data "google_project" "project" {
   project_id = var.project
 }
 
+# Wait for Cloud Run runtime service account to be created (helps prevent race conditions)
+resource "null_resource" "wait_for_run_runtime_sa" {
+  provisioner "local-exec" {
+    command = <<EOT
+#!/bin/sh
+set -e
+PROJECT=${var.project}
+PN=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
+SA="service-${PN}@gcp-sa-run.iam.gserviceaccount.com"
+echo "Waiting for Cloud Run runtime service account: ${SA}"
+COUNT=0
+while [ $COUNT -lt 60 ]; do
+  if gcloud iam service-accounts describe "$SA" --project="$PROJECT" >/dev/null 2>&1; then
+    echo "Found ${SA}"
+    exit 0
+  fi
+  COUNT=$((COUNT+1))
+  sleep 5
+done
+echo "Timed out waiting for ${SA}; proceeding and hope it is created later"
+exit 0
+EOT
+    interpreter = ["/bin/sh", "-c"]
+  }
+}
+
 resource "google_artifact_registry_repository_iam_member" "repo_reader_sa" {
   project    = var.project
   location   = var.region
@@ -57,6 +83,7 @@ resource "google_artifact_registry_repository_iam_member" "repo_reader_run_agent
   repository = google_artifact_registry_repository.repo.repository_id
   role       = "roles/artifactregistry.reader"
   member     = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-run.iam.gserviceaccount.com"
+  depends_on = [null_resource.wait_for_run_runtime_sa, google_project_service.run_api, google_artifact_registry_repository.repo]
 }
 
 # Service account for Cloud Run (optional - can use default)
