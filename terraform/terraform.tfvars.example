@@ -11,4 +11,4 @@ image = "us-central1-docker.pkg.dev/your-gcp-project-id/resume-customizer-repo/r
 github_owner = "your-github-owner"
 github_repo = "your-repo-name"
 github_branch = "main"
-github_installation_id = "12345678"
+

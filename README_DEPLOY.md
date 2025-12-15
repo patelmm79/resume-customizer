@@ -67,8 +67,8 @@ Cloud Build GitHub trigger via Terraform
 
 2. Obtain the GitHub App installation id for the repository. You can find this in the GitHub app installation details or via the GitHub API.
 
-3. Configure the GitHub trigger variables in `terraform/terraform.tfvars` (see `terraform/terraform.tfvars.example`). Set `github_owner`, `github_repo`, `github_branch`, and `github_installation_id`.
+3. Configure the GitHub trigger variables in `terraform/terraform.tfvars` (see `terraform/terraform.tfvars.example`). Set `github_owner`, `github_repo`, and `github_branch`.
 
-4. Apply Terraform; the trigger will be created and will run `cloudbuild.yaml` on pushes to the configured branch.
+4. Apply Terraform; the trigger will be created and will run `cloudbuild.yaml` on pushes to the configured branch if your project is already connected to GitHub via the Cloud Build GitHub App. If you have not installed the GitHub App, you can either install it or create the trigger manually in the Cloud Console.
 
-Notes on permissions: The Cloud Build GitHub App is the recommended way to enable automated builds from GitHub. Alternatively, you can create triggers manually in the Cloud Console.
+Notes on permissions: If you want Terraform to create a GitHub-connected trigger, ensure the Cloud Build GitHub App is installed and authorized for your repository via the Cloud Console first. Alternatively use GitHub Actions or manual triggers.

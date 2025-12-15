@@ -49,7 +49,4 @@ variable "github_branch" {
   default     = "main"
 }
 
-variable "github_installation_id" {
-  description = "GitHub App installation ID (for Cloud Build GitHub App integration)"
-  type        = string
-}
+
