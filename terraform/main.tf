@@ -56,13 +56,20 @@ resource "null_resource" "docker_build" {
       set -e
       cd "${path.module}/.."
       IMAGE=${var.region}-docker.pkg.dev/${var.project}/${var.artifact_repo}/resume-customizer:latest
-      gcloud builds submit --config=cloudbuild.yaml --substitutions=_IMAGE="$IMAGE",_SERVICE_NAME=${var.service_name},_REGION=${var.region} --project=${var.project}
+
+      echo "Building and pushing image: $IMAGE"
+      gcloud builds submit \
+        --config=cloudbuild.yaml \
+        --substitutions=_IMAGE="$IMAGE",_SERVICE_NAME=${var.service_name},_REGION=${var.region} \
+        --project=${var.project}
+
+      echo "Build complete. Image should be available at: $IMAGE"
     EOT
     interpreter = ["/bin/sh","-c"]
   }
 
   depends_on = [google_project_service.cloudbuild_api, google_project_service.artifact_api]
-  
+
 }
 
 # Ensure Cloud Run service account and Cloud Run runtime have read access to the repo
@@ -114,33 +121,60 @@ resource "google_artifact_registry_repository_iam_member" "repo_reader_sa" {
 resource "null_resource" "custom_sa_artifact_binding" {
   provisioner "local-exec" {
     command = <<-EOT
-      set -e
       PROJECT=${var.project}
       REGION=${var.region}
       REPO=${google_artifact_registry_repository.repo.repository_id}
       SA_EMAIL=${google_service_account.cloudrun_sa.email}
 
-      echo "Granting Artifact Registry reader role to $${SA_EMAIL}"
+      echo "================================================"
+      echo "Granting Artifact Registry permissions to: $${SA_EMAIL}"
+      echo "Repository: $${REPO}"
+      echo "Project: $${PROJECT}"
+      echo "================================================"
 
       # Project-level binding
-      gcloud projects add-iam-policy-binding "$${PROJECT}" \
+      echo "1. Adding project-level Artifact Registry reader role..."
+      if gcloud projects add-iam-policy-binding "$${PROJECT}" \
         --member="serviceAccount:$${SA_EMAIL}" \
         --role="roles/artifactregistry.reader" \
         --condition=None \
-        --quiet 2>/dev/null || true
+        --quiet 2>&1; then
+        echo "   ✓ Project-level binding succeeded"
+      else
+        echo "   ⚠ Project-level binding may have failed or role already assigned"
+      fi
 
       # Repository-level binding
-      gcloud artifacts repositories add-iam-policy-binding "$${REPO}" \
+      echo "2. Adding repository-level Artifact Registry reader role..."
+      if gcloud artifacts repositories add-iam-policy-binding "$${REPO}" \
         --project="$${PROJECT}" \
         --location="$${REGION}" \
         --member="serviceAccount:$${SA_EMAIL}" \
         --role="roles/artifactregistry.reader" \
-        --quiet 2>/dev/null || true
+        --quiet 2>&1; then
+        echo "   ✓ Repository-level binding succeeded"
+      else
+        echo "   ⚠ Repository-level binding may have failed or role already assigned"
+      fi
 
-      # Wait a bit for IAM propagation
-      sleep 3
+      # Wait for IAM propagation (increased from 3 to 10 seconds)
+      echo "3. Waiting 10 seconds for IAM propagation..."
+      sleep 10
 
-      echo "Done: $${SA_EMAIL} should have Artifact Registry reader access."
+      # Verify permissions
+      echo "4. Verifying permissions..."
+      if gcloud artifacts repositories get-iam-policy "$${REPO}" \
+        --project="$${PROJECT}" \
+        --location="$${REGION}" \
+        --format="value(bindings[].members[])" 2>/dev/null | grep -q "$${SA_EMAIL}"; then
+        echo "   ✓ Verified: Service account has Artifact Registry access"
+      else
+        echo "   ⚠ Warning: Could not verify service account permissions"
+      fi
+
+      echo "================================================"
+      echo "IAM binding process complete"
+      echo "================================================"
     EOT
     interpreter = ["/bin/sh", "-c"]
   }
@@ -148,7 +182,8 @@ resource "null_resource" "custom_sa_artifact_binding" {
   depends_on = [
     google_artifact_registry_repository.repo,
     google_service_account.cloudrun_sa,
-    google_project_service.artifact_api
+    google_project_service.artifact_api,
+    google_artifact_registry_repository_iam_member.repo_reader_sa
   ]
 }
 
