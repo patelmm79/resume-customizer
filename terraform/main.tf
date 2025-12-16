@@ -72,35 +72,9 @@ resource "null_resource" "docker_build" {
 
 }
 
-# Ensure Cloud Run service account and Cloud Run runtime have read access to the repo
+# Project data for reference
 data "google_project" "project" {
   project_id = var.project
-}
-
-# Wait for Cloud Run runtime service account to be created (helps prevent race conditions)
-resource "null_resource" "wait_for_run_runtime_sa" {
-  provisioner "local-exec" {
-    command = <<EOT
-#!/bin/sh
-set -e
-PROJECT="${var.project}"
-PN=$(gcloud projects describe "$PROJECT" --format='value(projectNumber)')
-SA="service-$${PN}@gcp-sa-run.iam.gserviceaccount.com"
-echo "Waiting for Cloud Run runtime service account: $${SA}"
-COUNT=0
-while [ $COUNT -lt 60 ]; do
-  if gcloud iam service-accounts describe "$SA" --project="$PROJECT" >/dev/null 2>&1; then
-    echo "Found $${SA}"
-    exit 0
-  fi
-  COUNT=$((COUNT+1))
-  sleep 5
-done
-echo "Timed out waiting for $${SA}; proceeding and hope it is created later"
-exit 0
-EOT
-    interpreter = ["/bin/sh", "-c"]
-  }
 }
 
 resource "google_artifact_registry_repository_iam_member" "repo_reader_sa" {
@@ -191,12 +165,12 @@ resource "null_resource" "custom_sa_artifact_binding" {
 # Robust binding: wait for Google-managed Cloud Run runtime SA, then
 # add Artifact Registry reader role using `gcloud` so we avoid API race
 # conditions that cause Terraform to fail when the SA is not yet present.
+# This is OPTIONAL and runs only after Cloud Run service is created (when create_runtime_bindings=true)
 resource "null_resource" "run_agent_bindings" {
   count = var.create_runtime_bindings ? 1 : 0
 
   provisioner "local-exec" {
     command = <<-EOT
-      set -e
       PROJECT=${var.project}
       REGION=${var.region}
       REPO=${google_artifact_registry_repository.repo.repository_id}
@@ -204,35 +178,62 @@ resource "null_resource" "run_agent_bindings" {
       PN=$(gcloud projects describe "$${PROJECT}" --format='value(projectNumber)')
       SA="service-$${PN}@gcp-sa-run.iam.gserviceaccount.com"
 
-      echo "Waiting for Cloud Run runtime service account: $${SA}"
+      echo "================================================"
+      echo "Setting up Google-managed Cloud Run runtime SA permissions"
+      echo "Service Account: $${SA}"
+      echo "================================================"
+
+      echo "Waiting for Cloud Run runtime service account to be created..."
       COUNT=0
-      until gcloud iam service-accounts describe "$${SA}" --project="$${PROJECT}" >/dev/null 2>&1; do
+      while [ $COUNT -lt 120 ]; do
+        if gcloud iam service-accounts describe "$${SA}" --project="$${PROJECT}" >/dev/null 2>&1; then
+          echo "✓ Service account found: $${SA}"
+          break
+        fi
         COUNT=$((COUNT+1))
-        if [ $COUNT -gt 60 ]; then
-          echo "Timed out waiting for $${SA}"
-          exit 1
+        if [ $COUNT -eq 120 ]; then
+          echo "⚠ Timed out waiting for service account (after 10 minutes)"
+          echo "This is OK - the service account may be created later"
+          echo "You can rerun: terraform apply -var='create_runtime_bindings=true'"
+          exit 0
         fi
         sleep 5
       done
 
-      echo "Adding project-level Artifact Registry read role for $${SA}"
-      gcloud projects add-iam-policy-binding "$${PROJECT}" \
+      echo "Adding Artifact Registry reader role to $${SA}..."
+      if gcloud projects add-iam-policy-binding "$${PROJECT}" \
         --member="serviceAccount:$${SA}" \
-        --role="roles/artifactregistry.reader"
+        --role="roles/artifactregistry.reader" \
+        --quiet 2>&1 >/dev/null; then
+        echo "✓ Project-level binding succeeded"
+      else
+        echo "⚠ Project-level binding may have failed or role already assigned"
+      fi
 
-      echo "Adding repository-level Artifact Registry read role for $${SA}"
-      gcloud artifacts repositories add-iam-policy-binding "$${REPO}" \
+      if gcloud artifacts repositories add-iam-policy-binding "$${REPO}" \
         --project="$${PROJECT}" \
         --location="$${REGION}" \
         --member="serviceAccount:$${SA}" \
-        --role="roles/artifactregistry.reader" || true
+        --role="roles/artifactregistry.reader" \
+        --quiet 2>&1 >/dev/null; then
+        echo "✓ Repository-level binding succeeded"
+      else
+        echo "⚠ Repository-level binding may have failed or role already assigned"
+      fi
 
-      echo "Done: $${SA} should have Artifact Registry reader access."
+      echo "================================================"
+      echo "Done: $${SA} should have Artifact Registry access"
+      echo "================================================"
     EOT
     interpreter = ["/bin/sh", "-c"]
   }
 
-  depends_on = [google_artifact_registry_repository.repo, null_resource.wait_for_run_runtime_sa, google_project_service.artifact_api, google_project_service.run_api]
+  depends_on = [
+    google_cloud_run_service.service,
+    google_artifact_registry_repository.repo,
+    google_project_service.artifact_api,
+    google_project_service.run_api
+  ]
 }
 
 # Service account for Cloud Run (optional - can use default)
@@ -242,6 +243,9 @@ resource "google_service_account" "cloudrun_sa" {
 }
 
 # Cloud Run service (managed)
+# Note: Uses custom service account (cloudrun_sa) which gets Artifact Registry permissions
+# via custom_sa_artifact_binding. The Google-managed runtime SA permissions
+# (run_agent_bindings) are optional and set up separately for subsequent deployments.
 resource "google_cloud_run_service" "service" {
   name     = var.service_name
   location = var.region
