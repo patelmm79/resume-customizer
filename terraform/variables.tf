@@ -22,8 +22,9 @@ variable "artifact_repo" {
 }
 
 variable "image" {
-  description = "Container image URL (Artifact Registry or GCR)"
+  description = "Container image URL (Artifact Registry or GCR). If empty, uses default path based on project/region/artifact_repo"
   type        = string
+  default     = ""
 }
 
 variable "port" {
