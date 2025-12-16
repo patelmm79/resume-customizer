@@ -56,7 +56,8 @@ resource "null_resource" "docker_build" {
     interpreter = ["/bin/sh","-c"]
   }
 
-  depends_on = [google_project_service.cloudbuild, google_project_service.artifact_api]
+  depends_on = [google_project_service.cloudbuild_api, google_project_service.artifact_api]
+  
 }
 
 # Ensure Cloud Run service account and Cloud Run runtime have read access to the repo
