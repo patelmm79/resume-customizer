@@ -280,10 +280,6 @@ resource "google_cloud_run_service" "service" {
         ports {
           container_port = var.port
         }
-        env {
-          name  = "PORT"
-          value = tostring(var.port)
-        }
       }
     }
   }
