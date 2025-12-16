@@ -79,26 +79,19 @@ Notes
 - The Dockerfile launches Streamlit on the port provided by Cloud Run (`PORT` env). Cloud Run will route HTTP requests to the Streamlit app.
 - To automate fully (push on commit -> build -> deploy), create a Cloud Build Trigger (GitHub/GCS) and point it to this repo and `cloudbuild.yaml`.
 
-CI / Automated builds
+CI / Automated builds (Terraform-managed)
 
-This repo now includes a GitHub Actions workflow to build and deploy on pushes to `main`:
+This repository uses Terraform to invoke Cloud Build during `terraform apply`. The Terraform `null_resource.docker_build` runs a local `gcloud builds submit --config=cloudbuild.yaml` to build and push the container image to Artifact Registry before Cloud Run is created. This keeps build orchestration tied to Terraform applies (similar to the `dev-nexus` approach).
 
-- `.github/workflows/build-deploy.yml`
+Requirements for Terraform-managed builds
+- `gcloud` must be installed and authenticated on the machine where you run `terraform apply`.
+- The account running `gcloud` must have permission to run Cloud Build and push to Artifact Registry.
 
-Required GitHub secrets (set in the repository Settings → Secrets):
+How it runs
+1. On `terraform apply`, the `null_resource.docker_build` will run `gcloud builds submit --config=cloudbuild.yaml` from the repo root and push the image to Artifact Registry.
+2. Terraform then creates the Cloud Run service which pulls the image from Artifact Registry.
 
-- `GCP_SA_KEY`: JSON service account key with permissions to run Cloud Build, push to Artifact Registry, and deploy to Cloud Run (roles: `roles/cloudbuild.builds.builder`, `roles/artifactregistry.writer`, `roles/run.admin`).
-- `GCP_PROJECT`: your GCP project id
-- `GCP_REGION`: region (e.g., `us-central1`)
-- `ARTIFACT_REPO`: Artifact Registry repository id (e.g., `resume-customizer-repo`)
-
-The workflow runs Cloud Build (`gcloud builds submit`) to build and push the image to Artifact Registry and then runs `gcloud run deploy` to deploy the service.
-
-Why I switched from Terraform trigger
-
-The Terraform-managed Cloud Build GitHub trigger was encountering a 400 "invalid argument" due to differences in GitHub connections and Cloud Build API expectations in some projects. Using GitHub Actions keeps CI configuration in GitHub and avoids those connection issues.
-
-If you prefer Cloud Build triggers managed in Terraform, you can still create them manually in the Cloud Console (Cloud Build → Triggers) and remove the GitHub Actions workflow.
+If you prefer CI-driven builds via GitHub Actions or Cloud Build triggers, remove the `null_resource.docker_build` and add your preferred workflow or trigger.
 
 Note on the Cloud Run runtime service account: the service account `service-<PROJECT_NUMBER>@gcp-sa-run.iam.gserviceaccount.com` is a Google-managed runtime agent that may be created only after the Cloud Run API is enabled and the Cloud Run service is first created or the service agent is provisioned. If Terraform attempts to bind IAM to that account before it exists you'll see an error like "service account ... does not exist". The Terraform configuration now includes a local wait loop that polls for that service account before applying the repository IAM binding; ensure you have `gcloud` installed and authenticated when running `terraform apply` so the wait can succeed.
 

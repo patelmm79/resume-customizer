@@ -2,7 +2,7 @@ terraform {
   required_providers {
     google = {
       source  = "hashicorp/google"
-      version = ">= 4.0.0"
+      version = "~> 5.0"
     }
   }
 }
@@ -36,6 +36,27 @@ resource "google_artifact_registry_repository" "repo" {
   repository_id = var.artifact_repo
   format = "DOCKER"
   description = "Repository for resume-customizer images"
+}
+
+# Build and push Docker image to Artifact Registry using Cloud Build
+resource "null_resource" "docker_build" {
+  triggers = {
+    dockerfile_hash  = filesha256("${path.module}/../Dockerfile")
+    requirements_hash = filesha256("${path.module}/../requirements.txt")
+    app_hash = filesha256("${path.module}/../app.py")
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      cd "${path.module}/.."
+      IMAGE=${var.region}-docker.pkg.dev/${var.project}/${var.artifact_repo}/resume-customizer:latest
+      gcloud builds submit --config=cloudbuild.yaml --substitutions=_IMAGE="$IMAGE",_SERVICE_NAME=${var.service_name},_REGION=${var.region} --project=${var.project}
+    EOT
+    interpreter = ["/bin/sh","-c"]
+  }
+
+  depends_on = [google_project_service.cloudbuild, google_project_service.artifact_api]
 }
 
 # Ensure Cloud Run service account and Cloud Run runtime have read access to the repo
@@ -134,7 +155,8 @@ resource "google_cloud_run_service" "service" {
 
   depends_on = [
     google_project_service.run_api,
-    google_project_service.artifact_api
+    google_project_service.artifact_api,
+    null_resource.docker_build
   ]
 }
 
