@@ -107,6 +107,7 @@ resource "google_service_account" "cloudrun_sa" {
 
 # Cloud Run service (managed)
 resource "google_cloud_run_service" "service" {
+  count    = var.create_runtime_bindings ? 1 : 0
   name     = var.service_name
   location = var.region
 
@@ -131,17 +132,19 @@ resource "google_cloud_run_service" "service" {
     latest_revision = true
   }
 
-  depends_on = concat([
+  depends_on = [
     google_project_service.run_api,
-    google_project_service.artifact_api
-  ], var.create_runtime_bindings ? [google_project_iam_member.run_agent_project_binding[0]] : [])
+    google_project_service.artifact_api,
+    google_project_iam_member.run_agent_project_binding
+  ]
 }
 
 # Allow unauthenticated invocations (public)
 resource "google_cloud_run_service_iam_member" "invoker" {
-  location = google_cloud_run_service.service.location
+  count    = var.create_runtime_bindings ? 1 : 0
+  location = google_cloud_run_service.service[0].location
   project  = var.project
-  service  = google_cloud_run_service.service.name
+  service  = google_cloud_run_service.service[0].name
   role     = "roles/run.invoker"
   member   = "allUsers"
 }
