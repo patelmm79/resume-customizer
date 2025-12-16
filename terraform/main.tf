@@ -109,6 +109,49 @@ resource "google_artifact_registry_repository_iam_member" "repo_reader_sa" {
   ]
 }
 
+# Use gcloud to ensure custom SA has artifact registry permissions
+# (more robust than relying solely on Terraform IAM binding)
+resource "null_resource" "custom_sa_artifact_binding" {
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      PROJECT=${var.project}
+      REGION=${var.region}
+      REPO=${google_artifact_registry_repository.repo.repository_id}
+      SA_EMAIL=${google_service_account.cloudrun_sa.email}
+
+      echo "Granting Artifact Registry reader role to $${SA_EMAIL}"
+
+      # Project-level binding
+      gcloud projects add-iam-policy-binding "$${PROJECT}" \
+        --member="serviceAccount:$${SA_EMAIL}" \
+        --role="roles/artifactregistry.reader" \
+        --condition=None \
+        --quiet 2>/dev/null || true
+
+      # Repository-level binding
+      gcloud artifacts repositories add-iam-policy-binding "$${REPO}" \
+        --project="$${PROJECT}" \
+        --location="$${REGION}" \
+        --member="serviceAccount:$${SA_EMAIL}" \
+        --role="roles/artifactregistry.reader" \
+        --quiet 2>/dev/null || true
+
+      # Wait a bit for IAM propagation
+      sleep 3
+
+      echo "Done: $${SA_EMAIL} should have Artifact Registry reader access."
+    EOT
+    interpreter = ["/bin/sh", "-c"]
+  }
+
+  depends_on = [
+    google_artifact_registry_repository.repo,
+    google_service_account.cloudrun_sa,
+    google_project_service.artifact_api
+  ]
+}
+
 
 # Robust binding: wait for Google-managed Cloud Run runtime SA, then
 # add Artifact Registry reader role using `gcloud` so we avoid API race
@@ -193,7 +236,7 @@ resource "google_cloud_run_service" "service" {
     google_project_service.run_api,
     google_project_service.artifact_api,
     null_resource.docker_build,
-    google_artifact_registry_repository_iam_member.repo_reader_sa
+    null_resource.custom_sa_artifact_binding
   ]
 }
 
