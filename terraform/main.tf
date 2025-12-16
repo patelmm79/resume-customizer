@@ -134,8 +134,7 @@ resource "google_cloud_run_service" "service" {
 
   depends_on = [
     google_project_service.run_api,
-    google_project_service.artifact_api,
-    google_project_iam_member.run_agent_project_binding[*]
+    google_project_service.artifact_api
   ]
 }
 
