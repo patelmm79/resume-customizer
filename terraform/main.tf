@@ -102,7 +102,11 @@ resource "google_artifact_registry_repository_iam_member" "repo_reader_sa" {
   repository = google_artifact_registry_repository.repo.repository_id
   role       = "roles/artifactregistry.reader"
   member     = "serviceAccount:${google_service_account.cloudrun_sa.email}"
-  depends_on = [google_artifact_registry_repository.repo, google_service_account.cloudrun_sa]
+  depends_on = [
+    google_artifact_registry_repository.repo,
+    google_service_account.cloudrun_sa,
+    google_project_service.artifact_api
+  ]
 }
 
 
@@ -189,7 +193,9 @@ resource "google_cloud_run_service" "service" {
   depends_on = [
     google_project_service.run_api,
     google_project_service.artifact_api,
-    null_resource.docker_build
+    null_resource.docker_build,
+    google_artifact_registry_repository_iam_member.repo_reader_sa,
+    null_resource.run_agent_bindings
   ]
 }
 
