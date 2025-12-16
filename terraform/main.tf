@@ -78,11 +78,12 @@ data "google_project" "project" {
 }
 
 resource "google_artifact_registry_repository_iam_member" "repo_reader_sa" {
+  count      = var.use_default_sa ? 0 : 1
   project    = var.project
   location   = var.region
   repository = google_artifact_registry_repository.repo.repository_id
   role       = "roles/artifactregistry.reader"
-  member     = "serviceAccount:${google_service_account.cloudrun_sa.email}"
+  member     = "serviceAccount:${google_service_account.cloudrun_sa[0].email}"
   depends_on = [
     google_artifact_registry_repository.repo,
     google_service_account.cloudrun_sa,
@@ -90,15 +91,32 @@ resource "google_artifact_registry_repository_iam_member" "repo_reader_sa" {
   ]
 }
 
+# Grant default service account Artifact Registry access if using it
+resource "google_artifact_registry_repository_iam_member" "repo_reader_default_sa" {
+  count      = var.use_default_sa ? 1 : 0
+  project    = var.project
+  location   = var.region
+  repository = google_artifact_registry_repository.repo.repository_id
+  role       = "roles/artifactregistry.reader"
+  member     = "serviceAccount:${data.google_compute_default_service_account.default[0].email}"
+  depends_on = [
+    google_artifact_registry_repository.repo,
+    google_project_service.artifact_api
+  ]
+}
+
 # Use gcloud to ensure custom SA has artifact registry permissions
 # (more robust than relying solely on Terraform IAM binding)
+# Only runs if not using default SA
 resource "null_resource" "custom_sa_artifact_binding" {
+  count = var.use_default_sa ? 0 : 1
+
   provisioner "local-exec" {
     command = <<-EOT
       PROJECT=${var.project}
       REGION=${var.region}
       REPO=${google_artifact_registry_repository.repo.repository_id}
-      SA_EMAIL=${google_service_account.cloudrun_sa.email}
+      SA_EMAIL=${google_service_account.cloudrun_sa[0].email}
 
       echo "================================================"
       echo "Granting Artifact Registry permissions to: $${SA_EMAIL}"
@@ -238,21 +256,25 @@ resource "null_resource" "run_agent_bindings" {
 
 # Service account for Cloud Run (optional - can use default)
 resource "google_service_account" "cloudrun_sa" {
+  count        = var.use_default_sa ? 0 : 1
   account_id   = "resume-customizer-sa"
   display_name = "Service account for Resume Customizer Cloud Run"
 }
 
+# Get the default Compute Engine service account
+data "google_compute_default_service_account" "default" {
+  count   = var.use_default_sa ? 1 : 0
+}
+
 # Cloud Run service (managed)
-# Note: Uses custom service account (cloudrun_sa) which gets Artifact Registry permissions
-# via custom_sa_artifact_binding. The Google-managed runtime SA permissions
-# (run_agent_bindings) are optional and set up separately for subsequent deployments.
+# Uses either custom service account (cloudrun_sa) or default Compute Engine SA based on use_default_sa
 resource "google_cloud_run_service" "service" {
   name     = var.service_name
   location = var.region
 
   template {
     spec {
-      service_account_name = google_service_account.cloudrun_sa.email
+      service_account_name = var.use_default_sa ? data.google_compute_default_service_account.default[0].email : google_service_account.cloudrun_sa[0].email
       containers {
         image = local.image
         ports {
@@ -275,7 +297,8 @@ resource "google_cloud_run_service" "service" {
     google_project_service.run_api,
     google_project_service.artifact_api,
     null_resource.docker_build,
-    null_resource.custom_sa_artifact_binding
+    google_artifact_registry_repository_iam_member.repo_reader_sa,
+    google_artifact_registry_repository_iam_member.repo_reader_default_sa
   ]
 }
 

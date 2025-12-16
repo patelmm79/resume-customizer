@@ -55,4 +55,10 @@ variable "create_runtime_bindings" {
   default     = false
 }
 
+variable "use_default_sa" {
+  description = "If true, use the default Compute Engine service account instead of creating a custom one"
+  type        = bool
+  default     = false
+}
+
 
