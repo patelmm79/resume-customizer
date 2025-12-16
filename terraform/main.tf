@@ -12,6 +12,11 @@ provider "google" {
   region  = var.region
 }
 
+# Compute final image if not provided explicitly
+locals {
+  image = length(trimspace(var.image)) > 0 ? var.image : "${var.region}-docker.pkg.dev/${var.project}/${var.artifact_repo}/resume-customizer:latest"
+}
+
 # Enable required APIs
 resource "google_project_service" "run_api" {
   project = var.project
@@ -97,17 +102,9 @@ resource "google_artifact_registry_repository_iam_member" "repo_reader_sa" {
   repository = google_artifact_registry_repository.repo.repository_id
   role       = "roles/artifactregistry.reader"
   member     = "serviceAccount:${google_service_account.cloudrun_sa.email}"
+  depends_on = [google_artifact_registry_repository.repo, google_service_account.cloudrun_sa]
 }
 
-resource "google_artifact_registry_repository_iam_member" "repo_reader_run_agent" {
-  count      = var.create_runtime_bindings ? 1 : 0
-  project    = var.project
-  location   = var.region
-  repository = google_artifact_registry_repository.repo.repository_id
-  role       = "roles/artifactregistry.reader"
-  member     = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-run.iam.gserviceaccount.com"
-  depends_on = [null_resource.wait_for_run_runtime_sa, google_project_service.run_api, google_artifact_registry_repository.repo]
-}
 
 # Robust binding: wait for Google-managed Cloud Run runtime SA, then
 # add Artifact Registry reader role using `gcloud` so we avoid API race
@@ -172,7 +169,7 @@ resource "google_cloud_run_service" "service" {
     spec {
       service_account_name = google_service_account.cloudrun_sa.email
       containers {
-        image = var.image
+        image = local.image
         ports {
           container_port = var.port
         }
