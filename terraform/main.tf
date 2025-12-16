@@ -86,6 +86,17 @@ resource "google_artifact_registry_repository_iam_member" "repo_reader_run_agent
   depends_on = [null_resource.wait_for_run_runtime_sa, google_project_service.run_api, google_artifact_registry_repository.repo]
 }
 
+# NOTE: repository-level IAM binding for the Cloud Run runtime agent can fail
+# if the Google-managed runtime service account doesn't yet exist. To avoid
+# that race, grant the runtime agent the Artifact Registry reader role at
+# the project level instead (accepted even if the SA is not yet present).
+resource "google_project_iam_member" "run_agent_project_binding" {
+  project = var.project
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-run.iam.gserviceaccount.com"
+  depends_on = [google_project_service.artifact_api, google_project_service.run_api]
+}
+
 # Service account for Cloud Run (optional - can use default)
 resource "google_service_account" "cloudrun_sa" {
   account_id   = "resume-customizer-sa"
@@ -120,7 +131,8 @@ resource "google_cloud_run_service" "service" {
 
   depends_on = [
     google_project_service.run_api,
-    google_project_service.artifact_api
+    google_project_service.artifact_api,
+    google_project_iam_member.run_agent_project_binding
   ]
 }
 
