@@ -79,42 +79,26 @@ Notes
 - The Dockerfile launches Streamlit on the port provided by Cloud Run (`PORT` env). Cloud Run will route HTTP requests to the Streamlit app.
 - To automate fully (push on commit -> build -> deploy), create a Cloud Build Trigger (GitHub/GCS) and point it to this repo and `cloudbuild.yaml`.
 
-Cloud Build GitHub trigger via Terraform
+CI / Automated builds
 
-1. Install the Google Cloud Build GitHub App on the GitHub repository you want to build. Follow the steps in the Cloud Build docs to install the app and authorize access to the repository.
+This repo now includes a GitHub Actions workflow to build and deploy on pushes to `main`:
 
-2. Obtain the GitHub App installation id for the repository. You can find this in the GitHub app installation details or via the GitHub API.
+- `.github/workflows/build-deploy.yml`
 
-3. Configure the GitHub trigger variables in `terraform/terraform.tfvars` (see `terraform/terraform.tfvars.example`). Set `github_owner`, `github_repo`, and `github_branch`.
+Required GitHub secrets (set in the repository Settings → Secrets):
 
-4. Apply Terraform; the trigger will be created and will run `cloudbuild.yaml` on pushes to the configured branch if your project is already connected to GitHub via the Cloud Build GitHub App. If you have not installed the GitHub App, you can either install it or create the trigger manually in the Cloud Console.
+- `GCP_SA_KEY`: JSON service account key with permissions to run Cloud Build, push to Artifact Registry, and deploy to Cloud Run (roles: `roles/cloudbuild.builds.builder`, `roles/artifactregistry.writer`, `roles/run.admin`).
+- `GCP_PROJECT`: your GCP project id
+- `GCP_REGION`: region (e.g., `us-central1`)
+- `ARTIFACT_REPO`: Artifact Registry repository id (e.g., `resume-customizer-repo`)
 
-Permissions notes and common errors
-- If you see an error like `artifactregistry.repositories.downloadArtifacts denied` when creating the Cloud Run service, the Cloud Run runtime (and/or the Cloud Run service account) does not have read access to the Artifact Registry repository. To fix this Terraform now adds IAM bindings to grant `roles/artifactregistry.reader` to:
-	- the service account created for Cloud Run (`resume-customizer-sa`), and
-	- the Cloud Run runtime service agent (`service-<PROJECT_NUMBER>@gcp-sa-run.iam.gserviceaccount.com`).
+The workflow runs Cloud Build (`gcloud builds submit`) to build and push the image to Artifact Registry and then runs `gcloud run deploy` to deploy the service.
 
-- If you still see permission errors after `terraform apply`, run the following to verify the project number and that bindings exist:
+Why I switched from Terraform trigger
 
-```bash
-gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)'
-gcloud artifacts repositories describe ${REPO} --location=${REGION}
-gcloud projects get-iam-policy ${PROJECT_ID} --format=json | jq '.bindings[] | select(.role=="roles/artifactregistry.reader")'
-```
+The Terraform-managed Cloud Build GitHub trigger was encountering a 400 "invalid argument" due to differences in GitHub connections and Cloud Build API expectations in some projects. Using GitHub Actions keeps CI configuration in GitHub and avoids those connection issues.
 
-If bindings are missing, add them manually (example):
-
-```bash
-# grant repo reader to the Cloud Run service account
-gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-	--member="serviceAccount:resume-customizer-sa@${PROJECT_ID}.iam.gserviceaccount.com" \
-	--role="roles/artifactregistry.reader"
-
-# grant repo reader to Cloud Run runtime agent (use project number from describe)
-gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-	--member="serviceAccount:service-${PROJECT_NUMBER}@gcp-sa-run.iam.gserviceaccount.com" \
-	--role="roles/artifactregistry.reader"
-```
+If you prefer Cloud Build triggers managed in Terraform, you can still create them manually in the Cloud Console (Cloud Build → Triggers) and remove the GitHub Actions workflow.
 
 Note on the Cloud Run runtime service account: the service account `service-<PROJECT_NUMBER>@gcp-sa-run.iam.gserviceaccount.com` is a Google-managed runtime agent that may be created only after the Cloud Run API is enabled and the Cloud Run service is first created or the service agent is provisioned. If Terraform attempts to bind IAM to that account before it exists you'll see an error like "service account ... does not exist". The Terraform configuration now includes a local wait loop that polls for that service account before applying the repository IAM binding; ensure you have `gcloud` installed and authenticated when running `terraform apply` so the wait can succeed.
 
