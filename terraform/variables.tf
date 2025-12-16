@@ -49,4 +49,10 @@ variable "github_branch" {
   default     = "main"
 }
 
+variable "create_runtime_bindings" {
+  description = "When false, skip creating IAM bindings for the Google-managed Cloud Run runtime service account (useful for first apply).\nSet to true on the second apply after the runtime service account exists."
+  type        = bool
+  default     = true
+}
+
 

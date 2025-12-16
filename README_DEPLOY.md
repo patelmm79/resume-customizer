@@ -55,6 +55,24 @@ cp terraform.tfvars.example terraform.tfvars
 terraform apply
 ```
 
+Two-step Terraform flow (optional)
+
+If you'd like to avoid timing issues with the Google-managed Cloud Run runtime service account, use a two-step apply:
+
+1. First apply: set `create_runtime_bindings = false` in `terraform/terraform.tfvars` and run `terraform apply`. This will create the Artifact Registry, service account you control (`resume-customizer-sa`), and other infra but skip binding for the Google-managed runtime agent.
+
+2. Wait for the Cloud Run runtime service account to appear (it may be created when Cloud Run is first used). You can check:
+
+```bash
+PROJECT=your-gcp-project-id
+PROJECT_NUMBER=$(gcloud projects describe ${PROJECT} --format='value(projectNumber)')
+gcloud iam service-accounts describe service-${PROJECT_NUMBER}@gcp-sa-run.iam.gserviceaccount.com --project=${PROJECT}
+```
+
+3. Second apply: set `create_runtime_bindings = true` in `terraform/terraform.tfvars` and run `terraform apply` again. Terraform will then create the bindings for the runtime agent.
+
+This two-step approach prevents Terraform from attempting to bind to a Google-managed service account before it exists.
+
 After successful apply, Terraform outputs will include `cloud_run_url`.
 
 Notes

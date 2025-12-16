@@ -12,3 +12,7 @@ github_owner = "your-github-owner"
 github_repo = "your-repo-name"
 github_branch = "main"
 
+# Use two-step apply: set create_runtime_bindings = false on first apply,
+# then set to true after the Cloud Run runtime service account exists.
+create_runtime_bindings = true
+
