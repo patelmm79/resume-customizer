@@ -127,7 +127,7 @@ variable "create_secrets" {
 variable "create_secret_versions" {
   description = "When true, Terraform will create secret versions for the standard keys when corresponding values are provided. Set to false to manage versions outside Terraform."
   type        = bool
-  default     = false
+  default     = true
 }
 
 variable "gemini_api_key_value" {
