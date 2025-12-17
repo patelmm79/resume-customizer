@@ -134,18 +134,30 @@ variable "gemini_api_key_value" {
   description = "Optional: GEMINI API key value to add as a secret version (set via TF_VAR or CI)."
   type        = string
   default     = ""
+  validation {
+    condition     = !(var.create_secret_versions && length(trimspace(var.gemini_api_key_value)) == 0)
+    error_message = "When create_secret_versions = true you must provide gemini_api_key_value in terraform.tfvars or via TF_VAR_gemini_api_key_value."
+  }
 }
 
 variable "anthropic_api_key_value" {
   description = "Optional: ANTHROPIC API key value to add as a secret version (set via TF_VAR or CI)."
   type        = string
   default     = ""
+  validation {
+    condition     = !(var.create_secret_versions && length(trimspace(var.anthropic_api_key_value)) == 0)
+    error_message = "When create_secret_versions = true you must provide anthropic_api_key_value in terraform.tfvars or via TF_VAR_anthropic_api_key_value."
+  }
 }
 
 variable "custom_llm_api_key_value" {
   description = "Optional: CUSTOM LLM API key value to add as a secret version (set via TF_VAR or CI)."
   type        = string
   default     = ""
+  validation {
+    condition     = !(var.create_secret_versions && length(trimspace(var.custom_llm_api_key_value)) == 0)
+    error_message = "When create_secret_versions = true you must provide custom_llm_api_key_value in terraform.tfvars or via TF_VAR_custom_llm_api_key_value."
+  }
 }
 
 
