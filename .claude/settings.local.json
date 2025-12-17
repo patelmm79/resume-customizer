@@ -16,7 +16,8 @@
       "Bash(\"venv/Scripts/python.exe\" test_all_providers_extraction.py)",
       "Bash(grep:*)",
       "Bash(\"venv/Scripts/python.exe\" test_structured_output.py)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Bash(gcloud run services describe:*)"
     ],
     "deny": [],
     "ask": []
