@@ -288,19 +288,19 @@ resource "google_secret_manager_secret" "custom_llm_api_key" {
 
 # Optionally create secret versions when values are provided via variables/CI
 resource "google_secret_manager_secret_version" "gemini_api_key_version" {
-  count       = var.create_secret_versions && length(trim(var.gemini_api_key_value)) > 0 ? 1 : 0
+  count       = var.create_secret_versions && length(trimspace(var.gemini_api_key_value)) > 0 ? 1 : 0
   secret      = google_secret_manager_secret.gemini_api_key[0].id
   secret_data = var.gemini_api_key_value
 }
 
 resource "google_secret_manager_secret_version" "anthropic_api_key_version" {
-  count       = var.create_secret_versions && length(trim(var.anthropic_api_key_value)) > 0 ? 1 : 0
+  count       = var.create_secret_versions && length(trimspace(var.anthropic_api_key_value)) > 0 ? 1 : 0
   secret      = google_secret_manager_secret.anthropic_api_key[0].id
   secret_data = var.anthropic_api_key_value
 }
 
 resource "google_secret_manager_secret_version" "custom_llm_api_key_version" {
-  count       = var.create_secret_versions && length(trim(var.custom_llm_api_key_value)) > 0 ? 1 : 0
+  count       = var.create_secret_versions && length(trimspace(var.custom_llm_api_key_value)) > 0 ? 1 : 0
   secret      = google_secret_manager_secret.custom_llm_api_key[0].id
   secret_data = var.custom_llm_api_key_value
 }
@@ -309,11 +309,11 @@ resource "google_secret_manager_secret_version" "custom_llm_api_key_version" {
 # to be provided (this enforces that values come from terraform.tfvars/TF_VARs).
 locals {
   # Fail fast: if create_secret_versions is true and any secret value is empty, abort with a clear message.
-  require_secret_values_check = (
+    require_secret_values_check = (
     var.create_secret_versions && (
-      length(trim(var.gemini_api_key_value)) == 0 ||
-      length(trim(var.anthropic_api_key_value)) == 0 ||
-      length(trim(var.custom_llm_api_key_value)) == 0
+      length(trimspace(var.gemini_api_key_value)) == 0 ||
+      length(trimspace(var.anthropic_api_key_value)) == 0 ||
+      length(trimspace(var.custom_llm_api_key_value)) == 0
     )
   ) ? error("Secret value variables are required when `create_secret_versions` is true. Please set `gemini_api_key_value`, `anthropic_api_key_value`, and `custom_llm_api_key_value` in your terraform.tfvars or pass them via TF_VAR_*") : true
 }
