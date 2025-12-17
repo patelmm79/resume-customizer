@@ -54,3 +54,9 @@ data/resumes/*.pdf
 # Terraform local variables (keep secrets out of git)
 terraform/terraform.tfvars
 nul
+
+# Ignore Terraform local state and provider binaries
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+# Ignore exported provider schema and downloaded binaries
+terraform/schema.json
