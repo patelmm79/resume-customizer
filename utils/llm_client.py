@@ -530,9 +530,9 @@ class CustomLLMClient(LLMClient):
             if json_end != -1 and json_end > json_start:
                 potential_json = content[json_start:json_end + 1]
                 print(f"[DEBUG EXTRACTION] Potential JSON length: {len(potential_json)} chars")
-                print(f"[DEBUG EXTRACTION] Contains 'score': {'"score"' in potential_json}")
-                print(f"[DEBUG EXTRACTION] Contains 'analysis': {'"analysis"' in potential_json}")
-                print(f"[DEBUG EXTRACTION] Contains 'suggestions': {'"suggestions"' in potential_json}")
+                print("[DEBUG EXTRACTION] Contains 'score':", '"score"' in potential_json)
+                print("[DEBUG EXTRACTION] Contains 'analysis':", '"analysis"' in potential_json)
+                print("[DEBUG EXTRACTION] Contains 'suggestions':", '"suggestions"' in potential_json)
                 # Verify it looks like valid JSON structure
                 if '"score"' in potential_json or '"analysis"' in potential_json or '"suggestions"' in potential_json:
                     print(f"[DEBUG] Extracted JSON from mixed content (full match), length: {len(potential_json)} chars")
