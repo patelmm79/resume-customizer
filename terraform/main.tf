@@ -309,6 +309,18 @@ resource "google_secret_manager_secret_version" "custom_llm_api_key_version" {
 # to be provided (this enforces that values come from terraform.tfvars/TF_VARs).
 /* Validation of required TF_VARs is implemented via variable validation blocks in variables.tf */
 
+# External check: run a small script during plan to fail with a clear message
+# if create_secret_versions = true but required TF_VAR secret values are missing.
+data "external" "require_secret_values" {
+  program = ["python", "${path.module}/validate_secret_vars.py"]
+  query = {
+    create_secret_versions = var.create_secret_versions
+    gemini                  = var.gemini_api_key_value
+    anthropic               = var.anthropic_api_key_value
+    custom                  = var.custom_llm_api_key_value
+  }
+}
+
 # Grant Cloud Run service account access to secrets
 locals {
   cloudrun_sa_email = var.use_default_sa ? data.google_compute_default_service_account.default[0].email : google_service_account.cloudrun_sa[0].email
