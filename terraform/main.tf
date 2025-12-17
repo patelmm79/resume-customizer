@@ -266,7 +266,7 @@ resource "google_secret_manager_secret" "gemini_api_key" {
   count     = var.create_secrets ? 1 : 0
   secret_id = "${var.secret_prefix}-GEMINI_API_KEY"
   replication {
-    automatic = true
+    auto {}
   }
 }
 
@@ -274,7 +274,7 @@ resource "google_secret_manager_secret" "anthropic_api_key" {
   count     = var.create_secrets ? 1 : 0
   secret_id = "${var.secret_prefix}-ANTHROPIC_API_KEY"
   replication {
-    automatic = true
+    auto {}
   }
 }
 
@@ -282,7 +282,7 @@ resource "google_secret_manager_secret" "custom_llm_api_key" {
   count     = var.create_secrets ? 1 : 0
   secret_id = "${var.secret_prefix}-CUSTOM_LLM_API_KEY"
   replication {
-    automatic = true
+    auto {}
   }
 }
 
@@ -372,8 +372,8 @@ resource "google_cloud_run_service" "service" {
               name = "GEMINI_API_KEY"
               value_from {
                 secret_key_ref {
-                  secret  = google_secret_manager_secret.gemini_api_key[0].secret_id
-                  version = "latest"
+                  name = google_secret_manager_secret.gemini_api_key[0].secret_id
+                  key  = "latest"
                 }
               }
             }
@@ -384,8 +384,8 @@ resource "google_cloud_run_service" "service" {
               name = "ANTHROPIC_API_KEY"
               value_from {
                 secret_key_ref {
-                  secret  = google_secret_manager_secret.anthropic_api_key[0].secret_id
-                  version = "latest"
+                  name = google_secret_manager_secret.anthropic_api_key[0].secret_id
+                  key  = "latest"
                 }
               }
             }
@@ -396,8 +396,8 @@ resource "google_cloud_run_service" "service" {
               name = "CUSTOM_LLM_API_KEY"
               value_from {
                 secret_key_ref {
-                  secret  = google_secret_manager_secret.custom_llm_api_key[0].secret_id
-                  version = "latest"
+                  name = google_secret_manager_secret.custom_llm_api_key[0].secret_id
+                  key  = "latest"
                 }
               }
             }
