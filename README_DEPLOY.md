@@ -97,3 +97,52 @@ Note on the Cloud Run runtime service account: the service account `service-<PRO
 
 Trigger creation errors (invalid argument)
 - If the Cloud Build trigger creation fails with "invalid argument", confirm that your project is connected to GitHub via the Cloud Build GitHub App in the Cloud Console (Cloud Build -> Connections). Terraform assumes a pre-existing GitHub connection; if you prefer Terraform to manage the connection you'll need to create a Cloud Build connection resource first or create the trigger manually in the console.
+
+Secrets & runtime configuration (recommended)
+-------------------------------------------
+
+This project requires provider API keys (LLM providers) and some runtime tuning values. For production deployments we recommend storing sensitive values in Secret Manager and mapping them into Cloud Run at runtime rather than committing them to source control or Terraform state.
+
+1. Secret naming and `secret_prefix`
+	- The Terraform example `terraform.tfvars.example` includes a `secret_prefix` variable used to name secrets in Secret Manager to avoid collisions (for example `resume_customizer-prod-GEMINI_API_KEY`).
+	- Fill `secret_prefix` in your `terraform.tfvars` per-environment (e.g. `resume_customizer-staging`).
+
+2. Terraform behavior
+	- Terraform will create Secret Manager secret resources for standard keys (if `create_secrets = true`) but will NOT populate secret versions. This avoids storing secret values in Terraform state.
+	- After `terraform apply`, you should populate secret values with `gcloud secrets versions add` or via CI (recommended).
+
+3. Adding secret values (example)
+```bash
+# Example: add a Gemini key value to Secret Manager
+SECRET_PREFIX=resume_customizer-prod
+echo -n "$GEMINI_API_KEY" | \
+  gcloud secrets versions add "${SECRET_PREFIX}-GEMINI_API_KEY" --data-file=- --project=${PROJECT_ID}
+
+# Add other keys similarly:
+echo -n "$ANTHROPIC_API_KEY" | gcloud secrets versions add "${SECRET_PREFIX}-ANTHROPIC_API_KEY" --data-file=- --project=${PROJECT_ID}
+echo -n "$CUSTOM_LLM_API_KEY" | gcloud secrets versions add "${SECRET_PREFIX}-CUSTOM_LLM_API_KEY" --data-file=- --project=${PROJECT_ID}
+```
+
+4. Grant access to Cloud Run service account
+```bash
+PROJECT_NUMBER=$(gcloud projects describe ${PROJECT_ID} --format='value(projectNumber)')
+# If using a custom service account set in Terraform use that; otherwise use default runtime SA
+RUN_SA=service-${PROJECT_NUMBER}@gcp-sa-run.iam.gserviceaccount.com
+
+gcloud secrets add-iam-policy-binding "${SECRET_PREFIX}-GEMINI_API_KEY" \
+  --member="serviceAccount:${RUN_SA}" --role="roles/secretmanager.secretAccessor" --project=${PROJECT_ID}
+```
+
+5. CI-driven secret provisioning (recommended)
+	- Add your secret values to your CI provider (GitHub Actions secrets, Cloud Build substitutions, etc.).
+	- In CI, run `gcloud secrets versions add` for each secret (as above) before running `terraform apply` or `gcloud run deploy` so the runtime has access immediately after deployment.
+
+6. Non-sensitive runtime values
+	- Non-sensitive settings such as model names and tuning parameters (`gemini_model`, `claude_model`, `custom_llm_max_retries`, `custom_llm_context_limit`) are exposed as standard environment variables via Terraform and should be set in `terraform.tfvars`.
+
+7. Security & best practices
+	- Do not put secret values into `terraform.tfvars` or commit them.
+	- Use the `secret_prefix` to isolate secrets per environment.
+	- Rotate keys by adding new secret versions and removing old ones. Use `latest` in the Cloud Run secret mapping to pick up new versions after redeploy.
+
+If you'd like, add a CI script that uploads secret versions from your CI secret store and runs `terraform apply`. This is the recommended pattern to ensure per-deployment secrets are provisioned automatically.

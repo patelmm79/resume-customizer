@@ -261,6 +261,57 @@ resource "google_service_account" "cloudrun_sa" {
   display_name = "Service account for Resume Customizer Cloud Run"
 }
 
+# Secret Manager: create standard secret resources for this app (no secret versions)
+resource "google_secret_manager_secret" "gemini_api_key" {
+  count     = var.create_secrets ? 1 : 0
+  secret_id = "${var.secret_prefix}-GEMINI_API_KEY"
+  replication {
+    automatic = true
+  }
+}
+
+resource "google_secret_manager_secret" "anthropic_api_key" {
+  count     = var.create_secrets ? 1 : 0
+  secret_id = "${var.secret_prefix}-ANTHROPIC_API_KEY"
+  replication {
+    automatic = true
+  }
+}
+
+resource "google_secret_manager_secret" "custom_llm_api_key" {
+  count     = var.create_secrets ? 1 : 0
+  secret_id = "${var.secret_prefix}-CUSTOM_LLM_API_KEY"
+  replication {
+    automatic = true
+  }
+}
+
+# Grant Cloud Run service account access to secrets
+locals {
+  cloudrun_sa_email = var.use_default_sa ? data.google_compute_default_service_account.default[0].email : google_service_account.cloudrun_sa[0].email
+}
+
+resource "google_secret_manager_secret_iam_member" "gemini_accessor" {
+  count     = var.create_secrets ? 1 : 0
+  secret_id = google_secret_manager_secret.gemini_api_key[0].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${local.cloudrun_sa_email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "anthropic_accessor" {
+  count     = var.create_secrets ? 1 : 0
+  secret_id = google_secret_manager_secret.anthropic_api_key[0].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${local.cloudrun_sa_email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "custom_llm_accessor" {
+  count     = var.create_secrets ? 1 : 0
+  secret_id = google_secret_manager_secret.custom_llm_api_key[0].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${local.cloudrun_sa_email}"
+}
+
 # Get the default Compute Engine service account
 data "google_compute_default_service_account" "default" {
   count   = var.use_default_sa ? 1 : 0
@@ -280,6 +331,77 @@ resource "google_cloud_run_service" "service" {
         ports {
           container_port = var.port
         }
+          # Non-secret runtime config
+          env {
+            name  = "LLM_PROVIDER"
+            value = var.llm_provider
+          }
+          env {
+            name  = "GEMINI_MODEL"
+            value = var.gemini_model
+          }
+          env {
+            name  = "CLAUDE_MODEL"
+            value = var.claude_model
+          }
+          env {
+            name  = "CUSTOM_LLM_BASE_URL"
+            value = var.custom_llm_base_url
+          }
+          env {
+            name  = "CUSTOM_LLM_MODEL"
+            value = var.custom_llm_model
+          }
+          env {
+            name  = "CUSTOM_LLM_MAX_RETRIES"
+            value = tostring(var.custom_llm_max_retries)
+          }
+          env {
+            name  = "CUSTOM_LLM_INITIAL_RETRY_DELAY"
+            value = tostring(var.custom_llm_initial_retry_delay)
+          }
+          env {
+            name  = "CUSTOM_LLM_CONTEXT_LIMIT"
+            value = tostring(var.custom_llm_context_limit)
+          }
+
+          # Secret-mounted env vars (map to Secret Manager secrets created above)
+          dynamic "env" {
+            for_each = var.create_secrets ? [1] : []
+            content {
+              name = "GEMINI_API_KEY"
+              value_from {
+                secret_key_ref {
+                  secret  = google_secret_manager_secret.gemini_api_key[0].secret_id
+                  version = "latest"
+                }
+              }
+            }
+          }
+          dynamic "env" {
+            for_each = var.create_secrets ? [1] : []
+            content {
+              name = "ANTHROPIC_API_KEY"
+              value_from {
+                secret_key_ref {
+                  secret  = google_secret_manager_secret.anthropic_api_key[0].secret_id
+                  version = "latest"
+                }
+              }
+            }
+          }
+          dynamic "env" {
+            for_each = var.create_secrets ? [1] : []
+            content {
+              name = "CUSTOM_LLM_API_KEY"
+              value_from {
+                secret_key_ref {
+                  secret  = google_secret_manager_secret.custom_llm_api_key[0].secret_id
+                  version = "latest"
+                }
+              }
+            }
+          }
       }
     }
   }

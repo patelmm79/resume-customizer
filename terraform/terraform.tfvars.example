@@ -16,3 +16,52 @@ github_branch = "main"
 # then set to true after the Cloud Run runtime service account exists.
 create_runtime_bindings = true
 
+
+# -----------------------------------------------------------------------------
+# LLM provider configuration (placeholders)
+# - For secrets, set the Secret Manager secret name (recommended) or provide
+#   the raw value here (not recommended for production).
+# - Example secret naming convention: GEMINI_API_KEY-prod, ANTHROPIC_API_KEY-staging
+# -----------------------------------------------------------------------------
+
+# Which provider to enable by default (options: "gemini", "claude", "custom")
+llm_provider = ""
+
+# Google Gemini (recommended): either provide secret name or plain key
+# If using Secret Manager, set to the secret resource name (e.g. "GEMINI_API_KEY-prod").
+gemini_api_key_secret = ""
+gemini_model = "gemini-2.0-flash-exp"
+
+# Anthropic Claude
+anthropic_api_key_secret = ""
+claude_model = "claude-3-5-sonnet-20241022"
+
+# Custom LLM (OpenAI-compatible / vLLM)
+custom_llm_api_key_secret = ""
+custom_llm_base_url = ""
+custom_llm_model = ""
+
+# Optional: lists of available models (comma-separated)
+# gemini_models = "gemini-2.0-flash-exp,gemini-1.5-pro"
+# claude_models = "claude-3-5-sonnet-20241022,claude-3-5-haiku-20241022"
+# custom_models = "gpt-4-turbo-preview,gpt-4,gpt-3.5-turbo"
+
+# -----------------------------------------------------------------------------
+# Additional runtime tuning (custom LLM)
+# These control retry/backoff behavior and context limits for custom LLMs.
+# -----------------------------------------------------------------------------
+# Max retry attempts for custom LLM (used when handling 503/warm-up)
+custom_llm_max_retries = 5
+# Initial retry delay in seconds (exponential backoff multiplier applied)
+custom_llm_initial_retry_delay = 5.0
+# Estimated model context limit (tokens) for custom LLMs
+custom_llm_context_limit = 32768
+
+# -----------------------------------------------------------------------------
+# Secret Manager naming prefix for this application
+# To avoid collisions with other projects/apps, set a prefix used when
+# creating Secret Manager secret names (e.g. "resume_customizer-prod").
+# Use in your CI script when creating or referencing secrets.
+# -----------------------------------------------------------------------------
+secret_prefix = "resume_customizer"
+
