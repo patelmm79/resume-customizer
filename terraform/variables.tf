@@ -123,5 +123,30 @@ variable "create_secrets" {
   default     = true
 }
 
+# Optional: let Terraform create secret versions when values are provided via TF_VAR or CI
+variable "create_secret_versions" {
+  description = "When true, Terraform will create secret versions for the standard keys when corresponding values are provided. Set to false to manage versions outside Terraform."
+  type        = bool
+  default     = false
+}
+
+variable "gemini_api_key_value" {
+  description = "Optional: GEMINI API key value to add as a secret version (set via TF_VAR or CI)."
+  type        = string
+  default     = ""
+}
+
+variable "anthropic_api_key_value" {
+  description = "Optional: ANTHROPIC API key value to add as a secret version (set via TF_VAR or CI)."
+  type        = string
+  default     = ""
+}
+
+variable "custom_llm_api_key_value" {
+  description = "Optional: CUSTOM LLM API key value to add as a secret version (set via TF_VAR or CI)."
+  type        = string
+  default     = ""
+}
+
 
 

@@ -286,6 +286,25 @@ resource "google_secret_manager_secret" "custom_llm_api_key" {
   }
 }
 
+# Optionally create secret versions when values are provided via variables/CI
+resource "google_secret_manager_secret_version" "gemini_api_key_version" {
+  count       = var.create_secret_versions && length(trim(var.gemini_api_key_value)) > 0 ? 1 : 0
+  secret      = google_secret_manager_secret.gemini_api_key[0].id
+  secret_data = var.gemini_api_key_value
+}
+
+resource "google_secret_manager_secret_version" "anthropic_api_key_version" {
+  count       = var.create_secret_versions && length(trim(var.anthropic_api_key_value)) > 0 ? 1 : 0
+  secret      = google_secret_manager_secret.anthropic_api_key[0].id
+  secret_data = var.anthropic_api_key_value
+}
+
+resource "google_secret_manager_secret_version" "custom_llm_api_key_version" {
+  count       = var.create_secret_versions && length(trim(var.custom_llm_api_key_value)) > 0 ? 1 : 0
+  secret      = google_secret_manager_secret.custom_llm_api_key[0].id
+  secret_data = var.custom_llm_api_key_value
+}
+
 # Grant Cloud Run service account access to secrets
 locals {
   cloudrun_sa_email = var.use_default_sa ? data.google_compute_default_service_account.default[0].email : google_service_account.cloudrun_sa[0].email
