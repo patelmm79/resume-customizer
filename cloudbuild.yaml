@@ -23,6 +23,7 @@ steps:
 substitutions:
   _SERVICE_NAME: 'resume-customizer'
   _REGION: 'us-central1'
+  _IMAGE: 'us-central1-docker.pkg.dev/${PROJECT_ID}/resume-customizer-repo/resume-customizer:latest'
 
 images:
   - '${_IMAGE}'
