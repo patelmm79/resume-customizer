@@ -68,6 +68,9 @@ def scoring_node(state: WorkflowState) -> Dict[str, Any]:
             "messages": [{"role": "ai", "content": f"Agent 1: Initial score: {result['score']}/10"}]
         }
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"[ERROR] Scoring failed with full traceback:\n{error_details}")
         return {
             "error": f"Scoring failed: {str(e)}",
             "current_stage": "error",

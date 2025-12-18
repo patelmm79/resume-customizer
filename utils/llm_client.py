@@ -386,9 +386,27 @@ class CustomLLMClient(LLMClient):
                         ) from e
                 else:
                     # Not a 503 error, re-raise immediately
+                    print(f"\n{'='*60}")
+                    print(f"[ERROR] vLLM API Error (HTTP {e.status_code})")
+                    print(f"[ERROR] Message: {str(e)}")
+                    print(f"[ERROR] Check your CUSTOM_LLM_BASE_URL and CUSTOM_LLM_API_KEY")
+                    print(f"{'='*60}\n")
                     raise
             except Exception as e:
-                # Non-503 errors are not retried
+                # Connection and other non-API errors
+                print(f"\n{'='*60}")
+                print(f"[ERROR] Connection Error to vLLM Server")
+                print(f"[ERROR] Error type: {type(e).__name__}")
+                print(f"[ERROR] Error message: {str(e)}")
+                print(f"[ERROR] Base URL: {base_url}")
+                print(f"[ERROR] \nPossible causes:")
+                print(f"[ERROR] 1. vLLM server is not running or has been stopped")
+                print(f"[ERROR] 2. Invalid or expired CUSTOM_LLM_BASE_URL")
+                print(f"[ERROR] 3. Invalid CUSTOM_LLM_API_KEY")
+                print(f"[ERROR] 4. Network connectivity issue")
+                print(f"[ERROR] \nSolution: Switch to 'gemini' provider in the sidebar")
+                print(f"{'='*60}\n")
+                # Non-API errors are not retried
                 raise
         else:
             # This shouldn't happen, but just in case
