@@ -106,7 +106,6 @@ resource "google_cloudbuildv2_connection" "github" {
   project         = var.project
   location        = var.region
   name            = "github-connection"
-  description     = "GitHub connection for resume-customizer Cloud Build"
   disabled        = false
 
   github_config {
