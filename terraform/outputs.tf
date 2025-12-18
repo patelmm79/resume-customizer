@@ -15,7 +15,16 @@ output "github_connection_created" {
 
 output "next_steps" {
   description = "Next steps after Terraform apply"
-  value = var.create_github_connection && length(trimspace(var.github_token)) > 0 ?
-    "GitHub v2 connection created! Now manually create the Cloud Build trigger:\n1. Go to: https://console.cloud.google.com/cloud-build/triggers\n2. Click 'Create Trigger'\n3. Name: 'resume-customizer'\n4. Event: Push to a branch\n5. Repository: ${var.github_owner}/${var.github_repo}\n6. Branch: ^${var.github_branch}$\n7. Build configuration: cloudbuild.yaml\n8. Click Create" :
-    "To create a trigger, provide github_token and set create_github_connection=true"
+  value = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? join("", [
+    "GitHub v2 connection created!\n\n",
+    "Next: Create the Cloud Build trigger manually:\n",
+    "1. Go to: https://console.cloud.google.com/cloud-build/triggers\n",
+    "2. Click 'Create Trigger'\n",
+    "3. Name: resume-customizer\n",
+    "4. Event: Push to a branch\n",
+    "5. Repository: ${var.github_owner}/${var.github_repo}\n",
+    "6. Branch: ^${var.github_branch}$\n",
+    "7. Build configuration: cloudbuild.yaml\n",
+    "8. Click Create"
+  ]) : "Configure github_token and set create_github_connection=true to automate GitHub connection setup"
 }
