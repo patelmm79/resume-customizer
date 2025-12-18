@@ -226,3 +226,83 @@ gcloud secrets add-iam-policy-binding "${SECRET_PREFIX}-GEMINI_API_KEY" \
 	- Rotate keys by adding new secret versions and removing old ones. Use `latest` in the Cloud Run secret mapping to pick up new versions after redeploy.
 
 If you'd like, add a CI script that uploads secret versions from your CI secret store and runs `terraform apply`. This is the recommended pattern to ensure per-deployment secrets are provisioned automatically.
+
+Multi-Instance & Multi-Environment Deployments
+----------------------------------------------
+
+If you're running Terraform across multiple instances or environments (dev, staging, prod), you MUST configure a remote backend to prevent accidental resource destruction.
+
+### The Problem
+
+Running `terraform destroy` on a shared local state will destroy resources managed by that state. If multiple instances share the same state file:
+- Destroying in one instance destroys resources for ALL instances
+- This is what happened when you lost your other services
+
+### Solution: Remote Backend Configuration
+
+Configure a remote backend in `terraform/backend.tf` to use ONE of:
+
+**Option 1: Terraform Cloud (Recommended)**
+- Automatic state locking prevents concurrent modifications
+- Built-in workspace support for environment isolation
+- Team-friendly with audit logs
+
+Setup:
+1. Create a Terraform Cloud account at https://app.terraform.io
+2. Create an organization
+3. Generate an API token
+4. Create `~/.terraformrc`:
+   ```hcl
+   credentials "app.terraform.io" {
+     token = "your-api-token-here"
+   }
+   ```
+5. Uncomment the Terraform Cloud configuration in `terraform/backend.tf`
+6. Add to `terraform.tfvars`: `environment = "dev"` (or "staging", "prod")
+7. Run `terraform init`
+
+Usage:
+```bash
+# For dev environment
+export TF_VAR_environment=dev
+terraform apply
+
+# For staging
+export TF_VAR_environment=staging
+terraform apply
+
+# Each environment has its own isolated state in a separate workspace
+```
+
+**Option 2: Google Cloud Storage (GCS)**
+- Each environment/instance gets its own state file
+- Works directly with GCP
+
+Setup:
+1. Create GCS bucket:
+   ```bash
+   gsutil mb gs://your-org-terraform-state
+   ```
+2. Uncomment GCS backend in `terraform/backend.tf`
+3. For each environment, initialize with different prefix:
+   ```bash
+   terraform init -backend-config="prefix=resume-customizer/dev"
+   terraform apply
+   ```
+
+### Preventing Accidental Destruction
+
+Once you've configured a remote backend:
+- Each environment has isolated state
+- Running `terraform destroy` only affects that environment's resources
+- Other services remain protected
+
+### Recovering Lost Services
+
+Services destroyed by `terraform destroy` cannot be automatically recovered from Terraform. However:
+1. If they were manually created (via `gcloud run deploy`), they may still exist in GCP
+2. Check: `gcloud run services list --project=your-project`
+3. Redefine them in Terraform if they were previously managed
+4. Or recreate them manually if needed
+
+Going forward, use a remote backend and separate environments to prevent this issue.

@@ -162,3 +162,10 @@ variable "create_github_connection" {
   default     = false
 }
 
+# Environment identifier for multi-instance deployments
+variable "environment" {
+  description = "Environment name (dev, staging, prod, etc.). Used for workspace naming and resource organization in cloud deployments."
+  type        = string
+  default     = "dev"
+}
+

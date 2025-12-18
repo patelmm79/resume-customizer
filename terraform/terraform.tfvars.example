@@ -17,6 +17,10 @@ github_branch = "main"
 # then set to true after the Cloud Run runtime service account exists.
 create_runtime_bindings = true
 
+# Environment name for multi-instance deployments
+# Use different values (dev, staging, prod) to isolate resources and state
+environment = "dev"
+
 
 # -----------------------------------------------------------------------------
 # LLM provider configuration (placeholders)
