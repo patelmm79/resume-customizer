@@ -124,9 +124,9 @@ If the Cloud Build trigger creation fails with "invalid argument", this means yo
 
    Terraform will now successfully create the Cloud Build trigger, which will be configured to run on pushes to your configured branch.
 
-**Optional: Secure GitHub Token Storage**
+**Automated GitHub Connection Setup**
 
-If you want to store your GitHub Personal Access Token securely in Google Cloud for reference (e.g., for CI/CD scripts or future automation), you can:
+To automate GitHub connection creation (instead of manual console setup):
 
 1. Create a GitHub Personal Access Token:
    - Go to https://github.com/settings/tokens
@@ -147,13 +147,26 @@ If you want to store your GitHub Personal Access Token securely in Google Cloud 
    terraform apply
    ```
 
-   Terraform will store your token securely in Google Cloud Secret Manager (not in Terraform state or logs).
+   Terraform will:
+   - Store your token securely in Google Cloud Secret Manager (not in state or logs)
+   - Create the GitHub v2 connection using the token
+   - Output instructions for creating the Cloud Build trigger
+
+4. After Terraform completes, follow the output instructions to create the trigger:
+   - Go to [Cloud Build → Triggers](https://console.cloud.google.com/cloud-build/triggers)
+   - Click "Create Trigger"
+   - Name: `resume-customizer`
+   - Event: Push to a branch
+   - Repository: `{github_owner}/{github_repo}`
+   - Branch: `^{github_branch}$`
+   - Build configuration: `cloudbuild.yaml`
+   - Click Create
 
 **Security Notes:**
-- The `github_token` is marked `sensitive` in Terraform - it won't appear in logs
-- The token is stored in Google Cloud Secret Manager, not in Terraform state
+- The `github_token` is marked `sensitive` in Terraform - won't appear in logs
+- Token is stored securely in Google Cloud Secret Manager, not in Terraform state
 - Do NOT commit `terraform.tfvars` to git if it contains your token
-- Alternatively, pass the token via environment variable: `export TF_VAR_github_token="ghp_..."`
+- Alternatively, pass token via environment variable: `export TF_VAR_github_token="ghp_..."`
 
 Secrets & runtime configuration (recommended)
 -------------------------------------------

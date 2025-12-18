@@ -138,6 +138,9 @@ resource "google_cloudbuildv2_connection" "github" {
    This works with the stable provider and supports remote Terraform runs.
 */
 resource "google_cloudbuild_trigger" "repo_trigger" {
+  # Skip trigger creation if using automated v2 connection (manual setup needed after connection is created)
+  count    = !var.create_github_connection || length(trimspace(var.github_token)) == 0 ? 1 : 0
+
   project  = var.project
   location = var.region
   filename = "cloudbuild.yaml"
@@ -160,10 +163,8 @@ resource "google_cloudbuild_trigger" "repo_trigger" {
   description = "Build and deploy resume-customizer on push to ${var.github_branch}"
   disabled    = false
 
-  # Trigger depends on the connection being created if automation is enabled
   depends_on = [
-    google_project_service.cloudbuild_api,
-    google_cloudbuildv2_connection.github
+    google_project_service.cloudbuild_api
   ]
 }
 
