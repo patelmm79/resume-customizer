@@ -4,6 +4,7 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 5.0"
     }
+    
   }
 }
 
@@ -11,6 +12,9 @@ provider "google" {
   project = var.project
   region  = var.region
 }
+
+# Beta provider for resources not present in the stable provider
+
 
 # Compute final image if not provided explicitly
 locals {
@@ -44,35 +48,60 @@ resource "google_artifact_registry_repository" "repo" {
 }
 
 # Build and push Docker image to Artifact Registry using Cloud Build
-resource "google_cloudbuild_build" "docker_build" {
-  project = var.project
-
-  # Build steps: build, push, then deploy to Cloud Run
-  steps {
-    name = "gcr.io/cloud-builders/docker"
-    args = ["build", "-t", local.image, "."]
+resource "null_resource" "docker_build" {
+  triggers = {
+    dockerfile_hash  = filesha256("${path.module}/../Dockerfile")
+    requirements_hash = filesha256("${path.module}/../requirements.txt")
+    app_hash = filesha256("${path.module}/../app.py")
   }
 
-  steps {
-    name = "gcr.io/cloud-builders/docker"
-    args = ["push", local.image]
+  provisioner "local-exec" {
+    command = <<-EOT
+      set -e
+      cd "${path.module}/.."
+      IMAGE=${var.region}-docker.pkg.dev/${var.project}/${var.artifact_repo}/resume-customizer:latest
+
+      echo "Building and pushing image: $IMAGE"
+      gcloud builds submit \
+        --config=cloudbuild.yaml \
+        --substitutions=_IMAGE="$IMAGE",_SERVICE_NAME=${var.service_name},_REGION=${var.region} \
+        --project=${var.project}
+
+      echo "Build complete. Image should be available at: $IMAGE"
+    EOT
+    interpreter = ["/bin/sh","-c"]
   }
-
-  steps {
-    name       = "gcr.io/google.com/cloudsdktool/cloud-sdk"
-    entrypoint = "bash"
-    args       = ["-c", "set -e\n\ngcloud run deploy ${var.service_name} --image=${local.image} --region=${var.region} --platform=managed --allow-unauthenticated --project=${var.project}"]
-  }
-
-  images = [local.image]
-
-  options {
-    logging = "CLOUD_LOGGING_ONLY"
-  }
-
-  timeout = "1200s"
 
   depends_on = [google_project_service.cloudbuild_api, google_project_service.artifact_api]
+
+}
+
+# Create an in-cloud Cloud Build build (uses beta provider resource)
+/* Use Cloud Build Trigger instead of direct Build resource (trigger runs on push).
+   The trigger will run Cloud Build using `cloudbuild.yaml` in the repository.
+   This works with the stable provider and supports remote Terraform runs.
+*/
+resource "google_cloudbuild_trigger" "repo_trigger" {
+  project  = var.project
+  filename = "cloudbuild.yaml"
+
+  github {
+    owner = var.github_owner
+    name  = var.github_repo
+
+    push {
+      branch = var.github_branch
+    }
+  }
+
+  substitutions = {
+    _REGION       = var.region
+    _SERVICE_NAME = var.service_name
+    _IMAGE        = local.image
+  }
+
+  description = "Build and deploy resume-customizer on push to ${var.github_branch}"
+  disabled    = false
 }
 
 # Project data for reference
@@ -94,7 +123,7 @@ resource "google_artifact_registry_repository_iam_member" "repo_reader_sa" {
   ]
 }
 
-# Grant Cloud Build service account permission to push to Artifact Registry
+# Ensure Cloud Build service account can write to Artifact Registry when builds run in-cloud
 resource "google_artifact_registry_repository_iam_member" "repo_writer_cloudbuild" {
   project    = var.project
   location   = var.region
@@ -103,6 +132,9 @@ resource "google_artifact_registry_repository_iam_member" "repo_writer_cloudbuil
   member     = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
   depends_on = [google_artifact_registry_repository.repo]
 }
+
+# Grant Cloud Build service account permission to push to Artifact Registry
+
 
 # Grant default service account Artifact Registry access if using it
 resource "google_artifact_registry_repository_iam_member" "repo_reader_default_sa" {
@@ -462,7 +494,7 @@ resource "google_cloud_run_service" "service" {
   depends_on = [
     google_project_service.run_api,
     google_project_service.artifact_api,
-    google_cloudbuild_build.docker_build,
+    google_cloudbuild_trigger.repo_trigger,
     google_artifact_registry_repository_iam_member.repo_reader_sa,
     google_artifact_registry_repository_iam_member.repo_reader_default_sa
   ]

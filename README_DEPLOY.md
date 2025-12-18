@@ -81,16 +81,25 @@ Notes
 
 CI / Automated builds (Terraform-managed)
 
-This repository uses Terraform to trigger an in-cloud Cloud Build during `terraform apply`. The configuration now uses a `google_cloudbuild_build` resource which runs the build inside Cloud Build (build -> push -> deploy). This works correctly when Terraform is executed remotely (Terraform Cloud / GCP) and does not require `gcloud` on the machine running Terraform.
+This repository uses Terraform to create a Cloud Build Trigger (via `google_cloudbuild_trigger`). The trigger runs the `cloudbuild.yaml` pipeline in Cloud Build when commits are pushed to the configured GitHub branch. This approach works with remote Terraform runs and keeps builds fully in-cloud.
 
-Requirements for Terraform-managed builds
-- The Cloud Build service account must have permission to push to the Artifact Registry repository and to deploy Cloud Run (the Terraform config adds a repository-level writer binding for Cloud Build).
+Requirements for Terraform-managed triggers
+- The repository must be connected to Cloud Build via the GitHub connection in the Cloud Console (Cloud Build -> Connections). Terraform can create triggers but cannot create the GitHub App connection automatically in most workflows.
 
 How it runs
-1. On `terraform apply` executed remotely, Terraform creates a `google_cloudbuild_build` resource. Cloud Build performs the container build, pushes the image to Artifact Registry, and deploys the new image to Cloud Run.
-2. Terraform then creates any remaining resources and finalizes the Cloud Run service.
+1. On `terraform apply` Terraform creates a `google_cloudbuild_trigger` that will run Cloud Build on pushes to the configured branch (for example `main`).
+2. When you push to the branch, Cloud Build will run the steps defined in `cloudbuild.yaml`, build and push the image, and can deploy the image to Cloud Run as configured in the build steps.
 
-If you prefer CI-driven builds via GitHub Actions or Cloud Build triggers, you can instead remove the `google_cloudbuild_build` and use an external CI pipeline that builds and pushes images, then run Terraform to update the service image.
+Triggering a build manually
+If you need to run the trigger immediately (for example after Terraform creates the trigger), you can run:
+
+```bash
+gcloud builds triggers run TRIGGER_ID --branch=main --project=${PROJECT_ID}
+```
+
+Replace `TRIGGER_ID` with the trigger ID output by Terraform (or list triggers with `gcloud builds triggers list`).
+
+If you prefer builds to be fully managed by an external CI pipeline (GitHub Actions, Cloud Build triggers on PR merge, etc.), create that pipeline and have it push the built image to Artifact Registry; Terraform will then point Cloud Run at the pushed image.
 
 Note on the Cloud Run runtime service account: the service account `service-<PROJECT_NUMBER>@gcp-sa-run.iam.gserviceaccount.com` is a Google-managed runtime agent that may be created only after the Cloud Run API is enabled and the Cloud Run service is first created or the service agent is provisioned. If Terraform attempts to bind IAM to that account before it exists you'll see an error like "service account ... does not exist". The Terraform configuration now includes a local wait loop that polls for that service account before applying the repository IAM binding; ensure you have `gcloud` installed and authenticated when running `terraform apply` so the wait can succeed.
 
