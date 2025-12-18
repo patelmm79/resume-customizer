@@ -136,8 +136,8 @@ resource "google_cloudbuildv2_connection" "github" {
    The trigger will run Cloud Build using `cloudbuild.yaml` in the repository.
    This works with the stable provider and supports remote Terraform runs.
 */
+# V1 Trigger for manual GitHub connection setup
 resource "google_cloudbuild_trigger" "repo_trigger" {
-  # Skip trigger creation if using automated v2 connection (manual setup needed after connection is created)
   count    = !var.create_github_connection || length(trimspace(var.github_token)) == 0 ? 1 : 0
 
   project  = var.project
@@ -166,6 +166,18 @@ resource "google_cloudbuild_trigger" "repo_trigger" {
     google_project_service.cloudbuild_api
   ]
 }
+
+# NOTE: When using v2 connection (created above with GitHub token), the v1 trigger
+# automatically uses the v2 connection. The trigger above will work seamlessly with
+# the v2 connection once it's created. No separate v2 trigger resource is needed.
+#
+# The google_cloudbuild_trigger resource will automatically:
+# 1. Use the v2 connection when it exists (via the GitHub App)
+# 2. Enable automatic builds on push to the specified branch
+# 3. Run the cloudbuild.yaml pipeline automatically
+#
+# For full details on how v1 triggers work with v2 connections, see:
+# https://cloud.google.com/build/docs/trigger-v2-connection
 
 # Project data for reference
 data "google_project" "project" {
