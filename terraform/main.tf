@@ -76,28 +76,7 @@ resource "null_resource" "docker_build" {
 
 }
 
-# Optional: Cloud Build GitHub Connection (if automated setup is enabled)
-# This requires a GitHub Personal Access Token to be provided via terraform.tfvars or TF_VAR
-resource "google_cloudbuildv2_connection" "github" {
-  count           = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? 1 : 0
-  location        = var.region
-  name            = "github-connection"
-  disabled        = false
-
-  github_config {
-    app_installation_id = 0  # Will use the authorizer credential instead
-    authorizer_credential {
-      oauth_token_secret_version = google_secret_manager_secret_version.github_token[0].id
-    }
-  }
-
-  depends_on = [
-    google_project_service.cloudbuild_api,
-    google_secret_manager_secret_version.github_token
-  ]
-}
-
-# Store GitHub token in Secret Manager if provided
+# Store GitHub token in Secret Manager if provided (for secure reference)
 resource "google_secret_manager_secret" "github_token" {
   count     = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? 1 : 0
   secret_id = "${var.secret_prefix}-GITHUB_TOKEN"
@@ -121,26 +100,12 @@ resource "google_cloudbuild_trigger" "repo_trigger" {
   project  = var.project
   filename = "cloudbuild.yaml"
 
-  # Use repository_id if GitHub connection is automated, otherwise use github block
-  dynamic "repository_event_handler" {
-    for_each = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? [1] : []
-    content {
-      repository = google_cloudbuildv2_connection.github[0].name
-      push {
-        branch = var.github_branch
-      }
-    }
-  }
+  github {
+    owner = var.github_owner
+    name  = var.github_repo
 
-  dynamic "github" {
-    for_each = !var.create_github_connection || length(trimspace(var.github_token)) == 0 ? [1] : []
-    content {
-      owner = var.github_owner
-      name  = var.github_repo
-
-      push {
-        branch = var.github_branch
-      }
+    push {
+      branch = var.github_branch
     }
   }
 
