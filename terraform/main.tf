@@ -130,34 +130,12 @@ resource "google_cloudbuild_trigger" "repo_trigger" {
   location = var.region
   filename = "cloudbuild.yaml"
 
-  # Use v2 repository event handler if GitHub connection is automated
-  dynamic "github_pull_request" {
-    for_each = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? [1] : []
-    content {
-      owner = var.github_owner
-      name  = var.github_repo
-    }
-  }
+  github {
+    owner = var.github_owner
+    name  = var.github_repo
 
-  dynamic "github_push" {
-    for_each = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? [1] : []
-    content {
-      owner  = var.github_owner
-      name   = var.github_repo
-      branch = "^${var.github_branch}$"
-    }
-  }
-
-  # Use manual github block if connection is not automated
-  dynamic "github" {
-    for_each = !var.create_github_connection || length(trimspace(var.github_token)) == 0 ? [1] : []
-    content {
-      owner = var.github_owner
-      name  = var.github_repo
-
-      push {
-        branch = var.github_branch
-      }
+    push {
+      branch = var.github_branch
     }
   }
 
@@ -170,6 +148,7 @@ resource "google_cloudbuild_trigger" "repo_trigger" {
   description = "Build and deploy resume-customizer on push to ${var.github_branch}"
   disabled    = false
 
+  # Trigger depends on the connection being created if automation is enabled
   depends_on = [
     google_project_service.cloudbuild_api,
     google_cloudbuildv2_connection.github
