@@ -11,6 +11,7 @@ output "service_account_email" {
 output "github_connection_created" {
   description = "Whether GitHub connection was created via automation"
   value       = var.create_github_connection && length(trimspace(var.github_token)) > 0
+  sensitive   = true  # Sensitive because it references var.github_token
 }
 
 output "next_steps" {
@@ -27,4 +28,5 @@ output "next_steps" {
     "7. Build configuration: cloudbuild.yaml\n",
     "8. Click Create"
   ]) : "Configure github_token and set create_github_connection=true to automate GitHub connection setup"
+  sensitive = true  # Sensitive because it references var.github_token
 }
