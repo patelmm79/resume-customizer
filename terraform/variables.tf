@@ -148,5 +148,17 @@ variable "custom_llm_api_key_value" {
   default     = ""
 }
 
+# GitHub connection variables for Cloud Build (optional automation)
+variable "github_token" {
+  description = "Optional: GitHub Personal Access Token to automate GitHub connection setup. If provided, Terraform will create the GitHub connection. If empty, you must manually create the connection in Cloud Console."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
 
+variable "create_github_connection" {
+  description = "If true and github_token is provided, Terraform will create the GitHub Cloud Build connection. Set to false to use manual connection setup."
+  type        = bool
+  default     = false
+}
 

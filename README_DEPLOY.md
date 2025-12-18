@@ -104,7 +104,52 @@ If you prefer builds to be fully managed by an external CI pipeline (GitHub Acti
 Note on the Cloud Run runtime service account: the service account `service-<PROJECT_NUMBER>@gcp-sa-run.iam.gserviceaccount.com` is a Google-managed runtime agent that may be created only after the Cloud Run API is enabled and the Cloud Run service is first created or the service agent is provisioned. If Terraform attempts to bind IAM to that account before it exists you'll see an error like "service account ... does not exist". The Terraform configuration now includes a local wait loop that polls for that service account before applying the repository IAM binding; ensure you have `gcloud` installed and authenticated when running `terraform apply` so the wait can succeed.
 
 Trigger creation errors (invalid argument)
-- If the Cloud Build trigger creation fails with "invalid argument", confirm that your project is connected to GitHub via the Cloud Build GitHub App in the Cloud Console (Cloud Build -> Connections). Terraform assumes a pre-existing GitHub connection; if you prefer Terraform to manage the connection you'll need to create a Cloud Build connection resource first or create the trigger manually in the console.
+
+Two options:
+
+**Option 1: Manual GitHub Connection (Default)**
+- If the Cloud Build trigger creation fails with "invalid argument", confirm that your project is connected to GitHub via the Cloud Build GitHub App in the Cloud Console (Cloud Build -> Connections).
+- Then run `terraform apply` again.
+
+**Option 2: Automated GitHub Connection (Recommended for CI/CD)**
+- Terraform can now automate the GitHub connection setup for you using a GitHub Personal Access Token.
+- This eliminates the need for manual setup in the console.
+
+Steps to automate:
+
+1. Create a GitHub Personal Access Token:
+   - Go to https://github.com/settings/tokens
+   - Click "Generate new token (classic)"
+   - Check these scopes:
+     - `repo` (full control of private repositories)
+     - `admin:repo_hook` (write access to hooks)
+   - Click "Generate token" and copy the token value
+
+2. Add to your `terraform.tfvars`:
+   ```hcl
+   create_github_connection = true
+   github_token             = "ghp_xxxxxxxxxxxxxxxxxxxx"  # Your GitHub PAT
+   ```
+
+3. Run `terraform apply`:
+   ```bash
+   terraform apply
+   ```
+
+   Terraform will:
+   - Create a Secret Manager secret for your GitHub token (not stored in state)
+   - Create a Cloud Build GitHub connection
+   - Create the trigger using the connection
+   - Never expose the token in logs or state
+
+**Security Notes:**
+- The `github_token` is marked `sensitive` in Terraform - it won't appear in logs
+- The token is stored in Google Cloud Secret Manager, not in Terraform state
+- Do NOT commit `terraform.tfvars` to git if it contains your token
+- Alternatively, pass the token via environment variable: `export TF_VAR_github_token="ghp_..."`
+
+**Disabling Automation:**
+- To go back to manual mode, set `create_github_connection = false` in `terraform.tfvars`
 
 Secrets & runtime configuration (recommended)
 -------------------------------------------
