@@ -563,14 +563,18 @@ resource "google_cloud_run_service" "service" {
     latest_revision = true
   }
 
-  depends_on = concat(
-    [
-      google_project_service.run_api,
-      google_project_service.artifact_api
-    ],
-    var.use_default_sa ? [google_artifact_registry_repository_iam_member.repo_reader_default_sa[0]] : [google_artifact_registry_repository_iam_member.repo_reader_sa[0]],
-    (!var.create_github_connection || length(trimspace(var.github_token)) == 0) ? [google_cloudbuild_trigger.repo_trigger[0]] : []
-  )
+  # Note: Terraform depends_on requires static lists, so we use conditional resources to manage dependencies
+  # The following implicit dependencies are created through resource references:
+  # - Artifact Registry IAM members (conditionally referenced via local.cloudrun_sa_email)
+  # - Cloud Build trigger (has count condition, will be implicit if created)
+  # Explicit static dependencies:
+  depends_on = [
+    google_project_service.run_api,
+    google_project_service.artifact_api,
+    google_secret_manager_secret_iam_member.gemini_accessor,
+    google_secret_manager_secret_iam_member.anthropic_accessor,
+    google_secret_manager_secret_iam_member.custom_llm_accessor
+  ]
 }
 
 # Allow unauthenticated invocations (public)
