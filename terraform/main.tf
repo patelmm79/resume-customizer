@@ -76,19 +76,49 @@ resource "null_resource" "docker_build" {
 
 }
 
-# Store GitHub token in Secret Manager if provided (for secure reference)
+# Enable Secret Manager API for storing GitHub token
+resource "google_project_service" "secretmanager_api" {
+  count   = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? 1 : 0
+  project = var.project
+  service = "secretmanager.googleapis.com"
+}
+
+# Store GitHub token in Secret Manager if provided
 resource "google_secret_manager_secret" "github_token" {
   count     = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? 1 : 0
+  project   = var.project
   secret_id = "${var.secret_prefix}-GITHUB_TOKEN"
   replication {
     auto {}
   }
+  depends_on = [google_project_service.secretmanager_api]
 }
 
 resource "google_secret_manager_secret_version" "github_token" {
   count       = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? 1 : 0
   secret      = google_secret_manager_secret.github_token[0].id
   secret_data = var.github_token
+}
+
+# Create GitHub connection using token (v2 API)
+resource "google_cloudbuildv2_connection" "github" {
+  count           = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? 1 : 0
+  project         = var.project
+  location        = var.region
+  name            = "github-connection"
+  description     = "GitHub connection for resume-customizer Cloud Build"
+  disabled        = false
+
+  github_config {
+    authorizer_credential {
+      oauth_token_secret_version = google_secret_manager_secret_version.github_token[0].id
+    }
+  }
+
+  depends_on = [
+    google_project_service.cloudbuild_api,
+    google_secret_manager_secret_version.github_token
+  ]
 }
 
 # Create an in-cloud Cloud Build build (uses beta provider resource)
@@ -98,14 +128,37 @@ resource "google_secret_manager_secret_version" "github_token" {
 */
 resource "google_cloudbuild_trigger" "repo_trigger" {
   project  = var.project
+  location = var.region
   filename = "cloudbuild.yaml"
 
-  github {
-    owner = var.github_owner
-    name  = var.github_repo
+  # Use v2 repository event handler if GitHub connection is automated
+  dynamic "github_pull_request" {
+    for_each = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? [1] : []
+    content {
+      owner = var.github_owner
+      name  = var.github_repo
+    }
+  }
 
-    push {
-      branch = var.github_branch
+  dynamic "github_push" {
+    for_each = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? [1] : []
+    content {
+      owner  = var.github_owner
+      name   = var.github_repo
+      branch = "^${var.github_branch}$"
+    }
+  }
+
+  # Use manual github block if connection is not automated
+  dynamic "github" {
+    for_each = !var.create_github_connection || length(trimspace(var.github_token)) == 0 ? [1] : []
+    content {
+      owner = var.github_owner
+      name  = var.github_repo
+
+      push {
+        branch = var.github_branch
+      }
     }
   }
 
@@ -119,7 +172,8 @@ resource "google_cloudbuild_trigger" "repo_trigger" {
   disabled    = false
 
   depends_on = [
-    google_project_service.cloudbuild_api
+    google_project_service.cloudbuild_api,
+    google_cloudbuildv2_connection.github
   ]
 }
 
