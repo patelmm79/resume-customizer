@@ -21,6 +21,20 @@ create_runtime_bindings = true
 # Use different values (dev, staging, prod) to isolate resources and state
 environment = "dev"
 
+# GCS Backend Configuration
+# Set these when running terraform init for the first time:
+#
+#   terraform init \
+#     -backend-config="bucket=your-project-id-terraform-state" \
+#     -backend-config="prefix=resume-customizer/dev"
+#
+# Where:
+#   - bucket: your GCS bucket name (must exist beforehand)
+#   - prefix: path within bucket (one per environment)
+#
+# Create the bucket once per project:
+#   gsutil mb gs://your-project-id-terraform-state
+
 
 # -----------------------------------------------------------------------------
 # LLM provider configuration (placeholders)
