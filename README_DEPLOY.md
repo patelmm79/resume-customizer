@@ -81,17 +81,16 @@ Notes
 
 CI / Automated builds (Terraform-managed)
 
-This repository uses Terraform to invoke Cloud Build during `terraform apply`. The Terraform `null_resource.docker_build` runs a local `gcloud builds submit --config=cloudbuild.yaml` to build and push the container image to Artifact Registry before Cloud Run is created. This keeps build orchestration tied to Terraform applies (similar to the `dev-nexus` approach).
+This repository uses Terraform to trigger an in-cloud Cloud Build during `terraform apply`. The configuration now uses a `google_cloudbuild_build` resource which runs the build inside Cloud Build (build -> push -> deploy). This works correctly when Terraform is executed remotely (Terraform Cloud / GCP) and does not require `gcloud` on the machine running Terraform.
 
 Requirements for Terraform-managed builds
-- `gcloud` must be installed and authenticated on the machine where you run `terraform apply`.
-- The account running `gcloud` must have permission to run Cloud Build and push to Artifact Registry.
+- The Cloud Build service account must have permission to push to the Artifact Registry repository and to deploy Cloud Run (the Terraform config adds a repository-level writer binding for Cloud Build).
 
 How it runs
-1. On `terraform apply`, the `null_resource.docker_build` will run `gcloud builds submit --config=cloudbuild.yaml` from the repo root and push the image to Artifact Registry.
-2. Terraform then creates the Cloud Run service which pulls the image from Artifact Registry.
+1. On `terraform apply` executed remotely, Terraform creates a `google_cloudbuild_build` resource. Cloud Build performs the container build, pushes the image to Artifact Registry, and deploys the new image to Cloud Run.
+2. Terraform then creates any remaining resources and finalizes the Cloud Run service.
 
-If you prefer CI-driven builds via GitHub Actions or Cloud Build triggers, remove the `null_resource.docker_build` and add your preferred workflow or trigger.
+If you prefer CI-driven builds via GitHub Actions or Cloud Build triggers, you can instead remove the `google_cloudbuild_build` and use an external CI pipeline that builds and pushes images, then run Terraform to update the service image.
 
 Note on the Cloud Run runtime service account: the service account `service-<PROJECT_NUMBER>@gcp-sa-run.iam.gserviceaccount.com` is a Google-managed runtime agent that may be created only after the Cloud Run API is enabled and the Cloud Run service is first created or the service agent is provisioned. If Terraform attempts to bind IAM to that account before it exists you'll see an error like "service account ... does not exist". The Terraform configuration now includes a local wait loop that polls for that service account before applying the repository IAM binding; ensure you have `gcloud` installed and authenticated when running `terraform apply` so the wait can succeed.
 
