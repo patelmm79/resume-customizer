@@ -45,6 +45,8 @@ resource "google_artifact_registry_repository" "repo" {
   repository_id = var.artifact_repo
   format = "DOCKER"
   description = "Repository for resume-customizer images"
+
+  depends_on = [google_project_service.artifact_api]
 }
 
 # Build and push Docker image to Artifact Registry using Cloud Build
@@ -72,7 +74,11 @@ resource "null_resource" "docker_build" {
     interpreter = ["/bin/sh","-c"]
   }
 
-  depends_on = [google_project_service.cloudbuild_api, google_project_service.artifact_api]
+  depends_on = [
+    google_project_service.cloudbuild_api,
+    google_project_service.artifact_api,
+    google_artifact_registry_repository.repo
+  ]
 
 }
 
