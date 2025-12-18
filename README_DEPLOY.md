@@ -42,11 +42,17 @@ cd terraform
 terraform init
 ```
 
-2. Create a `terraform.tfvars` from the example and set values (ensure `image` matches the pushed image):
+2. Create a `terraform.tfvars` from the example and set required values:
 
 ```bash
 cp terraform.tfvars.example terraform.tfvars
-# then edit terraform.tfvars to set your project and image
+# Edit terraform.tfvars and set:
+# - project = your GCP project ID
+# - github_owner = your GitHub username/org
+# - github_repo = your repository name
+#
+# Leave 'image' empty (or omit it) - Terraform will construct the path automatically:
+# ${region}-docker.pkg.dev/${project}/${artifact_repo}/resume-customizer:latest
 ```
 
 3. Apply Terraform:

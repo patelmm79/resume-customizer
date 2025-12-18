@@ -2,9 +2,10 @@ project = "your-gcp-project-id"
 region = "us-central1"
 service_name = "resume-customizer"
 artifact_repo = "resume-customizer-repo"
-# image should point to the built image in Artifact Registry, for example:
-# us-central1-docker.pkg.dev/your-gcp-project-id/resume-customizer-repo/resume-customizer:latest
-image = "us-central1-docker.pkg.dev/your-gcp-project-id/resume-customizer-repo/resume-customizer:latest"
+# image: Leave empty to let Terraform construct the path automatically
+# (recommended). Terraform will use: ${region}-docker.pkg.dev/${project}/${artifact_repo}/resume-customizer:latest
+# Only set this if you want to override with a custom image path.
+image = ""
 
 # GitHub trigger settings (Cloud Build GitHub App integration)
 # You must install the Google Cloud Build GitHub App on your repo and provide the installation id.
