@@ -100,6 +100,17 @@ resource "google_secret_manager_secret_version" "github_token" {
   secret_data = var.github_token
 }
 
+# Grant Cloud Build service account access to GitHub token secret
+resource "google_secret_manager_secret_iam_member" "github_token_accessor" {
+  count     = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? 1 : 0
+  secret_id = google_secret_manager_secret.github_token[0].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:service-${data.google_project.project.number}@gcp-sa-cloudbuild.iam.gserviceaccount.com"
+  depends_on = [
+    google_secret_manager_secret.github_token
+  ]
+}
+
 # Create GitHub connection using token (v2 API)
 resource "google_cloudbuildv2_connection" "github" {
   count           = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? 1 : 0
@@ -116,7 +127,8 @@ resource "google_cloudbuildv2_connection" "github" {
 
   depends_on = [
     google_project_service.cloudbuild_api,
-    google_secret_manager_secret_version.github_token
+    google_secret_manager_secret_version.github_token,
+    google_secret_manager_secret_iam_member.github_token_accessor
   ]
 }
 
