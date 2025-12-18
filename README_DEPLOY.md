@@ -124,9 +124,9 @@ If the Cloud Build trigger creation fails with "invalid argument", this means yo
 
    Terraform will now successfully create the Cloud Build trigger, which will be configured to run on pushes to your configured branch.
 
-**Automated GitHub Connection Setup**
+**Automated GitHub Connection & Trigger Setup (Recommended)**
 
-To automate GitHub connection creation (instead of manual console setup):
+To enable fully automatic CI/CD with no manual console setup:
 
 1. Create a GitHub Personal Access Token:
    - Go to https://github.com/settings/tokens
@@ -149,18 +149,22 @@ To automate GitHub connection creation (instead of manual console setup):
 
    Terraform will:
    - Store your token securely in Google Cloud Secret Manager (not in state or logs)
-   - Create the GitHub v2 connection using the token
-   - Output instructions for creating the Cloud Build trigger
+   - Create the GitHub v2 connection automatically
+   - Create the Cloud Build trigger automatically
+   - Configure the trigger to build on push to your specified branch
 
-4. After Terraform completes, follow the output instructions to create the trigger:
-   - Go to [Cloud Build → Triggers](https://console.cloud.google.com/cloud-build/triggers)
-   - Click "Create Trigger"
-   - Name: `resume-customizer`
-   - Event: Push to a branch
-   - Repository: `{github_owner}/{github_repo}`
-   - Branch: `^{github_branch}$`
-   - Build configuration: `cloudbuild.yaml`
-   - Click Create
+4. After Terraform completes, CI/CD is fully automated:
+   - Every push to your configured branch triggers a build
+   - Cloud Build runs the steps in `cloudbuild.yaml`
+   - Docker image is built and pushed to Artifact Registry
+   - Cloud Run service is updated (if configured in cloudbuild.yaml)
+   - No manual console setup needed
+
+**How it works:**
+- The v2 GitHub connection manages authentication with your GitHub repository
+- The Cloud Build trigger monitors your repository for commits
+- On each push to the configured branch, the build pipeline runs automatically
+- The pipeline can build your Docker image and deploy to Cloud Run
 
 **Security Notes:**
 - The `github_token` is marked `sensitive` in Terraform - won't appear in logs
