@@ -76,9 +76,8 @@ resource "null_resource" "docker_build" {
 
 }
 
-# Enable Secret Manager API for storing GitHub token
+# Enable Secret Manager API (needed for GitHub token and LLM API key storage)
 resource "google_project_service" "secretmanager_api" {
-  count   = var.create_github_connection && length(trimspace(var.github_token)) > 0 ? 1 : 0
   project = var.project
   service = "secretmanager.googleapis.com"
 }
@@ -373,43 +372,50 @@ resource "google_service_account" "cloudrun_sa" {
 # Secret Manager: create standard secret resources for this app (no secret versions)
 resource "google_secret_manager_secret" "gemini_api_key" {
   count     = var.create_secrets ? 1 : 0
+  project   = var.project
   secret_id = "${var.secret_prefix}-GEMINI_API_KEY"
   replication {
     auto {}
   }
+  depends_on = [google_project_service.secretmanager_api]
 }
 
 resource "google_secret_manager_secret" "anthropic_api_key" {
   count     = var.create_secrets ? 1 : 0
+  project   = var.project
   secret_id = "${var.secret_prefix}-ANTHROPIC_API_KEY"
   replication {
     auto {}
   }
+  depends_on = [google_project_service.secretmanager_api]
 }
 
 resource "google_secret_manager_secret" "custom_llm_api_key" {
   count     = var.create_secrets ? 1 : 0
+  project   = var.project
   secret_id = "${var.secret_prefix}-CUSTOM_LLM_API_KEY"
   replication {
     auto {}
   }
+  depends_on = [google_project_service.secretmanager_api]
 }
 
 # Optionally create secret versions when values are provided via variables/CI
+# Note: requires both create_secrets AND create_secret_versions to be true
 resource "google_secret_manager_secret_version" "gemini_api_key_version" {
-  count       = var.create_secret_versions && length(trimspace(var.gemini_api_key_value)) > 0 ? 1 : 0
+  count       = var.create_secrets && var.create_secret_versions && length(trimspace(var.gemini_api_key_value)) > 0 ? 1 : 0
   secret      = google_secret_manager_secret.gemini_api_key[0].id
   secret_data = var.gemini_api_key_value
 }
 
 resource "google_secret_manager_secret_version" "anthropic_api_key_version" {
-  count       = var.create_secret_versions && length(trimspace(var.anthropic_api_key_value)) > 0 ? 1 : 0
+  count       = var.create_secrets && var.create_secret_versions && length(trimspace(var.anthropic_api_key_value)) > 0 ? 1 : 0
   secret      = google_secret_manager_secret.anthropic_api_key[0].id
   secret_data = var.anthropic_api_key_value
 }
 
 resource "google_secret_manager_secret_version" "custom_llm_api_key_version" {
-  count       = var.create_secret_versions && length(trimspace(var.custom_llm_api_key_value)) > 0 ? 1 : 0
+  count       = var.create_secrets && var.create_secret_versions && length(trimspace(var.custom_llm_api_key_value)) > 0 ? 1 : 0
   secret      = google_secret_manager_secret.custom_llm_api_key[0].id
   secret_data = var.custom_llm_api_key_value
 }
@@ -459,6 +465,8 @@ resource "google_secret_manager_secret_iam_member" "custom_llm_accessor" {
 # Get the default Compute Engine service account
 data "google_compute_default_service_account" "default" {
   count   = var.use_default_sa ? 1 : 0
+  project = var.project
+  depends_on = [google_project_service.run_api]
 }
 
 # Cloud Run service (managed)
@@ -555,13 +563,14 @@ resource "google_cloud_run_service" "service" {
     latest_revision = true
   }
 
-  depends_on = [
-    google_project_service.run_api,
-    google_project_service.artifact_api,
-    google_cloudbuild_trigger.repo_trigger,
-    google_artifact_registry_repository_iam_member.repo_reader_sa,
-    google_artifact_registry_repository_iam_member.repo_reader_default_sa
-  ]
+  depends_on = concat(
+    [
+      google_project_service.run_api,
+      google_project_service.artifact_api
+    ],
+    var.use_default_sa ? [google_artifact_registry_repository_iam_member.repo_reader_default_sa[0]] : [google_artifact_registry_repository_iam_member.repo_reader_sa[0]],
+    (!var.create_github_connection || length(trimspace(var.github_token)) == 0) ? [google_cloudbuild_trigger.repo_trigger[0]] : []
+  )
 }
 
 # Allow unauthenticated invocations (public)
