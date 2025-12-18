@@ -4,7 +4,10 @@ terraform {
       source  = "hashicorp/google"
       version = "~> 5.0"
     }
-    
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.9"
+    }
   }
 }
 
@@ -37,6 +40,15 @@ resource "google_project_service" "artifact_api" {
   service = "artifactregistry.googleapis.com"
 }
 
+# Wait for API to be fully enabled before creating repository
+# (API enablement needs time to propagate to Google's systems)
+resource "time_sleep" "artifact_api_propagation" {
+  depends_on = [google_project_service.artifact_api]
+
+  create_duration  = "15s"
+  destroy_duration = "0s"
+}
+
 # Artifact Registry repository for container images
 resource "google_artifact_registry_repository" "repo" {
   provider = google
@@ -46,7 +58,7 @@ resource "google_artifact_registry_repository" "repo" {
   format = "DOCKER"
   description = "Repository for resume-customizer images"
 
-  depends_on = [google_project_service.artifact_api]
+  depends_on = [time_sleep.artifact_api_propagation]
 }
 
 # Build and push Docker image to Artifact Registry using Cloud Build
