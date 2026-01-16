@@ -430,6 +430,16 @@ resource "google_secret_manager_secret" "custom_llm_api_key" {
   depends_on = [google_project_service.secretmanager_api]
 }
 
+resource "google_secret_manager_secret" "langsmith_api_key" {
+  count     = var.create_secrets ? 1 : 0
+  project   = var.project
+  secret_id = "${var.secret_prefix}-LANGSMITH_API_KEY"
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.secretmanager_api]
+}
+
 # Optionally create secret versions when values are provided via variables/CI
 # Note: requires both create_secrets AND create_secret_versions to be true
 resource "google_secret_manager_secret_version" "gemini_api_key_version" {
@@ -448,6 +458,12 @@ resource "google_secret_manager_secret_version" "custom_llm_api_key_version" {
   count       = var.create_secrets && var.create_secret_versions && length(trimspace(var.custom_llm_api_key_value)) > 0 ? 1 : 0
   secret      = google_secret_manager_secret.custom_llm_api_key[0].id
   secret_data = var.custom_llm_api_key_value
+}
+
+resource "google_secret_manager_secret_version" "langsmith_api_key_version" {
+  count       = var.create_secrets && var.create_secret_versions && length(trimspace(var.langsmith_api_key_value)) > 0 ? 1 : 0
+  secret      = google_secret_manager_secret.langsmith_api_key[0].id
+  secret_data = var.langsmith_api_key_value
 }
 
 # Fail fast: if `create_secret_versions` is true, require all three secret value variables
@@ -488,6 +504,13 @@ resource "google_secret_manager_secret_iam_member" "anthropic_accessor" {
 resource "google_secret_manager_secret_iam_member" "custom_llm_accessor" {
   count     = var.create_secrets ? 1 : 0
   secret_id = google_secret_manager_secret.custom_llm_api_key[0].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${local.cloudrun_sa_email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "langsmith_accessor" {
+  count     = var.create_secrets ? 1 : 0
+  secret_id = google_secret_manager_secret.langsmith_api_key[0].id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${local.cloudrun_sa_email}"
 }
@@ -547,6 +570,20 @@ resource "google_cloud_run_service" "service" {
             value = tostring(var.custom_llm_context_limit)
           }
 
+          # LangSmith integration
+          env {
+            name  = "LANGSMITH_PROJECT"
+            value = var.project
+          }
+          env {
+            name  = "LANGSMITH_TRACING"
+            value = tostring(var.langsmith_tracing)
+          }
+          env {
+            name  = "LANGSMITH_ENDPOINT"
+            value = var.langsmith_endpoint
+          }
+
           # Secret-mounted env vars (map to Secret Manager secrets created above)
           dynamic "env" {
             for_each = var.create_secrets ? [1] : []
@@ -584,6 +621,18 @@ resource "google_cloud_run_service" "service" {
               }
             }
           }
+          dynamic "env" {
+            for_each = var.create_secrets ? [1] : []
+            content {
+              name = "LANGSMITH_API_KEY"
+              value_from {
+                secret_key_ref {
+                  name = google_secret_manager_secret.langsmith_api_key[0].secret_id
+                  key  = "latest"
+                }
+              }
+            }
+          }
       }
     }
   }
@@ -603,7 +652,8 @@ resource "google_cloud_run_service" "service" {
     google_project_service.artifact_api,
     google_secret_manager_secret_iam_member.gemini_accessor,
     google_secret_manager_secret_iam_member.anthropic_accessor,
-    google_secret_manager_secret_iam_member.custom_llm_accessor
+    google_secret_manager_secret_iam_member.custom_llm_accessor,
+    google_secret_manager_secret_iam_member.langsmith_accessor
   ]
 }
 

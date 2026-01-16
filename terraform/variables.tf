@@ -169,3 +169,23 @@ variable "environment" {
   default     = "dev"
 }
 
+# LangSmith integration variables
+variable "langsmith_tracing" {
+  description = "LangSmith tracing setting (true to enable)"
+  type        = bool
+  default     = false
+}
+
+variable "langsmith_endpoint" {
+  description = "LangSmith API endpoint URL (e.g., https://api.smith.langchain.com)"
+  type        = string
+  default     = ""
+}
+
+variable "langsmith_api_key_value" {
+  description = "Optional: LangSmith API key value to add as a secret version (set via TF_VAR or CI)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+

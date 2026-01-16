@@ -35,6 +35,33 @@ environment = "dev"
 # Create the bucket once per project:
 #   gsutil mb gs://your-project-id-terraform-state
 
+# -----------------------------------------------------------------------------
+# LangSmith Integration (optional)
+# Enables tracing and monitoring of LLM calls via LangSmith
+# Note: LANGSMITH_PROJECT is automatically set to your GCP project name
+# -----------------------------------------------------------------------------
+
+# Enable LangSmith tracing (true/false)
+langsmith_tracing = false
+
+# LangSmith API endpoint (e.g., https://api.smith.langchain.com)
+langsmith_endpoint = ""
+
+# LangSmith API key (provide via TF_VAR_langsmith_api_key_value or CI)
+# This will be stored in Secret Manager as: {secret_prefix}-LANGSMITH_API_KEY
+# langsmith_api_key_value = ""  # Set via environment or CI, never commit this
+
+# To enable LangSmith:
+# 1. Create a LangSmith account at https://smith.langchain.com
+# 2. Generate an API key
+# 3. Set langsmith_tracing = true
+# 4. Provide your endpoint and API key:
+#    export TF_VAR_langsmith_endpoint="https://api.smith.langchain.com"
+#    export TF_VAR_langsmith_api_key_value="your-api-key"
+# 5. Run: terraform apply
+
+# For production CI/CD:
+# Store the API key in your CI/CD secret store and pass via environment variable
 
 # -----------------------------------------------------------------------------
 # LLM provider configuration (placeholders)
