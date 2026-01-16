@@ -177,28 +177,58 @@ class GeminiClient(LLMClient):
         max_tokens: int = None
     ) -> str:
         """Generate using Gemini API."""
+        import time
+        from utils.debug import capture_llm_call
+
         combined_prompt = f"{system_prompt}\n\n{user_prompt}"
 
         # Use provided max_tokens or default to 8192
         if max_tokens is None:
             max_tokens = 8192
 
-        response = self.model.generate_content(
-            combined_prompt,
-            generation_config={
-                "temperature": temperature,
-                "top_p": 0.95,
-                "top_k": 40,
-                "max_output_tokens": max_tokens,
-            }
-        )
+        start_time = time.time()
+        try:
+            response = self.model.generate_content(
+                combined_prompt,
+                generation_config={
+                    "temperature": temperature,
+                    "top_p": 0.95,
+                    "top_k": 40,
+                    "max_output_tokens": max_tokens,
+                }
+            )
 
-        content = response.text
+            content = response.text
 
-        # Extract JSON from reasoning output if needed
-        content = self._extract_response_from_reasoning_output(content)
+            # Extract JSON from reasoning output if needed
+            content = self._extract_response_from_reasoning_output(content)
 
-        return content
+            # Capture for debug
+            duration_ms = (time.time() - start_time) * 1000
+            capture_llm_call(
+                provider="gemini",
+                model=self.model_name,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response=content,
+                temperature=temperature,
+                duration_ms=duration_ms,
+            )
+
+            return content
+        except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
+            capture_llm_call(
+                provider="gemini",
+                model=self.model_name,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response="",
+                temperature=temperature,
+                duration_ms=duration_ms,
+                error=str(e),
+            )
+            raise
 
 
 class ClaudeClient(LLMClient):
@@ -232,6 +262,8 @@ class ClaudeClient(LLMClient):
         thinking_budget: int = None  # Claude extended thinking
     ) -> str:
         """Generate using Claude API with optional extended thinking."""
+        import time
+        from utils.debug import capture_llm_call
 
         # Build request parameters
         request_params = {
@@ -252,14 +284,41 @@ class ClaudeClient(LLMClient):
             }
             print(f"[DEBUG Claude] Using extended thinking with {thinking_budget} token budget")
 
-        message = self.client.messages.create(**request_params)
+        start_time = time.time()
+        try:
+            message = self.client.messages.create(**request_params)
 
-        content = message.content[0].text
+            content = message.content[0].text
 
-        # Extract JSON from reasoning output if needed
-        content = self._extract_response_from_reasoning_output(content)
+            # Extract JSON from reasoning output if needed
+            content = self._extract_response_from_reasoning_output(content)
 
-        return content
+            # Capture for debug
+            duration_ms = (time.time() - start_time) * 1000
+            capture_llm_call(
+                provider="claude",
+                model=self.model_name,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response=content,
+                temperature=temperature,
+                duration_ms=duration_ms,
+            )
+
+            return content
+        except Exception as e:
+            duration_ms = (time.time() - start_time) * 1000
+            capture_llm_call(
+                provider="claude",
+                model=self.model_name,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response="",
+                temperature=temperature,
+                duration_ms=duration_ms,
+                error=str(e),
+            )
+            raise
 
 
 class CustomLLMClient(LLMClient):
@@ -320,6 +379,9 @@ class CustomLLMClient(LLMClient):
         """Generate using custom LLM API with optional structured output and retry logic."""
         import time
         from openai import APIStatusError
+        from utils.debug import capture_llm_call
+
+        start_time = time.time()
 
         # Get retry settings from environment variables
         if max_retries is None:
@@ -496,6 +558,18 @@ class CustomLLMClient(LLMClient):
         except UnicodeEncodeError:
             print(f"[DEBUG CustomLLM] After extraction: {len(content)} chars")
             print(f"[DEBUG CustomLLM] Extracted starts with: [Unicode content - cannot display]")
+
+        # Capture for debug
+        duration_ms = (time.time() - start_time) * 1000
+        capture_llm_call(
+            provider="custom",
+            model=self.model_name,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            response=content,
+            temperature=temperature,
+            duration_ms=duration_ms,
+        )
 
         return content
 

@@ -6,6 +6,7 @@ import traceback
 from main import ResumeCustomizer
 from workflow.state import WorkflowState
 from utils.langsmith_config import configure_langsmith
+from utils.debug import enable_debug, disable_debug, get_all_interactions, format_interaction
 
 # Configure LangSmith tracing at startup
 configure_langsmith()
@@ -133,17 +134,18 @@ with st.sidebar:
     st.divider()
 
     # Debug Mode Toggle
-    debug_mode = st.toggle("🐛 Debug Mode", value=False, help="Enable debug logging and detailed error messages")
+    debug_mode = st.toggle("🐛 Debug Mode", value=False, help="Enable debug logging, full LLM responses, and detailed error messages")
 
     if debug_mode:
-        st.caption("⚠️ Debug mode enabled")
+        st.caption("⚠️ Debug mode enabled - Capturing all LLM interactions")
+        enable_debug()  # Enable LLM interaction capture
         # Set environment variable for debug mode
         import os
         os.environ['DEBUG_MODE'] = '1'
 
-        # Show debug info if we have workflow state
-        if st.session_state.workflow_state:
-            with st.expander("🔍 Debug Info", expanded=False):
+        # Show debug info panels
+        with st.expander("🔍 Debug State Info", expanded=False):
+            if st.session_state.workflow_state:
                 st.json({
                     "current_stage": st.session_state.workflow_state.get("current_stage"),
                     "initial_score": st.session_state.workflow_state.get("initial_score"),
@@ -155,7 +157,62 @@ with st.sidebar:
                     "word_count_after_round2": st.session_state.workflow_state.get("word_count_after_round2"),
                     "error": st.session_state.workflow_state.get("error"),
                 })
+            else:
+                st.info("No workflow state yet. Run a workflow to see state info.")
+
+        # Show LLM Interactions
+        with st.expander("🤖 LLM Interactions", expanded=True):
+            interactions = get_all_interactions()
+            if interactions:
+                st.success(f"Captured {len(interactions)} LLM interaction(s)")
+
+                # Show most recent interaction
+                if interactions:
+                    latest = interactions[-1]
+                    formatted = format_interaction(latest, max_length=1000)
+
+                    st.subheader("Latest LLM Call")
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        st.metric("Provider", formatted["provider"])
+                        st.metric("Model", formatted["model"])
+                        st.metric("Temperature", formatted["temperature"])
+                    with col2:
+                        st.metric("Duration", formatted["duration"])
+                        st.metric("Prompt Chars", formatted["prompt_chars"])
+                        st.metric("Response Chars", formatted["response_chars"])
+
+                    with st.expander("📤 System Prompt"):
+                        st.code(formatted["system_prompt"], language="markdown")
+
+                    with st.expander("📥 User Prompt"):
+                        st.code(formatted["user_prompt"], language="markdown")
+
+                    with st.expander("💬 Full Response"):
+                        st.code(formatted["response"], language="json")
+
+                    if formatted["error"]:
+                        st.error(f"Error: {formatted['error']}")
+
+                # Show all interactions timeline
+                if len(interactions) > 1:
+                    with st.expander("📋 All LLM Calls Timeline"):
+                        for idx, interaction in enumerate(interactions, 1):
+                            formatted = format_interaction(interaction, max_length=200)
+                            col1, col2 = st.columns([3, 1])
+                            with col1:
+                                st.write(f"**{idx}. {formatted['provider']} ({formatted['model']})**")
+                                st.caption(f"Timestamp: {formatted['timestamp']}")
+                                st.caption(f"Duration: {formatted['duration']}")
+                            with col2:
+                                if formatted["error"]:
+                                    st.error("❌ Error")
+                                else:
+                                    st.success("✓ Success")
+            else:
+                st.info("No LLM interactions captured yet. Run a workflow to see LLM calls.")
     else:
+        disable_debug()  # Disable LLM interaction capture
         import os
         os.environ['DEBUG_MODE'] = '0'
 
