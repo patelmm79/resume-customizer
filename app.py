@@ -5,6 +5,10 @@ import traceback
 
 from main import ResumeCustomizer
 from workflow.state import WorkflowState
+from utils.langsmith_config import configure_langsmith
+
+# Configure LangSmith tracing at startup
+configure_langsmith()
 
 
 # Page configuration

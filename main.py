@@ -9,6 +9,10 @@ For the web interface, use: streamlit run app.py
 
 from workflow.orchestrator import ResumeWorkflowOrchestrator
 from workflow.state import WorkflowState
+from utils.langsmith_config import configure_langsmith
+
+# Configure LangSmith tracing at module load
+configure_langsmith()
 
 
 class ResumeCustomizer:
