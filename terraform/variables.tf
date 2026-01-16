@@ -183,7 +183,7 @@ variable "langsmith_endpoint" {
 }
 
 variable "langsmith_api_key_value" {
-  description = "Optional: LangSmith API key value to add as a secret version (set via TF_VAR or CI)."
+  description = "Optional: LangSmith API key value to add as a secret version. Can be provided via terraform.tfvars, TF_VAR environment variable, or CI. Will be stored in Secret Manager and mounted as LANGSMITH_API_KEY environment variable in Cloud Run."
   type        = string
   default     = ""
   sensitive   = true

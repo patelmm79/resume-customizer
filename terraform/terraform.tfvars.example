@@ -47,21 +47,30 @@ langsmith_tracing = false
 # LangSmith API endpoint (e.g., https://api.smith.langchain.com)
 langsmith_endpoint = ""
 
-# LangSmith API key (provide via TF_VAR_langsmith_api_key_value or CI)
+# LangSmith API key (provide via tfvars, TF_VAR, or CI)
 # This will be stored in Secret Manager as: {secret_prefix}-LANGSMITH_API_KEY
-# langsmith_api_key_value = ""  # Set via environment or CI, never commit this
+# WARNING: Do NOT commit to git if using real credentials
+# Use this in development/testing or in CI/CD where the file is generated
+langsmith_api_key_value = ""
 
 # To enable LangSmith:
 # 1. Create a LangSmith account at https://smith.langchain.com
-# 2. Generate an API key
-# 3. Set langsmith_tracing = true
-# 4. Provide your endpoint and API key:
-#    export TF_VAR_langsmith_endpoint="https://api.smith.langchain.com"
-#    export TF_VAR_langsmith_api_key_value="your-api-key"
-# 5. Run: terraform apply
+# 2. Generate an API key at https://smith.langchain.com/settings/keys
+# 3. Set langsmith_tracing = true (above)
+# 4. Set langsmith_endpoint = "https://api.smith.langchain.com" (above)
+# 5. Set langsmith_api_key_value (above) to your API key
+# 6. Run: terraform apply
 
-# For production CI/CD:
-# Store the API key in your CI/CD secret store and pass via environment variable
+# Methods to provide langsmith_api_key_value:
+# - Via terraform.tfvars: Uncomment langsmith_api_key_value = "your-api-key" (development only)
+# - Via environment variable: export TF_VAR_langsmith_api_key_value="your-api-key"
+# - Via CI/CD: Store in CI secrets and inject into tfvars at runtime
+
+# The API key will be:
+# - Stored securely in Google Cloud Secret Manager
+# - Retrieved automatically by Cloud Run
+# - Available as LANGSMITH_API_KEY environment variable
+# - Never logged or exposed in Terraform output
 
 # -----------------------------------------------------------------------------
 # LLM provider configuration (placeholders)
