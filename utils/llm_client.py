@@ -4,6 +4,19 @@ from typing import Optional
 import os
 from dotenv import load_dotenv
 
+# Import LangSmith for tracing (optional - only if available)
+try:
+    from langsmith import traceable
+    LANGSMITH_AVAILABLE = True
+except ImportError:
+    LANGSMITH_AVAILABLE = False
+    # Create a no-op decorator if langsmith is not installed
+    def traceable(func=None, *, name=None, tags=None, metadata=None, run_type=None):
+        """No-op decorator when langsmith is not available."""
+        if func is None:
+            return lambda f: f
+        return func
+
 load_dotenv()
 
 
@@ -154,6 +167,7 @@ class GeminiClient(LLMClient):
         self.model_name = model_name or os.getenv("GEMINI_MODEL", "gemini-2.0-flash-exp")
         self.model = genai.GenerativeModel(self.model_name)
 
+    @traceable(name="gemini_generation", tags=["llm", "gemini"])
     def generate_with_system_prompt(
         self,
         system_prompt: str,
@@ -207,6 +221,7 @@ class ClaudeClient(LLMClient):
         self.client = anthropic.Anthropic(api_key=api_key)
         self.model_name = model_name or os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022")
 
+    @traceable(name="claude_generation", tags=["llm", "claude"])
     def generate_with_system_prompt(
         self,
         system_prompt: str,
@@ -291,6 +306,7 @@ class CustomLLMClient(LLMClient):
         )
         self.model_name = model_name or os.getenv("CUSTOM_LLM_MODEL", "default-model")
 
+    @traceable(name="custom_llm_generation", tags=["llm", "custom"])
     def generate_with_system_prompt(
         self,
         system_prompt: str,
