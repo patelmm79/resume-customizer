@@ -573,7 +573,7 @@ resource "google_cloud_run_service" "service" {
           # LangSmith integration
           env {
             name  = "LANGSMITH_PROJECT"
-            value = var.project
+            value = var.service_name
           }
           env {
             name  = "LANGSMITH_TRACING"

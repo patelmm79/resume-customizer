@@ -14,7 +14,7 @@ def configure_langsmith():
 
     Environment variables:
     - LANGSMITH_API_KEY: API key for LangSmith (from Secret Manager)
-    - LANGSMITH_PROJECT: Project name in LangSmith (auto-set to GCP project)
+    - LANGSMITH_PROJECT: Project name in LangSmith (auto-set to service_name, e.g., resume-customizer)
     - LANGSMITH_ENDPOINT: LangSmith endpoint (usually https://api.smith.langchain.com)
     - LANGSMITH_TRACING: Enable/disable tracing (true/false)
     """

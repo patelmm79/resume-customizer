@@ -38,7 +38,7 @@ environment = "dev"
 # -----------------------------------------------------------------------------
 # LangSmith Integration (optional)
 # Enables tracing and monitoring of LLM calls via LangSmith
-# Note: LANGSMITH_PROJECT is automatically set to your GCP project name
+# Note: LANGSMITH_PROJECT is automatically set to the service_name (e.g., resume-customizer)
 # -----------------------------------------------------------------------------
 
 # Enable LangSmith tracing (true/false)

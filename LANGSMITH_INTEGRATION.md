@@ -130,7 +130,7 @@ The application uses these environment variables (automatically set by Terraform
 LANGSMITH_TRACING=true              # Enable/disable tracing
 LANGSMITH_API_KEY=your-api-key      # Secret key (from Secret Manager)
 LANGSMITH_ENDPOINT=...              # API endpoint URL
-LANGSMITH_PROJECT=your-gcp-project  # Project name for organizing traces
+LANGSMITH_PROJECT=resume-customizer # Application name (service_name)
 ```
 
 ## Code Integration
@@ -175,7 +175,7 @@ The decorator:
 
 3. **Check LangSmith project name:**
    - Must match the project in LangSmith dashboard
-   - Default: Your GCP project name
+   - Default: Application name (`resume-customizer` or custom service_name from Terraform)
 
 4. **Check logs:**
    ```bash
@@ -202,8 +202,9 @@ Tracing decorator will be inactive, but the code remains instrumented for future
 ## Best Practices
 
 1. **Use project names for organization:**
-   - LANGSMITH_PROJECT is automatically set to your GCP project
-   - Organize traces by environment: `dev`, `staging`, `prod`
+   - LANGSMITH_PROJECT is automatically set to the application name (service_name from Terraform)
+   - In LangSmith, create a project named `resume-customizer` to match
+   - For multiple environments, use Terraform's `environment` variable to name projects: `resume-customizer-dev`, `resume-customizer-staging`, etc.
 
 2. **Monitor costs:**
    - Review token usage in LangSmith dashboard
