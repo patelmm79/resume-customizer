@@ -6,10 +6,13 @@ import traceback
 from main import ResumeCustomizer
 from workflow.state import WorkflowState
 from utils.langsmith_config import configure_langsmith
+from utils.langfuse_config import configure_langfuse
 from utils.debug import enable_debug, disable_debug, get_all_interactions, format_interaction
+from utils.langfuse_wrapper import get_tracing_status
 
-# Configure LangSmith tracing at startup
+# Configure LangSmith and Langfuse tracing at startup
 configure_langsmith()
+configure_langfuse()
 
 
 # Page configuration
@@ -142,6 +145,20 @@ with st.sidebar:
         # Set environment variable for debug mode
         import os
         os.environ['DEBUG_MODE'] = '1'
+
+        # Show tracing status
+        tracing_status = get_tracing_status()
+        col1, col2 = st.columns(2)
+        with col1:
+            if tracing_status["langsmith_enabled"]:
+                st.success("✓ LangSmith: Enabled")
+            else:
+                st.warning("✗ LangSmith: Disabled")
+        with col2:
+            if tracing_status["langfuse_enabled"]:
+                st.success("✓ Langfuse: Enabled")
+            else:
+                st.warning("✗ Langfuse: Disabled")
 
         # Show debug info panels
         with st.expander("🔍 Debug State Info", expanded=False):

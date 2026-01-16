@@ -440,6 +440,26 @@ resource "google_secret_manager_secret" "langsmith_api_key" {
   depends_on = [google_project_service.secretmanager_api]
 }
 
+resource "google_secret_manager_secret" "langfuse_public_key" {
+  count     = var.create_secrets ? 1 : 0
+  project   = var.project
+  secret_id = "${var.secret_prefix}-LANGFUSE_PUBLIC_KEY"
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.secretmanager_api]
+}
+
+resource "google_secret_manager_secret" "langfuse_secret_key" {
+  count     = var.create_secrets ? 1 : 0
+  project   = var.project
+  secret_id = "${var.secret_prefix}-LANGFUSE_SECRET_KEY"
+  replication {
+    auto {}
+  }
+  depends_on = [google_project_service.secretmanager_api]
+}
+
 # Optionally create secret versions when values are provided via variables/CI
 # Note: requires both create_secrets AND create_secret_versions to be true
 resource "google_secret_manager_secret_version" "gemini_api_key_version" {
@@ -464,6 +484,18 @@ resource "google_secret_manager_secret_version" "langsmith_api_key_version" {
   count       = var.create_secrets && var.create_secret_versions && length(trimspace(var.langsmith_api_key_value)) > 0 ? 1 : 0
   secret      = google_secret_manager_secret.langsmith_api_key[0].id
   secret_data = var.langsmith_api_key_value
+}
+
+resource "google_secret_manager_secret_version" "langfuse_public_key_version" {
+  count       = var.create_secrets && var.create_secret_versions && length(trimspace(var.langfuse_public_key_value)) > 0 ? 1 : 0
+  secret      = google_secret_manager_secret.langfuse_public_key[0].id
+  secret_data = var.langfuse_public_key_value
+}
+
+resource "google_secret_manager_secret_version" "langfuse_secret_key_version" {
+  count       = var.create_secrets && var.create_secret_versions && length(trimspace(var.langfuse_secret_key_value)) > 0 ? 1 : 0
+  secret      = google_secret_manager_secret.langfuse_secret_key[0].id
+  secret_data = var.langfuse_secret_key_value
 }
 
 # Fail fast: if `create_secret_versions` is true, require all three secret value variables
@@ -511,6 +543,20 @@ resource "google_secret_manager_secret_iam_member" "custom_llm_accessor" {
 resource "google_secret_manager_secret_iam_member" "langsmith_accessor" {
   count     = var.create_secrets ? 1 : 0
   secret_id = google_secret_manager_secret.langsmith_api_key[0].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${local.cloudrun_sa_email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "langfuse_public_key_accessor" {
+  count     = var.create_secrets ? 1 : 0
+  secret_id = google_secret_manager_secret.langfuse_public_key[0].id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:${local.cloudrun_sa_email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "langfuse_secret_key_accessor" {
+  count     = var.create_secrets ? 1 : 0
+  secret_id = google_secret_manager_secret.langfuse_secret_key[0].id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${local.cloudrun_sa_email}"
 }
@@ -584,6 +630,16 @@ resource "google_cloud_run_service" "service" {
             value = var.langsmith_endpoint
           }
 
+          # Langfuse integration
+          env {
+            name  = "LANGFUSE_ENABLED"
+            value = tostring(var.langfuse_enabled)
+          }
+          env {
+            name  = "LANGFUSE_HOST"
+            value = var.langfuse_host
+          }
+
           # Secret-mounted env vars (map to Secret Manager secrets created above)
           dynamic "env" {
             for_each = var.create_secrets ? [1] : []
@@ -633,6 +689,30 @@ resource "google_cloud_run_service" "service" {
               }
             }
           }
+          dynamic "env" {
+            for_each = var.create_secrets ? [1] : []
+            content {
+              name = "LANGFUSE_PUBLIC_KEY"
+              value_from {
+                secret_key_ref {
+                  name = google_secret_manager_secret.langfuse_public_key[0].secret_id
+                  key  = "latest"
+                }
+              }
+            }
+          }
+          dynamic "env" {
+            for_each = var.create_secrets ? [1] : []
+            content {
+              name = "LANGFUSE_SECRET_KEY"
+              value_from {
+                secret_key_ref {
+                  name = google_secret_manager_secret.langfuse_secret_key[0].secret_id
+                  key  = "latest"
+                }
+              }
+            }
+          }
       }
     }
   }
@@ -653,7 +733,9 @@ resource "google_cloud_run_service" "service" {
     google_secret_manager_secret_iam_member.gemini_accessor,
     google_secret_manager_secret_iam_member.anthropic_accessor,
     google_secret_manager_secret_iam_member.custom_llm_accessor,
-    google_secret_manager_secret_iam_member.langsmith_accessor
+    google_secret_manager_secret_iam_member.langsmith_accessor,
+    google_secret_manager_secret_iam_member.langfuse_public_key_accessor,
+    google_secret_manager_secret_iam_member.langfuse_secret_key_accessor
   ]
 }
 

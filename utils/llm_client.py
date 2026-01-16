@@ -19,6 +19,13 @@ except ImportError:
 
 load_dotenv()
 
+# Initialize unified tracing (LangSmith + Langfuse)
+try:
+    from utils.langfuse_wrapper import initialize_tracing, log_llm_call
+    initialize_tracing()
+except Exception as e:
+    print(f"[WARNING] Failed to initialize tracing: {e}")
+
 
 class LLMClient(ABC):
     """Abstract base class for LLM clients."""
@@ -178,7 +185,6 @@ class GeminiClient(LLMClient):
     ) -> str:
         """Generate using Gemini API."""
         import time
-        from utils.debug import capture_llm_call
 
         combined_prompt = f"{system_prompt}\n\n{user_prompt}"
 
@@ -203,9 +209,9 @@ class GeminiClient(LLMClient):
             # Extract JSON from reasoning output if needed
             content = self._extract_response_from_reasoning_output(content)
 
-            # Capture for debug
+            # Log to both LangSmith and Langfuse
             duration_ms = (time.time() - start_time) * 1000
-            capture_llm_call(
+            log_llm_call(
                 provider="gemini",
                 model=self.model_name,
                 system_prompt=system_prompt,
@@ -218,7 +224,7 @@ class GeminiClient(LLMClient):
             return content
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
-            capture_llm_call(
+            log_llm_call(
                 provider="gemini",
                 model=self.model_name,
                 system_prompt=system_prompt,
@@ -263,7 +269,6 @@ class ClaudeClient(LLMClient):
     ) -> str:
         """Generate using Claude API with optional extended thinking."""
         import time
-        from utils.debug import capture_llm_call
 
         # Build request parameters
         request_params = {
@@ -293,9 +298,9 @@ class ClaudeClient(LLMClient):
             # Extract JSON from reasoning output if needed
             content = self._extract_response_from_reasoning_output(content)
 
-            # Capture for debug
+            # Log to both LangSmith and Langfuse
             duration_ms = (time.time() - start_time) * 1000
-            capture_llm_call(
+            log_llm_call(
                 provider="claude",
                 model=self.model_name,
                 system_prompt=system_prompt,
@@ -308,7 +313,7 @@ class ClaudeClient(LLMClient):
             return content
         except Exception as e:
             duration_ms = (time.time() - start_time) * 1000
-            capture_llm_call(
+            log_llm_call(
                 provider="claude",
                 model=self.model_name,
                 system_prompt=system_prompt,
@@ -379,7 +384,6 @@ class CustomLLMClient(LLMClient):
         """Generate using custom LLM API with optional structured output and retry logic."""
         import time
         from openai import APIStatusError
-        from utils.debug import capture_llm_call
 
         start_time = time.time()
 
@@ -559,9 +563,9 @@ class CustomLLMClient(LLMClient):
             print(f"[DEBUG CustomLLM] After extraction: {len(content)} chars")
             print(f"[DEBUG CustomLLM] Extracted starts with: [Unicode content - cannot display]")
 
-        # Capture for debug
+        # Log to both LangSmith and Langfuse
         duration_ms = (time.time() - start_time) * 1000
-        capture_llm_call(
+        log_llm_call(
             provider="custom",
             model=self.model_name,
             system_prompt=system_prompt,

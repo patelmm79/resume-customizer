@@ -189,3 +189,29 @@ variable "langsmith_api_key_value" {
   sensitive   = true
 }
 
+variable "langfuse_enabled" {
+  description = "Enable Langfuse tracing (true to enable)"
+  type        = bool
+  default     = false
+}
+
+variable "langfuse_host" {
+  description = "Langfuse host URL (e.g., https://cloud.langfuse.com or self-hosted URL)"
+  type        = string
+  default     = "https://cloud.langfuse.com"
+}
+
+variable "langfuse_public_key_value" {
+  description = "Optional: Langfuse public key value to add as a secret version. Can be provided via terraform.tfvars, TF_VAR environment variable, or CI. Will be stored in Secret Manager and mounted as LANGFUSE_PUBLIC_KEY environment variable in Cloud Run."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "langfuse_secret_key_value" {
+  description = "Optional: Langfuse secret key value to add as a secret version. Can be provided via terraform.tfvars, TF_VAR environment variable, or CI. Will be stored in Secret Manager and mounted as LANGFUSE_SECRET_KEY environment variable in Cloud Run."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
