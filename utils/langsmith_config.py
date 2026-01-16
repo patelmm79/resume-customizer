@@ -56,20 +56,21 @@ def configure_langsmith():
         return False
 
     try:
-        # Initialize LangSmith client (this validates credentials)
-        client = Client(
-            api_key=api_key,
-            endpoint=endpoint,
-        )
+        # Environment variables are already set, just validate by creating client
+        # LangSmith Client reads from LANGSMITH_API_KEY, LANGSMITH_ENDPOINT, LANGSMITH_PROJECT env vars
+        client = Client()
 
         # Verify connection by checking project
         print(f"[INFO] LangSmith tracing enabled")
         print(f"[INFO] Project: {project}")
         print(f"[INFO] Endpoint: {endpoint}")
+        print(f"[INFO] Client initialized successfully")
 
         return True
     except Exception as e:
         print(f"[ERROR] Failed to initialize LangSmith: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 
