@@ -169,7 +169,20 @@ with st.sidebar:
                 # Show most recent interaction
                 if interactions:
                     latest = interactions[-1]
-                    formatted = format_interaction(latest, max_length=1000)
+                    # Get raw interaction without truncation for full display
+                    formatted = {
+                        "timestamp": latest.get("timestamp", "N/A"),
+                        "provider": latest.get("provider", "N/A").upper(),
+                        "model": latest.get("model", "N/A"),
+                        "temperature": f"{latest.get('temperature', 0.7):.2f}",
+                        "duration": f"{latest.get('duration_ms', 0):.0f}ms" if latest.get('duration_ms') else "N/A",
+                        "system_prompt": latest.get("system_prompt", ""),
+                        "user_prompt": latest.get("user_prompt", ""),
+                        "response": latest.get("response", ""),
+                        "error": latest.get("error"),
+                        "prompt_chars": latest.get("combined_prompt_length", 0),
+                        "response_chars": latest.get("response_length", 0),
+                    }
 
                     st.subheader("Latest LLM Call")
                     col1, col2 = st.columns(2)
