@@ -82,17 +82,17 @@ def log_llm_call(
         try:
             trace_id = f"{provider}_{int(time.time() * 1000)}"
 
-            # Create trace
+            # Langfuse SDK: Create trace through the client
             trace = _langfuse_client.trace(
-                id=trace_id,
                 name=f"LLM Call - {provider.upper()}",
                 input={"system": system_prompt, "user": user_prompt},
                 metadata=metadata,
             )
 
-            # Create generation (LLM call)
+            # Create generation event within the trace
             if error:
-                trace.generation(
+                _langfuse_client.generation(
+                    trace_id=trace.id if hasattr(trace, 'id') else trace_id,
                     name=model,
                     model=model,
                     input=combined_prompt,
@@ -102,7 +102,8 @@ def log_llm_call(
                     metadata=metadata,
                 )
             else:
-                trace.generation(
+                _langfuse_client.generation(
+                    trace_id=trace.id if hasattr(trace, 'id') else trace_id,
                     name=model,
                     model=model,
                     input=combined_prompt,
@@ -114,12 +115,12 @@ def log_llm_call(
                     metadata=metadata,
                 )
 
-            # End the trace to mark it as complete
-            trace.end()
-
             # Flush to ensure traces are sent to Langfuse
             _langfuse_client.flush()
 
+        except AttributeError as e:
+            print(f"[WARNING] Langfuse API error (method not found): {e}")
+            print(f"[DEBUG] Available Langfuse client methods: {[m for m in dir(_langfuse_client) if not m.startswith('_')]}")
         except Exception as e:
             print(f"[WARNING] Failed to log to Langfuse: {e}")
             import traceback
