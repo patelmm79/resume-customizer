@@ -96,13 +96,13 @@ def log_llm_call(
                     metadata=metadata,
                 ) as generation:
                     if error:
-                        generation.end(
+                        generation.update(
                             output=None,
                             level="ERROR",
                             status_message=error,
                         )
                     else:
-                        generation.end(
+                        generation.update(
                             output=response,
                             usage={
                                 "input": len(system_prompt) + len(user_prompt),
