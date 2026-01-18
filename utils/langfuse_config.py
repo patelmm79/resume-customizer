@@ -24,10 +24,15 @@ def configure_langfuse():
         print("[WARNING] langfuse package not installed. Langfuse tracing disabled.")
         return None
 
+    # Load environment variables from .env file (in case they're there)
+    load_dotenv()
+
     # Check if tracing is enabled
     enabled = os.getenv("LANGFUSE_ENABLED", "false").lower() in ("true", "1", "yes")
 
     # Debug: Print what we found
+    all_env_vars = os.environ.copy()
+    print(f"[DEBUG] All env vars starting with LANGFUSE: {[(k, '***' if len(v) > 0 else 'empty') for k, v in all_env_vars.items() if k.startswith('LANGFUSE')]}")
     print(f"[DEBUG] LANGFUSE_ENABLED={os.getenv('LANGFUSE_ENABLED', 'not set')}")
     print(f"[DEBUG] LANGFUSE_PUBLIC_KEY={'***' if os.getenv('LANGFUSE_PUBLIC_KEY') else 'not set'}")
     print(f"[DEBUG] LANGFUSE_SECRET_KEY={'***' if os.getenv('LANGFUSE_SECRET_KEY') else 'not set'}")
