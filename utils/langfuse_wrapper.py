@@ -80,47 +80,39 @@ def log_llm_call(
     # Log to Langfuse if enabled
     if _langfuse_client:
         try:
-            trace_id = f"{provider}_{int(time.time() * 1000)}"
-
-            # Langfuse SDK: Create trace through the client
-            trace = _langfuse_client.trace(
+            # Create a span (trace) for the LLM call
+            with _langfuse_client.start_as_current_observation(
+                as_type="span",
                 name=f"LLM Call - {provider.upper()}",
                 input={"system": system_prompt, "user": user_prompt},
                 metadata=metadata,
-            )
-
-            # Create generation event within the trace
-            if error:
-                _langfuse_client.generation(
-                    trace_id=trace.id if hasattr(trace, 'id') else trace_id,
+            ) as span:
+                # Create generation (LLM call) within the span
+                with _langfuse_client.start_as_current_observation(
+                    as_type="generation",
                     name=model,
                     model=model,
                     input=combined_prompt,
-                    output=None,
-                    level="ERROR",
-                    status_message=error,
                     metadata=metadata,
-                )
-            else:
-                _langfuse_client.generation(
-                    trace_id=trace.id if hasattr(trace, 'id') else trace_id,
-                    name=model,
-                    model=model,
-                    input=combined_prompt,
-                    output=response,
-                    usage={
-                        "input": len(system_prompt) + len(user_prompt),
-                        "output": len(response) if response else 0,
-                    },
-                    metadata=metadata,
-                )
+                ) as generation:
+                    if error:
+                        generation.end(
+                            output=None,
+                            level="ERROR",
+                            status_message=error,
+                        )
+                    else:
+                        generation.end(
+                            output=response,
+                            usage={
+                                "input": len(system_prompt) + len(user_prompt),
+                                "output": len(response) if response else 0,
+                            },
+                        )
 
             # Flush to ensure traces are sent to Langfuse
             _langfuse_client.flush()
 
-        except AttributeError as e:
-            print(f"[WARNING] Langfuse API error (method not found): {e}")
-            print(f"[DEBUG] Available Langfuse client methods: {[m for m in dir(_langfuse_client) if not m.startswith('_')]}")
         except Exception as e:
             print(f"[WARNING] Failed to log to Langfuse: {e}")
             import traceback

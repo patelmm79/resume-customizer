@@ -636,7 +636,7 @@ resource "google_cloud_run_service" "service" {
             value = tostring(var.langfuse_enabled)
           }
           env {
-            name  = "LANGFUSE_HOST"
+            name  = "LANGFUSE_BASE_URL"
             value = var.langfuse_host
           }
 

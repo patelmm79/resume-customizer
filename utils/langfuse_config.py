@@ -15,11 +15,11 @@ def configure_langfuse():
     Environment variables:
     - LANGFUSE_PUBLIC_KEY: Public key for Langfuse
     - LANGFUSE_SECRET_KEY: Secret key for Langfuse
-    - LANGFUSE_HOST: Langfuse host (optional, defaults to https://cloud.langfuse.com)
+    - LANGFUSE_BASE_URL: Langfuse API URL (optional, defaults to https://cloud.langfuse.com)
     - LANGFUSE_ENABLED: Enable/disable Langfuse tracing (true/false)
     """
     try:
-        from langfuse import Langfuse
+        from langfuse import get_client
     except ImportError:
         print("[WARNING] langfuse package not installed. Langfuse tracing disabled.")
         return None
@@ -36,7 +36,7 @@ def configure_langfuse():
     print(f"[DEBUG] LANGFUSE_ENABLED={os.getenv('LANGFUSE_ENABLED', 'not set')}")
     print(f"[DEBUG] LANGFUSE_PUBLIC_KEY={'***' if os.getenv('LANGFUSE_PUBLIC_KEY') else 'not set'}")
     print(f"[DEBUG] LANGFUSE_SECRET_KEY={'***' if os.getenv('LANGFUSE_SECRET_KEY') else 'not set'}")
-    print(f"[DEBUG] LANGFUSE_HOST={os.getenv('LANGFUSE_HOST', 'not set (using default)')}")
+    print(f"[DEBUG] LANGFUSE_BASE_URL={os.getenv('LANGFUSE_BASE_URL', 'not set (using default)')}")
 
     if not enabled:
         print("[INFO] Langfuse tracing is disabled (LANGFUSE_ENABLED=false)")
@@ -45,7 +45,6 @@ def configure_langfuse():
     # Get required configuration
     public_key = os.getenv("LANGFUSE_PUBLIC_KEY")
     secret_key = os.getenv("LANGFUSE_SECRET_KEY")
-    host = os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com")
 
     # Validate configuration
     if not public_key:
@@ -57,17 +56,13 @@ def configure_langfuse():
         return None
 
     try:
-        # Initialize Langfuse client
-        print(f"[DEBUG] Initializing Langfuse with host: {host}")
-        client = Langfuse(
-            public_key=public_key,
-            secret_key=secret_key,
-            host=host,
-        )
+        # Initialize Langfuse client using get_client()
+        # Reads from environment variables: LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_BASE_URL
+        print(f"[DEBUG] Initializing Langfuse client with get_client()")
+        client = get_client()
 
         # Client initialized
         print(f"[INFO] Langfuse client initialized successfully")
-        print(f"[INFO] Host: {host}")
 
         return client
     except Exception as e:
