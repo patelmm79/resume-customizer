@@ -726,21 +726,16 @@ resource "google_cloud_run_service" "service" {
   # The following implicit dependencies are created through resource references:
   # - Artifact Registry IAM members (conditionally referenced via local.cloudrun_sa_email)
   # - Cloud Build trigger (has count condition, will be implicit if created)
+  # - Langfuse IAM members (implicitly created through dynamic env blocks)
   # Explicit static dependencies:
-  depends_on = flatten([
-    [
-      google_project_service.run_api,
-      google_project_service.artifact_api,
-      google_secret_manager_secret_iam_member.gemini_accessor,
-      google_secret_manager_secret_iam_member.anthropic_accessor,
-      google_secret_manager_secret_iam_member.custom_llm_accessor,
-      google_secret_manager_secret_iam_member.langsmith_accessor
-    ],
-    var.create_secrets ? [
-      google_secret_manager_secret_iam_member.langfuse_public_key_accessor[0],
-      google_secret_manager_secret_iam_member.langfuse_secret_key_accessor[0]
-    ] : []
-  ])
+  depends_on = [
+    google_project_service.run_api,
+    google_project_service.artifact_api,
+    google_secret_manager_secret_iam_member.gemini_accessor,
+    google_secret_manager_secret_iam_member.anthropic_accessor,
+    google_secret_manager_secret_iam_member.custom_llm_accessor,
+    google_secret_manager_secret_iam_member.langsmith_accessor
+  ]
 }
 
 # Allow unauthenticated invocations (public)
