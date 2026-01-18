@@ -53,16 +53,16 @@ def configure_langfuse():
 
     try:
         # Initialize Langfuse client
+        print(f"[DEBUG] Initializing Langfuse with host: {host}")
         client = Langfuse(
             public_key=public_key,
             secret_key=secret_key,
             host=host,
         )
 
-        # Test connection
-        print(f"[INFO] Langfuse tracing enabled")
+        # Client initialized
+        print(f"[INFO] Langfuse client initialized successfully")
         print(f"[INFO] Host: {host}")
-        print(f"[INFO] Client initialized successfully")
 
         return client
     except Exception as e:

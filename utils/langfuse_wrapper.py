@@ -114,8 +114,16 @@ def log_llm_call(
                     metadata=metadata,
                 )
 
+            # End the trace to mark it as complete
+            trace.end()
+
+            # Flush to ensure traces are sent to Langfuse
+            _langfuse_client.flush()
+
         except Exception as e:
             print(f"[WARNING] Failed to log to Langfuse: {e}")
+            import traceback
+            traceback.print_exc()
 
     # Log to LangSmith via debug capture
     try:
