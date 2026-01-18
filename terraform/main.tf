@@ -690,7 +690,7 @@ resource "google_cloud_run_service" "service" {
             }
           }
           dynamic "env" {
-            for_each = var.create_secrets ? [1] : []
+            for_each = var.create_secrets && var.create_secret_versions && length(trimspace(var.langfuse_public_key_value)) > 0 ? [1] : []
             content {
               name = "LANGFUSE_PUBLIC_KEY"
               value_from {
@@ -702,7 +702,7 @@ resource "google_cloud_run_service" "service" {
             }
           }
           dynamic "env" {
-            for_each = var.create_secrets ? [1] : []
+            for_each = var.create_secrets && var.create_secret_versions && length(trimspace(var.langfuse_secret_key_value)) > 0 ? [1] : []
             content {
               name = "LANGFUSE_SECRET_KEY"
               value_from {
@@ -727,16 +727,20 @@ resource "google_cloud_run_service" "service" {
   # - Artifact Registry IAM members (conditionally referenced via local.cloudrun_sa_email)
   # - Cloud Build trigger (has count condition, will be implicit if created)
   # Explicit static dependencies:
-  depends_on = [
-    google_project_service.run_api,
-    google_project_service.artifact_api,
-    google_secret_manager_secret_iam_member.gemini_accessor,
-    google_secret_manager_secret_iam_member.anthropic_accessor,
-    google_secret_manager_secret_iam_member.custom_llm_accessor,
-    google_secret_manager_secret_iam_member.langsmith_accessor,
-    google_secret_manager_secret_iam_member.langfuse_public_key_accessor,
-    google_secret_manager_secret_iam_member.langfuse_secret_key_accessor
-  ]
+  depends_on = flatten([
+    [
+      google_project_service.run_api,
+      google_project_service.artifact_api,
+      google_secret_manager_secret_iam_member.gemini_accessor,
+      google_secret_manager_secret_iam_member.anthropic_accessor,
+      google_secret_manager_secret_iam_member.custom_llm_accessor,
+      google_secret_manager_secret_iam_member.langsmith_accessor
+    ],
+    var.create_secrets ? [
+      google_secret_manager_secret_iam_member.langfuse_public_key_accessor[0],
+      google_secret_manager_secret_iam_member.langfuse_secret_key_accessor[0]
+    ] : []
+  ])
 }
 
 # Allow unauthenticated invocations (public)
