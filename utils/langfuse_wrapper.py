@@ -80,35 +80,17 @@ def log_llm_call(
     # Log to Langfuse if enabled
     if _langfuse_client:
         try:
-            # Create a span (trace) for the LLM call
-            with _langfuse_client.start_as_current_observation(
-                as_type="span",
-                name=f"LLM Call - {provider.upper()}",
-                input={"system": system_prompt, "user": user_prompt},
+            # Create a trace for the LLM call
+            trace_name = f"LLM Call - {provider.upper()}"
+
+            # Log as a simple generation
+            _langfuse_client.generation(
+                name=trace_name,
+                model=model,
+                input=combined_prompt,
+                output=response if not error else None,
                 metadata=metadata,
-            ) as span:
-                # Create generation (LLM call) within the span
-                with _langfuse_client.start_as_current_observation(
-                    as_type="generation",
-                    name=model,
-                    model=model,
-                    input=combined_prompt,
-                    metadata=metadata,
-                ) as generation:
-                    if error:
-                        generation.update(
-                            output=None,
-                            level="ERROR",
-                            status_message=error,
-                        )
-                    else:
-                        generation.update(
-                            output=response,
-                            usage={
-                                "input": len(system_prompt) + len(user_prompt),
-                                "output": len(response) if response else 0,
-                            },
-                        )
+            )
 
             # Flush to ensure traces are sent to Langfuse
             _langfuse_client.flush()
