@@ -14,10 +14,20 @@ from utils.langfuse_wrapper import get_tracing_status
 @st.cache_resource
 def _init_tracing():
     """Initialize tracing platforms once at startup."""
-    configure_langsmith()
-    configure_langfuse()
+    try:
+        configure_langsmith()
+    except Exception as e:
+        print(f"[WARNING] LangSmith initialization failed: {e}")
 
-_init_tracing()
+    try:
+        configure_langfuse()
+    except Exception as e:
+        print(f"[WARNING] Langfuse initialization failed: {e}")
+
+try:
+    _init_tracing()
+except Exception as e:
+    print(f"[ERROR] Failed to initialize tracing: {e}")
 
 
 # Page configuration
@@ -1460,51 +1470,32 @@ elif current_stage == "awaiting_validation_approval_old":
         button_label = "✅ Proceed to Export" if state['is_valid'] else "⚠️ Export Anyway"
         button_type = "primary" if state['is_valid'] else "secondary"
 
-        if st.button(button_label, type=button_type, use_container_width=True):
-            try:
-                # First, just transition to export stage (no export yet)
-                st.session_state.workflow_state['current_stage'] = "export"
-                st.session_state.export_in_progress = True
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error starting export: {str(e)}")
-                st.code(traceback.format_exc())
+        if st.button(button_label, type=button_type, use_container_width=True, key="validation_export_btn"):
+            # First, just transition to export stage (no export yet)
+            st.session_state.workflow_state['current_stage'] = "export"
+            st.session_state.export_in_progress = True
+            st.rerun()
 
 
 # Stage 12: Export (intermediate processing)
 elif current_stage == "export":
     st.header("Step 6: Exporting Resume...")
+    st.info("🔄 Processing your resume export, please wait...")
 
-    # Check if export flag is set
-    if st.session_state.get('export_in_progress'):
-        st.info("🔄 Processing your resume export, please wait...")
-
-        try:
-            # Perform the actual export
-            final_state = st.session_state.customizer.finalize_workflow(
-                st.session_state.workflow_state
-            )
-
-            # Update state with the export result
-            st.session_state.workflow_state = final_state
-
-            # Clear the flag and transition to completed
-            st.session_state.export_in_progress = False
-            st.session_state.workflow_state['current_stage'] = "completed"
-
-            st.success("✅ Export completed! Preparing final display...")
-            st.rerun()
-
-        except Exception as e:
-            st.error(f"❌ Error during export: {str(e)}")
-            st.code(traceback.format_exc())
-            st.session_state.export_in_progress = False
-            st.session_state.workflow_state['current_stage'] = "awaiting_validation_approval"
-            if st.button("⬅️ Go Back", key="export_error_back"):
-                st.rerun()
-    else:
-        st.info("Initializing export...")
+    # Perform the actual export
+    try:
+        final_state = st.session_state.customizer.finalize_workflow(
+            st.session_state.workflow_state
+        )
+        st.session_state.workflow_state = final_state
+        st.session_state.export_in_progress = False
+        st.session_state.workflow_state['current_stage'] = "completed"
+        st.success("✅ Export completed!")
         st.rerun()
+    except Exception as e:
+        st.error(f"❌ Error during export: {str(e)}")
+        print(f"[ERROR] Export failed: {traceback.format_exc()}")
+        st.session_state.export_in_progress = False
 
 
 # Stage 13: Completed
