@@ -1470,11 +1470,18 @@ elif current_stage == "awaiting_validation_approval_old":
         button_label = "✅ Proceed to Export" if state['is_valid'] else "⚠️ Export Anyway"
         button_type = "primary" if state['is_valid'] else "secondary"
 
-        if st.button(button_label, type=button_type, use_container_width=True, key="validation_export_btn"):
-            # First, just transition to export stage (no export yet)
+        def _on_export_click():
+            """Callback for export button - transitions to export stage."""
             st.session_state.workflow_state['current_stage'] = "export"
             st.session_state.export_in_progress = True
-            st.rerun()
+
+        st.button(
+            button_label,
+            type=button_type,
+            use_container_width=True,
+            key="validation_export_btn",
+            on_click=_on_export_click
+        )
 
 
 # Stage 12: Export (intermediate processing)
