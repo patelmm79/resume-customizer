@@ -1473,21 +1473,9 @@ elif current_stage == "awaiting_validation_approval_old":
         button_type = "primary" if state['is_valid'] else "secondary"
 
         def _on_export_click():
-            """Callback for export button - execute export BEFORE rendering."""
-            try:
-                # Execute finalize_workflow in callback (before render)
-                final_state = st.session_state.customizer.finalize_workflow(
-                    st.session_state.workflow_state
-                )
-                # Update state and transition to completed
-                st.session_state.workflow_state = final_state
-                st.session_state.workflow_state['current_stage'] = "completed"
-                st.session_state.export_completed = True
-            except Exception as e:
-                # Don't call st.error() in callback - just update state
-                print(f"[ERROR] Export failed: {traceback.format_exc()}")
-                st.session_state.workflow_state['current_stage'] = "error"
-                st.session_state.workflow_state['error'] = str(e)
+            """Callback for export button - transition to loading stage first."""
+            # First transition to loading stage (minimal UI to allow DOM reconciliation)
+            st.session_state.workflow_state['current_stage'] = "export_loading"
 
         st.button(
             button_label,
@@ -1496,6 +1484,25 @@ elif current_stage == "awaiting_validation_approval_old":
             key="validation_export_btn",
             on_click=_on_export_click
         )
+
+
+# Stage 12: Export Loading (minimal UI - just text, no fancy elements)
+elif current_stage == "export_loading":
+    st.write("### Finalizing Resume Export...")
+    st.write("Processing... please wait")
+
+    # Execute export with NO widget rendering during execution
+    try:
+        final_state = st.session_state.customizer.finalize_workflow(
+            st.session_state.workflow_state
+        )
+        st.session_state.workflow_state = final_state
+        st.session_state.workflow_state['current_stage'] = "completed"
+        # NO st.rerun() - let Streamlit handle it naturally via state change
+    except Exception as e:
+        print(f"[ERROR] Export failed: {traceback.format_exc()}")
+        st.session_state.workflow_state['current_stage'] = "error"
+        st.session_state.workflow_state['error'] = str(e)
 
 
 # Stage 13: Completed
