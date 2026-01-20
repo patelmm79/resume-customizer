@@ -10,9 +10,14 @@ from utils.langfuse_config import configure_langfuse
 from utils.debug import enable_debug, disable_debug, get_all_interactions, format_interaction
 from utils.langfuse_wrapper import get_tracing_status
 
-# Configure LangSmith and Langfuse tracing at startup
-configure_langsmith()
-configure_langfuse()
+# Configure LangSmith and Langfuse tracing at startup (cached to prevent reinit on every rerun)
+@st.cache_resource
+def _init_tracing():
+    """Initialize tracing platforms once at startup."""
+    configure_langsmith()
+    configure_langfuse()
+
+_init_tracing()
 
 
 # Page configuration
