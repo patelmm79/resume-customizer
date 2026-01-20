@@ -1473,9 +1473,21 @@ elif current_stage == "awaiting_validation_approval_old":
         button_type = "primary" if state['is_valid'] else "secondary"
 
         def _on_export_click():
-            """Callback for export button - transitions to export stage."""
-            st.session_state.workflow_state['current_stage'] = "export"
-            st.session_state.export_in_progress = True
+            """Callback for export button - execute export BEFORE rendering."""
+            try:
+                # Execute finalize_workflow in callback (before render)
+                final_state = st.session_state.customizer.finalize_workflow(
+                    st.session_state.workflow_state
+                )
+                # Update state and transition to completed
+                st.session_state.workflow_state = final_state
+                st.session_state.workflow_state['current_stage'] = "completed"
+                st.session_state.export_completed = True
+            except Exception as e:
+                # Don't call st.error() in callback - just update state
+                print(f"[ERROR] Export failed: {traceback.format_exc()}")
+                st.session_state.workflow_state['current_stage'] = "error"
+                st.session_state.workflow_state['error'] = str(e)
 
         st.button(
             button_label,
@@ -1484,35 +1496,6 @@ elif current_stage == "awaiting_validation_approval_old":
             key="validation_export_btn",
             on_click=_on_export_click
         )
-
-
-# Stage 12: Export (intermediate processing)
-elif current_stage == "export":
-    st.header("Step 6: Exporting Resume...")
-    st.info("🔄 Processing your resume export, please wait...")
-
-    # Perform the actual export WITHOUT calling st.rerun()
-    # Let Streamlit handle the natural rerun cycle
-    if st.session_state.get('export_in_progress'):
-        try:
-            final_state = st.session_state.customizer.finalize_workflow(
-                st.session_state.workflow_state
-            )
-            st.session_state.workflow_state = final_state
-            st.session_state.export_in_progress = False
-            st.session_state.workflow_state['current_stage'] = "completed"
-            st.success("✅ Export completed! Refreshing...")
-
-            # Use st.session_state marker to trigger natural rerun instead of explicit rerun
-            st.session_state.export_completed = True
-
-        except Exception as e:
-            st.error(f"❌ Error during export: {str(e)}")
-            print(f"[ERROR] Export failed: {traceback.format_exc()}")
-            st.session_state.export_in_progress = False
-    else:
-        # Shouldn't happen, but show loading
-        st.info("Preparing export...")
 
 
 # Stage 13: Completed
