@@ -1461,23 +1461,50 @@ elif current_stage == "awaiting_validation_approval_old":
         button_type = "primary" if state['is_valid'] else "secondary"
 
         if st.button(button_label, type=button_type, use_container_width=True):
-            with st.spinner("Exporting to PDF..."):
-                try:
-                    final_state = st.session_state.customizer.finalize_workflow(
-                        st.session_state.workflow_state
-                    )
-                    st.session_state.workflow_state = final_state
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error exporting: {str(e)}")
-                    st.code(traceback.format_exc())
+            try:
+                # First, just transition to export stage (no export yet)
+                st.session_state.workflow_state['current_stage'] = "export"
+                st.session_state.export_in_progress = True
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error starting export: {str(e)}")
+                st.code(traceback.format_exc())
 
 
 # Stage 12: Export (intermediate processing)
 elif current_stage == "export":
-    st.header("Exporting Resume...")
-    st.info("Please wait while your resume is being exported to PDF...")
-    st.spinner("Processing...")
+    st.header("Step 6: Exporting Resume...")
+
+    # Check if export flag is set
+    if st.session_state.get('export_in_progress'):
+        st.info("🔄 Processing your resume export, please wait...")
+
+        try:
+            # Perform the actual export
+            final_state = st.session_state.customizer.finalize_workflow(
+                st.session_state.workflow_state
+            )
+
+            # Update state with the export result
+            st.session_state.workflow_state = final_state
+
+            # Clear the flag and transition to completed
+            st.session_state.export_in_progress = False
+            st.session_state.workflow_state['current_stage'] = "completed"
+
+            st.success("✅ Export completed! Preparing final display...")
+            st.rerun()
+
+        except Exception as e:
+            st.error(f"❌ Error during export: {str(e)}")
+            st.code(traceback.format_exc())
+            st.session_state.export_in_progress = False
+            st.session_state.workflow_state['current_stage'] = "awaiting_validation_approval"
+            if st.button("⬅️ Go Back", key="export_error_back"):
+                st.rerun()
+    else:
+        st.info("Initializing export...")
+        st.rerun()
 
 
 # Stage 13: Completed
