@@ -137,7 +137,7 @@ with st.sidebar:
     st.divider()
 
     # Debug Mode Toggle
-    debug_mode = st.toggle("🐛 Debug Mode", value=False, help="Enable debug logging, full LLM responses, and detailed error messages")
+    debug_mode = st.toggle("🐛 Debug Mode", value=False, help="Enable debug logging, full LLM responses, and detailed error messages", key="sidebar_debug_toggle")
 
     if debug_mode:
         st.caption("⚠️ Debug mode enabled - Capturing all LLM interactions")
@@ -1468,8 +1468,15 @@ elif current_stage == "awaiting_validation_approval_old":
                     st.code(traceback.format_exc())
 
 
-# Stage 12-13: Export & Completed
-elif current_stage in ["export", "completed"]:
+# Stage 12: Export (intermediate processing)
+elif current_stage == "export":
+    st.header("Exporting Resume...")
+    st.info("Please wait while your resume is being exported to PDF...")
+    st.spinner("Processing...")
+
+
+# Stage 13: Completed
+elif current_stage == "completed":
     state = st.session_state.workflow_state
     st.header("Step 6: Export Complete!")
 
