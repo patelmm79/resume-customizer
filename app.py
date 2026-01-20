@@ -1498,11 +1498,13 @@ elif current_stage == "export_loading":
         )
         st.session_state.workflow_state = final_state
         st.session_state.workflow_state['current_stage'] = "completed"
-        # NO st.rerun() - let Streamlit handle it naturally via state change
     except Exception as e:
         print(f"[ERROR] Export failed: {traceback.format_exc()}")
         st.session_state.workflow_state['current_stage'] = "error"
         st.session_state.workflow_state['error'] = str(e)
+
+    # Explicitly rerun to show completed stage with new state
+    st.rerun()
 
 
 # Stage 13: Completed
