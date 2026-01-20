@@ -20,11 +20,14 @@ except ImportError:
 load_dotenv()
 
 # Initialize unified tracing (LangSmith + Langfuse)
+# Note: This is imported but not initialized here - initialization happens in app.py with caching
 try:
     from utils.langfuse_wrapper import initialize_tracing, log_llm_call
-    initialize_tracing()
 except Exception as e:
-    print(f"[WARNING] Failed to initialize tracing: {e}")
+    print(f"[WARNING] Failed to import tracing: {e}")
+    # Define stub functions if import fails
+    def log_llm_call(*args, **kwargs):
+        pass
 
 
 class LLMClient(ABC):
