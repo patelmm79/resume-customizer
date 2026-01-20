@@ -1457,14 +1457,16 @@ elif current_stage == "awaiting_validation_approval_old":
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        if st.button("⬅️ Start Over", use_container_width=True):
+        def _on_start_over_click():
             reset_app()
 
+        st.button("⬅️ Start Over", use_container_width=True, on_click=_on_start_over_click, key="validation_start_over_btn")
+
     with col2:
-        if st.button("🔄 Reselect Suggestions", use_container_width=True):
-            # Go back to suggestion selection
+        def _on_reselect_click():
             st.session_state.workflow_state['current_stage'] = "awaiting_selection"
-            st.rerun()
+
+        st.button("🔄 Reselect Suggestions", use_container_width=True, on_click=_on_reselect_click, key="validation_reselect_btn")
 
     with col3:
         button_label = "✅ Proceed to Export" if state['is_valid'] else "⚠️ Export Anyway"
