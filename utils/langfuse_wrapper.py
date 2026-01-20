@@ -80,17 +80,18 @@ def log_llm_call(
     # Log to Langfuse if enabled
     if _langfuse_client:
         try:
-            # Create a trace for the LLM call
-            trace_name = f"LLM Call - {provider.upper()}"
-
-            # Log as a simple generation
-            _langfuse_client.generation(
-                name=trace_name,
+            # Create trace for LLM call using context manager
+            with _langfuse_client.start_as_current_observation(
+                as_type="generation",
+                name=f"LLM Call - {provider.upper()}",
                 model=model,
                 input=combined_prompt,
-                output=response if not error else None,
                 metadata=metadata,
-            )
+            ) as observation:
+                # Update with output (don't include 'output' in context manager params)
+                observation.update(
+                    output=response if not error else None,
+                )
 
             # Flush to ensure traces are sent to Langfuse
             _langfuse_client.flush()
