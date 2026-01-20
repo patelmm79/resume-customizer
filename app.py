@@ -1476,7 +1476,7 @@ elif current_stage in ["export", "completed"]:
     st.success("Resume approved and exported successfully!")
 
     # Go Back button
-    if st.button("⬅️ Go Back to Approval", use_container_width=False, help="Return to approval stage to make changes"):
+    if st.button("⬅️ Go Back to Approval", use_container_width=False, help="Return to approval stage to make changes", key="export_go_back_btn"):
         st.session_state.workflow_state['current_stage'] = "awaiting_approval"
         st.rerun()
 
@@ -1506,14 +1506,16 @@ elif current_stage in ["export", "completed"]:
         pdf_filename = st.text_input(
             "PDF Filename",
             value="optimized_resume.pdf",
-            help="Enter the desired filename for your PDF"
+            help="Enter the desired filename for your PDF",
+            key="export_pdf_filename"
         )
 
     with col2:
         md_filename = st.text_input(
             "Markdown Filename",
             value="optimized_resume.md",
-            help="Enter the desired filename for your Markdown file"
+            help="Enter the desired filename for your Markdown file",
+            key="export_md_filename"
         )
 
     # PDF Formatting Controls
@@ -1564,7 +1566,7 @@ elif current_stage in ["export", "completed"]:
         )
 
     with col4:
-        if st.button("🔄 Regenerate PDF", use_container_width=True, help="Apply formatting changes and regenerate PDF"):
+        if st.button("🔄 Regenerate PDF", use_container_width=True, help="Apply formatting changes and regenerate PDF", key="export_regenerate_pdf_btn"):
             with st.spinner("Regenerating PDF with new settings..."):
                 try:
                     # Debug: Show what values we're using
@@ -1778,7 +1780,7 @@ elif current_stage in ["export", "completed"]:
             col1, col2 = st.columns(2)
 
             with col1:
-                if st.button("🔄 Revise Cover Letter", use_container_width=True):
+                if st.button("🔄 Revise Cover Letter", use_container_width=True, key="export_revise_letter_btn"):
                     with st.spinner("Revising cover letter based on feedback..."):
                         try:
                             # Revise cover letter using orchestrator
@@ -1794,7 +1796,7 @@ elif current_stage in ["export", "completed"]:
                             st.code(traceback.format_exc())
 
             with col2:
-                if st.button("✅ Approve & Export PDF", type="primary", use_container_width=True):
+                if st.button("✅ Approve & Export PDF", type="primary", use_container_width=True, key="export_approve_letter_pdf_btn"):
                     with st.spinner("Exporting cover letter to PDF..."):
                         try:
                             # Export cover letter using orchestrator
@@ -1812,7 +1814,7 @@ elif current_stage in ["export", "completed"]:
         # Offer to generate cover letter
         st.info("💡 Click below to generate a personalized cover letter based on your resume and the job description.")
 
-        if st.button("✨ Generate Cover Letter", use_container_width=True):
+        if st.button("✨ Generate Cover Letter", use_container_width=True, key="export_generate_letter_btn"):
             with st.spinner("Generating and reviewing cover letter..."):
                 try:
                     # Generate cover letter using orchestrator (includes review)
@@ -1828,7 +1830,7 @@ elif current_stage in ["export", "completed"]:
 
     st.divider()
 
-    if st.button("🎉 Start New Resume", type="primary", use_container_width=True):
+    if st.button("🎉 Start New Resume", type="primary", use_container_width=True, key="export_start_new_resume_btn"):
         reset_app()
 
 
