@@ -1297,9 +1297,13 @@ elif current_stage == "freeform_editing":
 # Stage 11: Final Scoring
 elif current_stage == "final_scoring":
     state = st.session_state.workflow_state
-    st.header("Step 5: Final Score")
 
-    with st.spinner("Calculating final score..."):
+    # Check if score has already been calculated
+    if not state.get('final_score'):
+        # First time entering this stage - calculate score without spinner
+        st.write("### Calculating Final Score")
+        st.write("Computing resume compatibility score...")
+
         try:
             from agents.agent_1_scorer import ResumeScorerAgent
 
@@ -1311,7 +1315,7 @@ elif current_stage == "final_scoring":
                 state['modified_resume']
             )
 
-            # Calculate final score
+            # Calculate final score (this may take a moment)
             agent = ResumeScorerAgent()
             result = agent.score_only(
                 final_resume,
@@ -1321,57 +1325,88 @@ elif current_stage == "final_scoring":
             # Store final score
             final_score = result['score']
             state['final_score'] = final_score
+            state['final_assessment'] = result.get('analysis', '')
             state['freeform_resume'] = final_resume  # Ensure this is saved
 
-            # Display results
-            col1, col2, col3 = st.columns(3)
-
-            with col1:
-                st.metric("Initial Score", f"{state['initial_score']}/100")
-
-            with col2:
-                st.metric("After Optimization", f"{state['new_score']}/100")
-
-            with col3:
-                improvement = final_score - state['initial_score']
-                st.metric(
-                    "Final Score",
-                    f"{final_score}/100",
-                    delta=f"+{improvement}" if improvement > 0 else str(improvement)
-                )
-
-            st.divider()
-
-            if result.get('analysis'):
-                st.subheader("Final Assessment")
-                with st.expander("View Analysis", expanded=True):
-                    st.markdown(result['analysis'])
-
-            st.divider()
-
-            col1, col2 = st.columns(2)
-
-            with col1:
-                if st.button("⬅️ Back to Edits", use_container_width=True):
-                    st.session_state.workflow_state['current_stage'] = "freeform_editing"
-                    st.rerun()
-
-            with col2:
-                if st.button("📄 Export Resume", type="primary", use_container_width=True):
-                    with st.spinner("Exporting to PDF..."):
-                        try:
-                            final_state = st.session_state.customizer.finalize_workflow(
-                                st.session_state.workflow_state
-                            )
-                            st.session_state.workflow_state = final_state
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"Error exporting: {str(e)}")
-                            st.code(traceback.format_exc())
+            # Force rerun to display results with cached state
+            st.rerun()
 
         except Exception as e:
-            st.error(f"Error calculating final score: {str(e)}")
+            print(f"[ERROR] Final scoring failed: {traceback.format_exc()}")
+            st.error(f"❌ Error calculating final score: {str(e)}")
             st.code(traceback.format_exc())
+
+    else:
+        # Display cached results
+        st.header("Step 5: Final Score")
+
+        # Display results
+        col1, col2, col3 = st.columns(3)
+
+        with col1:
+            st.metric("Initial Score", f"{state['initial_score']}/100")
+
+        with col2:
+            st.metric("After Optimization", f"{state['new_score']}/100")
+
+        with col3:
+            improvement = state['final_score'] - state['initial_score']
+            st.metric(
+                "Final Score",
+                f"{state['final_score']}/100",
+                delta=f"+{improvement}" if improvement > 0 else str(improvement)
+            )
+
+        st.divider()
+
+        if state.get('final_assessment'):
+            st.subheader("Final Assessment")
+            with st.expander("View Analysis", expanded=True):
+                st.markdown(state['final_assessment'])
+
+        st.divider()
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if st.button("⬅️ Back to Edits", use_container_width=True):
+                st.session_state.workflow_state['current_stage'] = "freeform_editing"
+                st.rerun()
+
+        with col2:
+            def _on_export_btn_click():
+                """Handle export button click."""
+                st.session_state.workflow_state['current_stage'] = "exporting"
+
+            st.button(
+                "📄 Export Resume",
+                type="primary",
+                use_container_width=True,
+                on_click=_on_export_btn_click
+            )
+
+
+# Stage 12: Exporting (handles PDF export without spinner)
+elif current_stage == "exporting":
+    state = st.session_state.workflow_state
+    st.write("### Exporting Resume to PDF")
+    st.write("Processing your resume export...")
+
+    try:
+        # Execute export
+        final_state = st.session_state.customizer.finalize_workflow(state)
+        st.session_state.workflow_state = final_state
+
+        # Check if export was successful
+        if final_state.get('pdf_bytes'):
+            st.session_state.workflow_state['current_stage'] = "completed"
+            st.rerun()
+        else:
+            st.error("Export failed: No PDF bytes generated")
+    except Exception as e:
+        print(f"[ERROR] Export failed: {traceback.format_exc()}")
+        st.error(f"❌ Error exporting: {str(e)}")
+        st.code(traceback.format_exc())
 
 
 # Stage 9b: Legacy validation approval stage (shouldn't reach here anymore)
@@ -1473,9 +1508,8 @@ elif current_stage == "awaiting_validation_approval_old":
         button_type = "primary" if state['is_valid'] else "secondary"
 
         def _on_export_click():
-            """Callback for export button - transition to loading stage first."""
-            # First transition to loading stage (minimal UI to allow DOM reconciliation)
-            st.session_state.workflow_state['current_stage'] = "export_loading"
+            """Callback for export button - transition to exporting stage."""
+            st.session_state.workflow_state['current_stage'] = "exporting"
 
         st.button(
             button_label,
@@ -1484,27 +1518,6 @@ elif current_stage == "awaiting_validation_approval_old":
             key="validation_export_btn",
             on_click=_on_export_click
         )
-
-
-# Stage 12: Export Loading (minimal UI - just text, no fancy elements)
-elif current_stage == "export_loading":
-    st.write("### Finalizing Resume Export...")
-    st.write("Processing... please wait")
-
-    # Execute export with NO widget rendering during execution
-    try:
-        final_state = st.session_state.customizer.finalize_workflow(
-            st.session_state.workflow_state
-        )
-        st.session_state.workflow_state = final_state
-        st.session_state.workflow_state['current_stage'] = "completed"
-    except Exception as e:
-        print(f"[ERROR] Export failed: {traceback.format_exc()}")
-        st.session_state.workflow_state['current_stage'] = "error"
-        st.session_state.workflow_state['error'] = str(e)
-
-    # Explicitly rerun to show completed stage with new state
-    st.rerun()
 
 
 # Stage 13: Completed
