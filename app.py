@@ -864,7 +864,7 @@ elif current_stage == "awaiting_approval":
     with col1:
         st.metric(
             "Original Score",
-            f"{state['initial_score']}/10"
+            f"{state['initial_score']}/100"
         )
 
     with col2:
@@ -1321,7 +1321,7 @@ elif current_stage == "final_scoring":
                 improvement = final_score - state['initial_score']
                 st.metric(
                     "Final Score",
-                    f"{final_score}/10",
+                    f"{final_score}/100",
                     delta=f"+{improvement}" if improvement > 0 else str(improvement)
                 )
 
@@ -1486,9 +1486,14 @@ elif current_stage in ["export", "completed"]:
             state.get('freeform_resume') or
             state.get('optimized_resume_round2') or
             state.get('optimized_resume') or
-            state['modified_resume']
+            state.get('modified_resume') or
+            state.get('original_resume') or
+            "Resume content not available"
         )
-        st.markdown(final_resume)
+        if final_resume:
+            st.markdown(final_resume)
+        else:
+            st.warning("No resume content found in state")
 
     st.divider()
 
@@ -1611,7 +1616,8 @@ elif current_stage in ["export", "completed"]:
             state.get('freeform_resume') or
             state.get('optimized_resume_round2') or
             state.get('optimized_resume') or
-            state['modified_resume']
+            state.get('modified_resume') or
+            state.get('original_resume')
         )
         if final_resume:
             st.download_button(
@@ -1631,13 +1637,15 @@ elif current_stage in ["export", "completed"]:
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.metric("Original Score", f"{state['initial_score']}/100")
+        initial_score = state.get('initial_score', 'N/A')
+        st.metric("Original Score", f"{initial_score}/100" if initial_score != 'N/A' else initial_score)
 
     with col2:
-        st.metric("Final Score", f"{state['new_score']}/100")
+        final_score = state.get('new_score', state.get('final_score', 'N/A'))
+        st.metric("Final Score", f"{final_score}/100" if final_score != 'N/A' else final_score)
 
     with col3:
-        improvement = state['score_improvement']
+        improvement = state.get('score_improvement', 0)
         st.metric("Improvement", f"+{improvement}" if improvement > 0 else str(improvement))
 
     st.divider()
