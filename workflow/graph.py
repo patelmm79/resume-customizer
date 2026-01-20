@@ -197,8 +197,8 @@ def create_cover_letter_workflow() -> StateGraph:
     Create workflow for cover letter generation (optional final step).
 
     Flow:
-    1. generate_cover_letter (Agent 7 writes)
-    2. review_cover_letter (Agent 8 reviews)
+    1. cover_letter_generation (Agent 7 writes)
+    2. cover_letter_review (Agent 8 reviews)
     3. END (waits for user to optionally provide feedback and trigger revision)
 
     Returns:
@@ -206,12 +206,12 @@ def create_cover_letter_workflow() -> StateGraph:
     """
     workflow = StateGraph(WorkflowState)
 
-    workflow.add_node("generate_cover_letter", cover_letter_generation_node)
-    workflow.add_node("review_cover_letter", review_cover_letter_node)
+    workflow.add_node("cover_letter_generation", cover_letter_generation_node)
+    workflow.add_node("review_letter", review_cover_letter_node)
 
-    workflow.set_entry_point("generate_cover_letter")
-    workflow.add_edge("generate_cover_letter", "review_cover_letter")
-    workflow.add_edge("review_cover_letter", END)
+    workflow.set_entry_point("cover_letter_generation")
+    workflow.add_edge("cover_letter_generation", "review_letter")
+    workflow.add_edge("review_letter", END)
 
     return workflow
 
