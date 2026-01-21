@@ -23,10 +23,17 @@ load_dotenv()
 SETTINGS_FILE = Path(__file__).parent.parent / ".settings.json"
 
 DEFAULT_SETTINGS = {
+    # Candidate Information
     "candidate_name": "Optimized_Resume",
+
+    # PDF Formatting
     "pdf_font_size": 9.5,
     "pdf_line_height": 1.2,
     "pdf_page_margin": 0.75,
+
+    # LLM Configuration
+    "llm_provider": "gemini",  # Options: 'gemini', 'claude', 'custom'
+    "llm_model": None,  # None = use provider default. Can be overridden by GEMINI_MODEL, CLAUDE_MODEL, etc env vars
 }
 
 
@@ -242,3 +249,34 @@ def get_settings_source() -> str:
         return "Local File (.settings.json)"
 
     return "Defaults"
+
+
+def get_saved_llm_config() -> Dict[str, Any]:
+    """
+    Get saved LLM provider and model from settings.
+
+    Returns:
+        Dictionary with 'provider' and 'model' keys
+    """
+    settings = load_settings()
+    return {
+        "provider": settings.get("llm_provider", "gemini"),
+        "model": settings.get("llm_model"),
+    }
+
+
+def set_saved_llm_config(provider: str, model: Optional[str] = None) -> bool:
+    """
+    Save LLM provider and model selection to settings.
+
+    Args:
+        provider: LLM provider ('gemini', 'claude', 'custom')
+        model: Optional specific model name
+
+    Returns:
+        True if successful, False otherwise
+    """
+    settings = load_settings()
+    settings["llm_provider"] = provider
+    settings["llm_model"] = model
+    return save_settings(settings)

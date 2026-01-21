@@ -17,6 +17,8 @@ from utils.settings import (
     load_settings,
     save_settings,
     get_settings_source,
+    get_saved_llm_config,
+    set_saved_llm_config,
     DEFAULT_SETTINGS,
 )
 
@@ -131,6 +133,57 @@ def test_settings_source_display():
     return True
 
 
+def test_llm_config():
+    """Test LLM provider and model settings."""
+    print("\n" + "=" * 60)
+    print("TEST 4: LLM Provider Settings")
+    print("=" * 60)
+
+    # Clean environment
+    os.environ.pop("RESUME_SETTINGS_STORAGE", None)
+    os.environ.pop("RESUME_SETTINGS_BUCKET", None)
+
+    # Test default LLM config
+    config = get_saved_llm_config()
+    print(f"\n✓ Default LLM config: {config}")
+    assert config["provider"] == "gemini"
+
+    # Test saving LLM config
+    if set_saved_llm_config("claude", "claude-3-5-sonnet-20241022"):
+        print("✓ Saved Claude model")
+
+        # Load and verify
+        loaded_config = get_saved_llm_config()
+        print(f"✓ Loaded LLM config: {loaded_config}")
+        assert loaded_config["provider"] == "claude"
+        assert loaded_config["model"] == "claude-3-5-sonnet-20241022"
+    else:
+        print("✗ Failed to save LLM config")
+        return False
+
+    # Test switching provider
+    if set_saved_llm_config("custom", "llama3:70b"):
+        print("✓ Saved custom model")
+
+        loaded_config = get_saved_llm_config()
+        assert loaded_config["provider"] == "custom"
+        assert loaded_config["model"] == "llama3:70b"
+    else:
+        print("✗ Failed to save custom model")
+        return False
+
+    # Reset to defaults
+    if set_saved_llm_config("gemini", None):
+        print("✓ Reset to Gemini defaults")
+        config = get_saved_llm_config()
+        assert config["provider"] == "gemini"
+    else:
+        print("✗ Failed to reset")
+        return False
+
+    return True
+
+
 def main():
     """Run all tests."""
     print("Resume Customizer - Cloud Settings Tests")
@@ -140,6 +193,7 @@ def main():
         ("Local Fallback", test_local_fallback),
         ("Cloud Config Detection", test_cloud_config_detection),
         ("Settings Source Display", test_settings_source_display),
+        ("LLM Config", test_llm_config),
     ]
 
     passed = 0

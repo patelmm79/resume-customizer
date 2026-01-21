@@ -10,7 +10,7 @@ from utils.langfuse_config import configure_langfuse
 from utils.debug import enable_debug, disable_debug, get_all_interactions, format_interaction
 from utils.langfuse_wrapper import get_tracing_status
 from utils.markdown_renderer import render_markdown_with_html
-from utils.settings import load_settings, save_settings, get_settings_source
+from utils.settings import load_settings, save_settings, get_settings_source, get_saved_llm_config, set_saved_llm_config
 
 # Configure LangSmith and Langfuse tracing at startup (cached to prevent reinit on every rerun)
 @st.cache_resource
@@ -39,15 +39,18 @@ st.set_page_config(
     layout="wide"
 )
 
-# Initialize session state
+# Initialize session state with saved settings as defaults
 if "workflow_state" not in st.session_state:
     st.session_state.workflow_state = None
 if "customizer" not in st.session_state:
     st.session_state.customizer = ResumeCustomizer()
+
+# Load LLM config from saved settings (but allow env vars to override)
+saved_llm_config = get_saved_llm_config()
 if "selected_provider" not in st.session_state:
-    st.session_state.selected_provider = "gemini"
+    st.session_state.selected_provider = saved_llm_config.get("provider", "gemini")
 if "selected_model" not in st.session_state:
-    st.session_state.selected_model = None
+    st.session_state.selected_model = saved_llm_config.get("model")
 
 
 def reset_app():
@@ -370,6 +373,40 @@ with st.sidebar:
             key="settings_pdf_page_margin"
         )
 
+        st.divider()
+
+        st.caption("**LLM Provider Settings**")
+
+        # Get available models from llm_client
+        from utils.llm_client import get_available_models
+        available_models_dict = get_available_models()
+
+        # LLM Provider Selection
+        saved_llm_config = get_saved_llm_config()
+        llm_provider = st.selectbox(
+            "Default LLM Provider",
+            options=["gemini", "claude", "custom"],
+            index=["gemini", "claude", "custom"].index(saved_llm_config["provider"]),
+            help="Default LLM provider to use for resume customization",
+            key="settings_llm_provider"
+        )
+
+        # LLM Model Selection (based on selected provider)
+        provider_models = available_models_dict.get(llm_provider, [])
+        saved_model = saved_llm_config["model"] or provider_models[0] if provider_models else None
+
+        if provider_models:
+            llm_model = st.selectbox(
+                "Default Model",
+                options=provider_models,
+                index=provider_models.index(saved_model) if saved_model in provider_models else 0,
+                help=f"Default model to use from {llm_provider.upper()} provider",
+                key="settings_llm_model"
+            )
+        else:
+            llm_model = None
+            st.warning(f"No models available for {llm_provider.upper()}. Configure {llm_provider.upper()}_MODELS in .env")
+
         # Save Settings Button
         col1, col2 = st.columns(2)
         with col1:
@@ -379,9 +416,14 @@ with st.sidebar:
                     "pdf_font_size": pdf_font_size,
                     "pdf_line_height": pdf_line_height,
                     "pdf_page_margin": pdf_page_margin,
+                    "llm_provider": llm_provider,
+                    "llm_model": llm_model,
                 }
                 if save_settings(new_settings):
                     st.success("✅ Settings saved!")
+                    # Update session state with new LLM config
+                    st.session_state.selected_provider = llm_provider
+                    st.session_state.selected_model = llm_model or provider_models[0] if provider_models else None
                 else:
                     st.error("❌ Failed to save settings")
 
