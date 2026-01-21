@@ -2,15 +2,11 @@
 # This creates a GCS bucket for persisting .settings.json across deployments
 # Only created when storage_provider = "gcs"
 #
-# Uses existing variables from main Cloud Run config:
+# Uses existing variables and provider from main Cloud Run config:
 # - project: GCP project ID
 # - region: GCP region
 # - service_name: Application name for resource naming
-
-provider "google" {
-  project = var.project
-  region  = var.region
-}
+# - provider "google": Defined in main.tf
 
 # GCS bucket for settings storage
 resource "google_storage_bucket" "settings" {
