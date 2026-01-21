@@ -22,13 +22,13 @@ Your settings persistence infrastructure is now ready to deploy. Here's what you
 
 ### On Windows
 ```bash
-cd infrastructure
+cd terraform
 deploy-settings.bat
 ```
 
 ### On Linux/macOS
 ```bash
-cd infrastructure
+cd terraform
 chmod +x deploy-settings.sh
 ./deploy-settings.sh
 ```
@@ -58,7 +58,7 @@ aws sts get-caller-identity
 
 **2. Navigate to infrastructure:**
 ```bash
-cd infrastructure
+cd terraform
 ```
 
 **3. Create `terraform.tfvars`:**
@@ -92,7 +92,7 @@ gcloud auth list
 
 **2. Navigate to infrastructure:**
 ```bash
-cd infrastructure
+cd terraform
 ```
 
 **3. Remove S3 config:**
@@ -294,23 +294,30 @@ You now have:
 ## Files Added
 
 ```
-infrastructure/
-├── terraform-s3.tf                    (S3 configuration)
-├── terraform-gcs.tf                   (GCS configuration)
-├── deploy-settings.bat                (Windows deployment script)
-├── deploy-settings.sh                 (Linux/macOS deployment script)
-├── README.md                          (Quick reference)
-├── SETTINGS_PERSISTENCE_GUIDE.md      (Complete guide)
-└── [other files...]
+terraform/
+├── main.tf                            (GCP Cloud Run - existing)
+├── variables.tf                       (Variables - existing)
+├── outputs.tf                         (Outputs - existing)
+│
+├── settings-s3.tf                     (AWS S3 configuration - NEW)
+├── settings-gcs.tf                    (GCS configuration - NEW)
+├── settings.tfvars.example            (Settings config example - NEW)
+├── SETTINGS_PERSISTENCE_GUIDE.md      (Complete guide - NEW)
+├── deploy-settings.bat                (Windows deployment script - NEW)
+├── deploy-settings.sh                 (Linux/macOS deployment script - NEW)
+├── README.md                          (Terraform directory guide - NEW)
+└── [other Terraform files...]
 
-CLOUD_DEPLOYMENT_QUICKSTART.md         (This file)
+CLOUD_DEPLOYMENT_QUICKSTART.md         (This file - in root directory)
 ```
+
+**Note**: Settings persistence files are now IN `/terraform` directory, not in a separate `/infrastructure` directory.
 
 ---
 
 ## Questions?
 
 Refer to:
-- Quick questions → `infrastructure/README.md`
-- Detailed info → `infrastructure/SETTINGS_PERSISTENCE_GUIDE.md`
-- Implementation → `utils/settings.py`
+- Terraform directory guide → `terraform/README.md`
+- Settings persistence guide → `terraform/SETTINGS_PERSISTENCE_GUIDE.md`
+- Implementation details → `utils/settings.py`
