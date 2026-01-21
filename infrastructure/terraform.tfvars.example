@@ -1,0 +1,93 @@
+# Terraform configuration for Resume Customizer Settings Persistence
+# This file contains example values for deploying cloud storage
+# Copy this to terraform.tfvars and update with your values
+
+# ============================================================================
+# AWS S3 Configuration (use this section if deploying to AWS)
+# ============================================================================
+# Uncomment this section and comment out the GCS section below
+
+# AWS region where the S3 bucket will be created
+# aws_region = "us-west-2"
+
+# Application name (used in resource naming, must be alphanumeric + hyphens)
+# app_name = "resume-customizer"
+
+
+# ============================================================================
+# Google Cloud Storage (GCS) Configuration (use this section if deploying to GCP)
+# ============================================================================
+# Uncomment this section and comment out the S3 section above
+
+# GCP project ID where the bucket will be created
+# gcp_project = "your-gcp-project-id"
+
+# GCP region for the storage bucket
+# gcp_region = "us-central1"
+
+# Application name (used in resource naming, must be alphanumeric + hyphens)
+# app_name = "resume-customizer"
+
+
+# ============================================================================
+# Important Notes
+# ============================================================================
+#
+# 1. Choose ONE: Either S3 or GCS
+#    - Uncomment the S3 section if using AWS
+#    - Uncomment the GCS section if using Google Cloud
+#    - Keep only one section uncommented
+#
+# 2. Regional Considerations:
+#    - S3: Use any valid AWS region (us-west-2, us-east-1, eu-west-1, etc.)
+#    - GCS: Use any valid GCP region (us-central1, us-east1, europe-west1, etc.)
+#
+# 3. Application Name:
+#    - Must be alphanumeric and hyphens only
+#    - Used in bucket naming to ensure global uniqueness
+#    - Default: "resume-customizer"
+#
+# 4. Credentials:
+#    - AWS: Ensure AWS CLI is configured with credentials
+#      Command: aws configure
+#      Or set: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+#    - GCP: Ensure gcloud is authenticated
+#      Command: gcloud auth login
+#      Or use service account key
+#
+# 5. Using the Deployment Script (Recommended):
+#    - The deploy-settings.sh or deploy-settings.bat script
+#      will automatically create this file for you
+#    - You only need to edit this manually if doing manual deployment
+#
+# 6. Next Steps After Configuration:
+#    1. Run: terraform init
+#    2. Run: terraform plan
+#    3. Review the plan
+#    4. Run: terraform apply
+#    5. Save the output (bucket name, credentials needed)
+#    6. Add environment variables to your deployment platform
+#
+# ============================================================================
+# Example Configurations
+# ============================================================================
+#
+# For AWS S3 in us-west-2:
+#   aws_region = "us-west-2"
+#   app_name   = "resume-customizer"
+#
+# For AWS S3 in eu-west-1 (Europe):
+#   aws_region = "eu-west-1"
+#   app_name   = "resume-customizer"
+#
+# For GCP in us-central1:
+#   gcp_project = "my-gcp-project-123"
+#   gcp_region  = "us-central1"
+#   app_name    = "resume-customizer"
+#
+# For GCP in europe-west1:
+#   gcp_project = "my-gcp-project-123"
+#   gcp_region  = "europe-west1"
+#   app_name    = "resume-customizer"
+#
+# ============================================================================
