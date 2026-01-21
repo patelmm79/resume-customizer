@@ -148,10 +148,9 @@ secret_prefix = "resume_customizer"
 # ============================================================================
 # Uncomment and modify these lines for GCS deployment
 # Leave the S3 section above commented out
-# NOTE: Remove or comment out the S3 section (aws_region and app_name above)
+# NOTE: GCS uses the 'region' variable defined above (no separate gcp_region needed)
 #
 # gcp_project = "my-gcp-project-id"
-# gcp_region  = "us-central1"
 # app_name    = "resume-customizer"
 #
 #
@@ -165,8 +164,9 @@ secret_prefix = "resume_customizer"
 #    - Keep only one section uncommented
 #
 # 2. Regional Considerations:
-#    - S3: Use any valid AWS region (us-west-2, us-east-1, eu-west-1, etc.)
-#    - GCS: Use any valid GCP region (us-central1, us-east1, europe-west1, etc.)
+#    - Both S3 and GCS use the 'region' variable at the top of this file
+#    - Valid GCP regions: us-central1, us-east1, europe-west1, asia-southeast1, etc.
+#    - For S3-only: Override with aws_region (separate variable)
 #
 # 3. Application Name:
 #    - Must be alphanumeric and hyphens only
@@ -219,23 +219,23 @@ secret_prefix = "resume_customizer"
 #
 #
 # EXAMPLE D: Google Cloud Storage (us-central1) - Ready to copy
+# (Ensure 'region' is set to us-central1 at the top of this file)
 # ============================================================================
 # gcp_project = "my-gcp-project-123"
-# gcp_region  = "us-central1"
 # app_name    = "resume-customizer"
 #
 #
 # EXAMPLE E: Google Cloud Storage (europe-west1) - Ready to copy
+# (Ensure 'region' is set to europe-west1 at the top of this file)
 # ============================================================================
 # gcp_project = "my-gcp-project-123"
-# gcp_region  = "europe-west1"
 # app_name    = "resume-customizer"
 #
 #
 # EXAMPLE F: Google Cloud Storage (asia-southeast1) - Ready to copy
+# (Ensure 'region' is set to asia-southeast1 at the top of this file)
 # ============================================================================
 # gcp_project = "my-gcp-project-123"
-# gcp_region  = "asia-southeast1"
 # app_name    = "resume-customizer"
 #
 

@@ -1,19 +1,13 @@
 # Terraform configuration for Google Cloud Storage bucket for Resume Customizer settings
 # This creates a GCS bucket for persisting .settings.json across deployments
 
-# NOTE: This file is an alternative to terraform-s3.tf
+# NOTE: This file is an alternative to settings-s3.tf
 # Use this if deploying to Google Cloud Platform instead of AWS
 
 # Set GCP project
 variable "gcp_project" {
   description = "GCP project ID"
   type        = string
-}
-
-# Set GCP region
-variable "gcp_region" {
-  description = "GCP region"
-  default     = "us-central1"
 }
 
 # Set application name
@@ -24,13 +18,13 @@ variable "app_name" {
 
 provider "google" {
   project = var.gcp_project
-  region  = var.gcp_region
+  region  = var.region
 }
 
 # GCS bucket for settings storage
 resource "google_storage_bucket" "settings" {
   name          = "${var.app_name}-settings-${var.gcp_project}"
-  location      = var.gcp_region
+  location      = var.region
   force_destroy = false
 
   versioning {
@@ -81,9 +75,9 @@ output "bucket_name" {
   value       = google_storage_bucket.settings.name
 }
 
-output "bucket_location" {
-  description = "GCS bucket location"
-  value       = google_storage_bucket.settings.location
+output "bucket_region" {
+  description = "GCS bucket region"
+  value       = var.region
 }
 
 output "service_account_email" {
