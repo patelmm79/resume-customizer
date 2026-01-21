@@ -10,7 +10,7 @@ from utils.langfuse_config import configure_langfuse
 from utils.debug import enable_debug, disable_debug, get_all_interactions, format_interaction
 from utils.langfuse_wrapper import get_tracing_status
 from utils.markdown_renderer import render_markdown_with_html
-from utils.settings import load_settings, save_settings
+from utils.settings import load_settings, save_settings, get_settings_source
 
 # Configure LangSmith and Langfuse tracing at startup (cached to prevent reinit on every rerun)
 @st.cache_resource
@@ -319,6 +319,10 @@ with st.sidebar:
     # Settings Section
     with st.expander("⚙️ Settings", expanded=False):
         st.subheader("Default Settings")
+
+        # Show settings storage source
+        settings_source = get_settings_source()
+        st.caption(f"📁 Storage: {settings_source}")
 
         # Load current settings
         current_settings = load_settings()
