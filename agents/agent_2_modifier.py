@@ -105,6 +105,47 @@ Return the complete modified resume in markdown format with ALL ORIGINAL FORMATT
         except Exception as e:
             raise Exception(f"Error modifying resume: {str(e)}")
 
+    def get_modification_analysis(
+        self,
+        suggestions: List[Dict]
+    ) -> str:
+        """
+        Generate analysis of applied modifications.
+
+        Args:
+            suggestions: List of suggestion dictionaries with user selections
+
+        Returns:
+            Analysis text describing what was modified
+        """
+        selected_suggestions = [
+            s for s in suggestions if s.get("selected", False)
+        ]
+
+        if not selected_suggestions:
+            return "No modifications were applied."
+
+        # Group suggestions by category
+        by_category = {}
+        for suggestion in selected_suggestions:
+            category = suggestion.get("category", "Other")
+            if category not in by_category:
+                by_category[category] = []
+            by_category[category].append(suggestion.get("text", "Unknown"))
+
+        # Build analysis text
+        analysis_lines = ["## Modifications Applied\n"]
+
+        for category, items in by_category.items():
+            analysis_lines.append(f"**{category}:**")
+            for item in items:
+                analysis_lines.append(f"- {item}")
+            analysis_lines.append("")
+
+        analysis_lines.append(f"\nTotal modifications: {len(selected_suggestions)} suggestion(s) applied")
+
+        return "\n".join(analysis_lines)
+
     def _clean_resume(self, resume: str) -> str:
         """
         Clean up the resume output.

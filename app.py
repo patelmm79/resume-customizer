@@ -587,6 +587,21 @@ elif current_stage == "awaiting_optimization_selection":
 
     st.divider()
 
+    # Display Agent 2 modification analysis
+    if state.get('modification_analysis'):
+        st.subheader("Agent 2: What Was Changed")
+        with st.expander("View modification details", expanded=False):
+            st.markdown(state['modification_analysis'])
+
+            st.divider()
+
+            # Show the modified resume
+            st.subheader("Modified Resume")
+            with st.expander("View your modified resume", expanded=False):
+                st.markdown(state.get('modified_resume', 'No modified resume available'))
+
+    st.divider()
+
     # Display optimization analysis
     if state.get('optimization_analysis'):
         st.subheader("Optimization Analysis")

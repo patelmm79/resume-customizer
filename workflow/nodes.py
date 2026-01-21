@@ -86,7 +86,7 @@ def modification_node(state: WorkflowState) -> Dict[str, Any]:
         state: Current workflow state
 
     Returns:
-        Updated state with modified resume
+        Updated state with modified resume and analysis
     """
     try:
         agent = ResumeModifierAgent()
@@ -96,8 +96,12 @@ def modification_node(state: WorkflowState) -> Dict[str, Any]:
             state["job_description"]
         )
 
+        # Get analysis of what was modified
+        modification_analysis = agent.get_modification_analysis(state["suggestions"])
+
         return {
             "modified_resume": modified,
+            "modification_analysis": modification_analysis,
             "current_stage": "rescoring",
             "messages": [{"role": "ai", "content": "Agent 2: Resume modified successfully"}]
         }
