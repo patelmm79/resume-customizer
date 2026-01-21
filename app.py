@@ -277,11 +277,20 @@ with st.sidebar:
     from utils.llm_client import get_available_models
     AVAILABLE_MODELS = get_available_models()
 
+    # Get dynamic list of providers from settings (supports custom added providers)
+    all_providers = get_llm_providers()
+    provider_names = [p['name'] for p in all_providers]
+
     # Provider selection
+    try:
+        default_idx = provider_names.index(st.session_state.selected_provider)
+    except (ValueError, IndexError):
+        default_idx = 0  # Fallback to first provider if current one not found
+
     provider = st.selectbox(
         "LLM Provider",
-        options=["gemini", "claude", "custom"],
-        index=["gemini", "claude", "custom"].index(st.session_state.selected_provider),
+        options=provider_names,
+        index=default_idx,
         help="Select the LLM provider to use for resume customization",
         key="provider_selector"
     )
@@ -308,16 +317,20 @@ with st.sidebar:
     from dotenv import load_dotenv
     load_dotenv()
 
+    # Get the selected provider's API key environment variable
+    selected_prov = get_provider(provider)
     config_status = "✅ Configured"
-    if provider == "gemini":
-        if not os.getenv("GEMINI_API_KEY"):
-            config_status = "❌ Missing GEMINI_API_KEY"
-    elif provider == "claude":
-        if not os.getenv("ANTHROPIC_API_KEY"):
-            config_status = "❌ Missing ANTHROPIC_API_KEY"
-    elif provider == "custom":
-        if not os.getenv("CUSTOM_LLM_API_KEY") or not os.getenv("CUSTOM_LLM_BASE_URL"):
-            config_status = "❌ Missing API config"
+
+    if selected_prov:
+        api_key_env = selected_prov.get("api_key_env")
+        if api_key_env:
+            if not os.getenv(api_key_env):
+                config_status = f"❌ Missing {api_key_env}"
+            # Special check for custom providers that also need base URL
+            if provider == "custom" and not os.getenv("CUSTOM_LLM_BASE_URL"):
+                config_status = "❌ Missing CUSTOM_LLM_BASE_URL"
+    else:
+        config_status = "❌ Provider not found"
 
     st.caption(f"Status: {config_status}")
 
