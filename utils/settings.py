@@ -22,6 +22,52 @@ load_dotenv()
 # Local file fallback
 SETTINGS_FILE = Path(__file__).parent.parent / ".settings.json"
 
+
+def _get_default_providers() -> list:
+    """
+    Build default LLM providers list from actual available models.
+
+    This reads from get_available_models() which gets models from environment variables
+    (GEMINI_MODELS, CLAUDE_MODELS, CUSTOM_MODELS) or uses hardcoded defaults.
+
+    This ensures settings.py always uses the same models as llm_client.py
+    """
+    from utils.llm_client import get_available_models
+
+    available_models = get_available_models()
+
+    providers = []
+
+    # Gemini provider
+    if "gemini" in available_models:
+        providers.append({
+            "name": "gemini",
+            "models": available_models["gemini"],
+            "api_key_env": "GEMINI_API_KEY",
+            "enabled": True,
+        })
+
+    # Claude provider
+    if "claude" in available_models:
+        providers.append({
+            "name": "claude",
+            "models": available_models["claude"],
+            "api_key_env": "ANTHROPIC_API_KEY",
+            "enabled": True,
+        })
+
+    # Custom provider
+    if "custom" in available_models:
+        providers.append({
+            "name": "custom",
+            "models": available_models["custom"],
+            "api_key_env": "CUSTOM_LLM_API_KEY",
+            "enabled": False,
+        })
+
+    return providers
+
+
 DEFAULT_SETTINGS = {
     # Candidate Information
     "candidate_name": "Optimized_Resume",
@@ -31,29 +77,10 @@ DEFAULT_SETTINGS = {
     "pdf_line_height": 1.2,
     "pdf_page_margin": 0.75,
 
-    # LLM Provider Management
-    "llm_providers": [
-        {
-            "name": "gemini",
-            "models": ["gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"],
-            "api_key_env": "GEMINI_API_KEY",
-            "enabled": True,
-        },
-        {
-            "name": "claude",
-            "models": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"],
-            "api_key_env": "ANTHROPIC_API_KEY",
-            "enabled": True,
-        },
-        {
-            "name": "custom",
-            "models": ["custom-model"],
-            "api_key_env": "CUSTOM_LLM_API_KEY",
-            "enabled": False,
-        },
-    ],
+    # LLM Provider Management - dynamically populated from available models
+    "llm_providers": _get_default_providers(),
     "llm_default_provider": "gemini",
-    "llm_default_model": "gemini-2.0-flash-exp",
+    "llm_default_model": None,  # Will be set to first available model for default provider
 }
 
 
@@ -278,10 +305,9 @@ def get_saved_llm_config() -> Dict[str, Any]:
     Returns:
         Dictionary with 'provider' and 'model' keys
     """
-    settings = load_settings()
     return {
-        "provider": settings.get("llm_default_provider", "gemini"),
-        "model": settings.get("llm_default_model"),
+        "provider": get_default_provider(),
+        "model": get_default_model(),
     }
 
 
@@ -515,6 +541,19 @@ def get_default_provider() -> Optional[str]:
 
 
 def get_default_model() -> Optional[str]:
-    """Get the default LLM model name."""
+    """
+    Get the default LLM model name.
+
+    If not explicitly set, returns the first available model for the default provider.
+    """
     settings = load_settings()
-    return settings.get("llm_default_model")
+    default_model = settings.get("llm_default_model")
+
+    # If no default model set, get first model from default provider
+    if not default_model:
+        default_provider = settings.get("llm_default_provider", "gemini")
+        provider = get_provider(default_provider)
+        if provider and provider.get("models"):
+            default_model = provider["models"][0]
+
+    return default_model
