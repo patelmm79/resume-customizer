@@ -10,7 +10,12 @@ from utils.langfuse_config import configure_langfuse
 from utils.debug import enable_debug, disable_debug, get_all_interactions, format_interaction
 from utils.langfuse_wrapper import get_tracing_status
 from utils.markdown_renderer import render_markdown_with_html
-from utils.settings import load_settings, save_settings, get_settings_source, get_saved_llm_config, set_saved_llm_config
+from utils.settings import (
+    load_settings, save_settings, get_settings_source,
+    get_saved_llm_config, set_saved_llm_config,
+    get_llm_providers, get_provider, add_provider, update_provider, delete_provider,
+    add_model, remove_model, set_default_provider, get_default_provider, get_default_model
+)
 
 # Configure LangSmith and Langfuse tracing at startup (cached to prevent reinit on every rerun)
 @st.cache_resource
@@ -45,12 +50,11 @@ if "workflow_state" not in st.session_state:
 if "customizer" not in st.session_state:
     st.session_state.customizer = ResumeCustomizer()
 
-# Load LLM config from saved settings (but allow env vars to override)
-saved_llm_config = get_saved_llm_config()
+# Load LLM config from saved settings
 if "selected_provider" not in st.session_state:
-    st.session_state.selected_provider = saved_llm_config.get("provider", "gemini")
+    st.session_state.selected_provider = get_default_provider()
 if "selected_model" not in st.session_state:
-    st.session_state.selected_model = saved_llm_config.get("model")
+    st.session_state.selected_model = get_default_model()
 
 
 def reset_app():
@@ -375,55 +379,171 @@ with st.sidebar:
 
         st.divider()
 
-        st.caption("**LLM Provider Settings**")
+        st.caption("**LLM Provider Management**")
 
-        # Get available models from llm_client
-        from utils.llm_client import get_available_models
-        available_models_dict = get_available_models()
+        # Get all providers
+        providers = get_llm_providers()
+        default_provider = get_default_provider()
+        default_model = get_default_model()
 
-        # LLM Provider Selection
-        saved_llm_config = get_saved_llm_config()
-        llm_provider = st.selectbox(
-            "Default LLM Provider",
-            options=["gemini", "claude", "custom"],
-            index=["gemini", "claude", "custom"].index(saved_llm_config["provider"]),
-            help="Default LLM provider to use for resume customization",
-            key="settings_llm_provider"
-        )
+        # Tab for viewing/managing providers
+        tab1, tab2 = st.tabs(["Manage Providers", "Set Defaults"])
 
-        # LLM Model Selection (based on selected provider)
-        provider_models = available_models_dict.get(llm_provider, [])
-        saved_model = saved_llm_config["model"] or provider_models[0] if provider_models else None
+        with tab1:
+            st.subheader("Configured Providers")
 
-        if provider_models:
-            llm_model = st.selectbox(
-                "Default Model",
-                options=provider_models,
-                index=provider_models.index(saved_model) if saved_model in provider_models else 0,
-                help=f"Default model to use from {llm_provider.upper()} provider",
-                key="settings_llm_model"
+            if providers:
+                for idx, provider in enumerate(providers):
+                    with st.expander(f"🔧 {provider['name'].upper()} (Enabled: {provider['enabled']})", expanded=(idx == 0)):
+                        col1, col2, col3 = st.columns(3)
+
+                        # Display provider info
+                        with col1:
+                            st.text(f"**API Key Env:** {provider['api_key_env']}")
+                            enabled = st.checkbox(
+                                "Enabled",
+                                value=provider['enabled'],
+                                key=f"enable_{provider['name']}"
+                            )
+
+                        with col2:
+                            st.text(f"**Models:** {len(provider['models'])}")
+
+                        with col3:
+                            if st.button("🗑️ Delete", key=f"delete_{provider['name']}", use_container_width=True):
+                                if delete_provider(provider['name']):
+                                    st.success(f"✅ Deleted {provider['name']}")
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to delete provider")
+
+                        # Update enabled status if changed
+                        if enabled != provider['enabled']:
+                            if update_provider(provider['name'], enabled=enabled):
+                                st.success(f"✅ Updated {provider['name']}")
+                                st.rerun()
+
+                        # Display and manage models
+                        st.markdown("**Models:**")
+                        model_cols = st.columns([0.7, 0.15, 0.15])
+
+                        with model_cols[0]:
+                            new_model = st.text_input(
+                                "Add new model",
+                                key=f"new_model_{provider['name']}",
+                                placeholder="Enter model name..."
+                            )
+
+                        with model_cols[1]:
+                            if st.button("Add", key=f"add_model_{provider['name']}", use_container_width=True):
+                                if new_model and add_model(provider['name'], new_model):
+                                    st.success(f"✅ Added {new_model}")
+                                    st.rerun()
+                                elif new_model:
+                                    st.error("Model already exists or failed to add")
+
+                        # List existing models with delete buttons
+                        for model in provider['models']:
+                            mcol1, mcol2 = st.columns([0.85, 0.15])
+                            with mcol1:
+                                st.text(f"  • {model}")
+                            with mcol2:
+                                if st.button("X", key=f"remove_model_{provider['name']}_{model}", use_container_width=True):
+                                    if remove_model(provider['name'], model):
+                                        st.success(f"✅ Removed {model}")
+                                        st.rerun()
+
+            else:
+                st.info("No providers configured")
+
+            st.divider()
+
+            # Add new provider
+            st.subheader("Add New Provider")
+            new_provider_name = st.text_input(
+                "Provider Name",
+                placeholder="e.g., ollama, lm-studio",
+                key="new_provider_name"
             )
-        else:
-            llm_model = None
-            st.warning(f"No models available for {llm_provider.upper()}. Configure {llm_provider.upper()}_MODELS in .env")
+            new_api_key_env = st.text_input(
+                "API Key Environment Variable",
+                placeholder="e.g., OLLAMA_API_KEY",
+                key="new_api_key_env"
+            )
+            new_models_input = st.text_area(
+                "Models (comma-separated)",
+                placeholder="e.g., llama3:70b,mistral:8x7b",
+                key="new_models_input"
+            )
+            new_enabled = st.checkbox("Enabled by default", value=True, key="new_enabled")
 
-        # Save Settings Button
+            if st.button("➕ Add Provider", use_container_width=True, key="add_provider_btn"):
+                if new_provider_name and new_api_key_env and new_models_input:
+                    models_list = [m.strip() for m in new_models_input.split(",") if m.strip()]
+                    if add_provider(new_provider_name, models_list, new_api_key_env, new_enabled):
+                        st.success(f"✅ Added provider: {new_provider_name}")
+                        st.rerun()
+                    else:
+                        st.error("Provider already exists or failed to add")
+                else:
+                    st.error("Please fill in all fields")
+
+        with tab2:
+            st.subheader("Set Default Provider & Model")
+
+            # Select default provider
+            provider_names = [p['name'] for p in providers]
+            if provider_names:
+                default_idx = provider_names.index(default_provider) if default_provider in provider_names else 0
+                selected_provider = st.selectbox(
+                    "Default Provider",
+                    options=provider_names,
+                    index=default_idx,
+                    key="select_default_provider"
+                )
+
+                # Get models for selected provider
+                selected_prov = get_provider(selected_provider)
+                if selected_prov and selected_prov['models']:
+                    model_idx = 0
+                    if default_model and default_model in selected_prov['models']:
+                        model_idx = selected_prov['models'].index(default_model)
+
+                    selected_model = st.selectbox(
+                        "Default Model",
+                        options=selected_prov['models'],
+                        index=model_idx,
+                        key="select_default_model"
+                    )
+
+                    if st.button("💾 Set as Default", use_container_width=True, key="set_default_btn"):
+                        if set_default_provider(selected_provider, selected_model):
+                            st.success(f"✅ Default set to {selected_provider} - {selected_model}")
+                            st.session_state.selected_provider = selected_provider
+                            st.session_state.selected_model = selected_model
+                            st.rerun()
+                        else:
+                            st.error("Failed to set defaults")
+                else:
+                    st.warning("Selected provider has no models")
+            else:
+                st.info("No providers configured")
+
+        st.divider()
+
+        # Save Settings Button (for PDF and Candidate settings only)
         col1, col2 = st.columns(2)
         with col1:
             if st.button("💾 Save Settings", use_container_width=True):
-                new_settings = {
+                current_settings = load_settings()
+                current_settings.update({
                     "candidate_name": candidate_name,
                     "pdf_font_size": pdf_font_size,
                     "pdf_line_height": pdf_line_height,
                     "pdf_page_margin": pdf_page_margin,
-                    "llm_provider": llm_provider,
-                    "llm_model": llm_model,
-                }
-                if save_settings(new_settings):
+                })
+                if save_settings(current_settings):
                     st.success("✅ Settings saved!")
-                    # Update session state with new LLM config
-                    st.session_state.selected_provider = llm_provider
-                    st.session_state.selected_model = llm_model or provider_models[0] if provider_models else None
                 else:
                     st.error("❌ Failed to save settings")
 

@@ -31,9 +31,29 @@ DEFAULT_SETTINGS = {
     "pdf_line_height": 1.2,
     "pdf_page_margin": 0.75,
 
-    # LLM Configuration
-    "llm_provider": "gemini",  # Options: 'gemini', 'claude', 'custom'
-    "llm_model": None,  # None = use provider default. Can be overridden by GEMINI_MODEL, CLAUDE_MODEL, etc env vars
+    # LLM Provider Management
+    "llm_providers": [
+        {
+            "name": "gemini",
+            "models": ["gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"],
+            "api_key_env": "GEMINI_API_KEY",
+            "enabled": True,
+        },
+        {
+            "name": "claude",
+            "models": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"],
+            "api_key_env": "ANTHROPIC_API_KEY",
+            "enabled": True,
+        },
+        {
+            "name": "custom",
+            "models": ["custom-model"],
+            "api_key_env": "CUSTOM_LLM_API_KEY",
+            "enabled": False,
+        },
+    ],
+    "llm_default_provider": "gemini",
+    "llm_default_model": "gemini-2.0-flash-exp",
 }
 
 
@@ -260,8 +280,8 @@ def get_saved_llm_config() -> Dict[str, Any]:
     """
     settings = load_settings()
     return {
-        "provider": settings.get("llm_provider", "gemini"),
-        "model": settings.get("llm_model"),
+        "provider": settings.get("llm_default_provider", "gemini"),
+        "model": settings.get("llm_default_model"),
     }
 
 
@@ -277,6 +297,224 @@ def set_saved_llm_config(provider: str, model: Optional[str] = None) -> bool:
         True if successful, False otherwise
     """
     settings = load_settings()
-    settings["llm_provider"] = provider
-    settings["llm_model"] = model
+    settings["llm_default_provider"] = provider
+    settings["llm_default_model"] = model
     return save_settings(settings)
+
+
+def get_llm_providers() -> list:
+    """
+    Get list of all configured LLM providers.
+
+    Returns:
+        List of provider dictionaries with name, models, api_key_env, and enabled status
+    """
+    settings = load_settings()
+    return settings.get("llm_providers", DEFAULT_SETTINGS.get("llm_providers", []))
+
+
+def get_provider(name: str) -> Optional[Dict[str, Any]]:
+    """
+    Get a specific LLM provider by name.
+
+    Args:
+        name: Provider name
+
+    Returns:
+        Provider dictionary or None if not found
+    """
+    providers = get_llm_providers()
+    for provider in providers:
+        if provider["name"] == name:
+            return provider
+    return None
+
+
+def add_provider(name: str, models: list, api_key_env: str, enabled: bool = True) -> bool:
+    """
+    Add a new LLM provider to settings.
+
+    Args:
+        name: Provider name (unique identifier)
+        models: List of model names available for this provider
+        api_key_env: Environment variable name for API key
+        enabled: Whether provider is enabled by default
+
+    Returns:
+        True if successful, False otherwise
+    """
+    settings = load_settings()
+
+    # Check if provider already exists
+    for provider in settings.get("llm_providers", []):
+        if provider["name"] == name:
+            return False  # Provider already exists
+
+    # Add new provider
+    new_provider = {
+        "name": name,
+        "models": models,
+        "api_key_env": api_key_env,
+        "enabled": enabled,
+    }
+    settings["llm_providers"].append(new_provider)
+
+    return save_settings(settings)
+
+
+def update_provider(name: str, models: Optional[list] = None,
+                   api_key_env: Optional[str] = None,
+                   enabled: Optional[bool] = None) -> bool:
+    """
+    Update an existing LLM provider.
+
+    Args:
+        name: Provider name
+        models: Optional new list of models
+        api_key_env: Optional new API key environment variable name
+        enabled: Optional new enabled status
+
+    Returns:
+        True if successful, False otherwise
+    """
+    settings = load_settings()
+
+    for provider in settings.get("llm_providers", []):
+        if provider["name"] == name:
+            if models is not None:
+                provider["models"] = models
+            if api_key_env is not None:
+                provider["api_key_env"] = api_key_env
+            if enabled is not None:
+                provider["enabled"] = enabled
+            return save_settings(settings)
+
+    return False  # Provider not found
+
+
+def delete_provider(name: str) -> bool:
+    """
+    Delete an LLM provider from settings.
+
+    Args:
+        name: Provider name
+
+    Returns:
+        True if successful, False otherwise
+    """
+    settings = load_settings()
+    original_count = len(settings.get("llm_providers", []))
+
+    settings["llm_providers"] = [
+        p for p in settings.get("llm_providers", [])
+        if p["name"] != name
+    ]
+
+    # If we deleted the default provider, reset to first available
+    if settings.get("llm_default_provider") == name:
+        if settings["llm_providers"]:
+            settings["llm_default_provider"] = settings["llm_providers"][0]["name"]
+            settings["llm_default_model"] = settings["llm_providers"][0]["models"][0]
+        else:
+            settings["llm_default_provider"] = None
+            settings["llm_default_model"] = None
+
+    if len(settings.get("llm_providers", [])) < original_count:
+        return save_settings(settings)
+
+    return False  # Provider not found
+
+
+def add_model(provider_name: str, model: str) -> bool:
+    """
+    Add a model to an existing provider.
+
+    Args:
+        provider_name: Provider name
+        model: Model name to add
+
+    Returns:
+        True if successful, False otherwise
+    """
+    settings = load_settings()
+
+    for provider in settings.get("llm_providers", []):
+        if provider["name"] == provider_name:
+            if model not in provider["models"]:
+                provider["models"].append(model)
+                return save_settings(settings)
+            return False  # Model already exists
+
+    return False  # Provider not found
+
+
+def remove_model(provider_name: str, model: str) -> bool:
+    """
+    Remove a model from a provider.
+
+    Args:
+        provider_name: Provider name
+        model: Model name to remove
+
+    Returns:
+        True if successful, False otherwise
+    """
+    settings = load_settings()
+
+    for provider in settings.get("llm_providers", []):
+        if provider["name"] == provider_name:
+            if model in provider["models"]:
+                provider["models"].remove(model)
+
+                # If this was the default model, reset to first model
+                if settings.get("llm_default_model") == model and settings.get("llm_default_provider") == provider_name:
+                    if provider["models"]:
+                        settings["llm_default_model"] = provider["models"][0]
+                    else:
+                        settings["llm_default_model"] = None
+
+                return save_settings(settings)
+            return False  # Model not found
+
+    return False  # Provider not found
+
+
+def set_default_provider(name: str, model: Optional[str] = None) -> bool:
+    """
+    Set the default LLM provider.
+
+    Args:
+        name: Provider name
+        model: Optional specific model to set as default
+
+    Returns:
+        True if successful, False otherwise
+    """
+    provider = get_provider(name)
+    if not provider:
+        return False
+
+    settings = load_settings()
+    settings["llm_default_provider"] = name
+
+    if model:
+        if model not in provider["models"]:
+            return False
+        settings["llm_default_model"] = model
+    else:
+        # Use first model as default
+        settings["llm_default_model"] = provider["models"][0] if provider["models"] else None
+
+    return save_settings(settings)
+
+
+def get_default_provider() -> Optional[str]:
+    """Get the default LLM provider name."""
+    settings = load_settings()
+    return settings.get("llm_default_provider", "gemini")
+
+
+def get_default_model() -> Optional[str]:
+    """Get the default LLM model name."""
+    settings = load_settings()
+    return settings.get("llm_default_model")

@@ -19,6 +19,16 @@ from utils.settings import (
     get_settings_source,
     get_saved_llm_config,
     set_saved_llm_config,
+    get_llm_providers,
+    get_provider,
+    add_provider,
+    update_provider,
+    delete_provider,
+    add_model,
+    remove_model,
+    set_default_provider,
+    get_default_provider,
+    get_default_model,
     DEFAULT_SETTINGS,
 )
 
@@ -184,6 +194,100 @@ def test_llm_config():
     return True
 
 
+def test_provider_management():
+    """Test LLM provider CRUD operations."""
+    print("\n" + "=" * 60)
+    print("TEST 5: LLM Provider Management")
+    print("=" * 60)
+
+    # Clean environment
+    os.environ.pop("RESUME_SETTINGS_STORAGE", None)
+    os.environ.pop("RESUME_SETTINGS_BUCKET", None)
+
+    # Test getting default providers
+    providers = get_llm_providers()
+    print(f"\n✓ Default providers: {len(providers)}")
+    assert len(providers) >= 3  # Should have gemini, claude, custom
+
+    # Test getting specific provider
+    gemini = get_provider("gemini")
+    print(f"✓ Found Gemini provider with {len(gemini['models'])} models")
+    assert gemini is not None
+
+    # Test adding a new provider
+    if add_provider("ollama", ["llama3:70b", "mistral:8x7b"], "OLLAMA_API_KEY", True):
+        print("✓ Added new Ollama provider")
+
+        # Verify it was added
+        providers = get_llm_providers()
+        assert len(providers) == 4
+        ollama = get_provider("ollama")
+        assert ollama is not None
+        assert len(ollama["models"]) == 2
+    else:
+        print("✗ Failed to add Ollama provider")
+        return False
+
+    # Test adding a model to provider
+    if add_model("ollama", "neural-chat:8b"):
+        print("✓ Added model to Ollama")
+
+        ollama = get_provider("ollama")
+        assert "neural-chat:8b" in ollama["models"]
+    else:
+        print("✗ Failed to add model")
+        return False
+
+    # Test removing a model
+    if remove_model("ollama", "mistral:8x7b"):
+        print("✓ Removed model from Ollama")
+
+        ollama = get_provider("ollama")
+        assert "mistral:8x7b" not in ollama["models"]
+    else:
+        print("✗ Failed to remove model")
+        return False
+
+    # Test updating provider
+    if update_provider("ollama", enabled=False):
+        print("✓ Disabled Ollama provider")
+
+        ollama = get_provider("ollama")
+        assert ollama["enabled"] == False
+    else:
+        print("✗ Failed to update provider")
+        return False
+
+    # Test setting default provider
+    if set_default_provider("ollama", "llama3:70b"):
+        print("✓ Set Ollama as default provider")
+
+        default = get_default_provider()
+        assert default == "ollama"
+
+        default_model = get_default_model()
+        assert default_model == "llama3:70b"
+    else:
+        print("✗ Failed to set default provider")
+        return False
+
+    # Test deleting provider
+    if delete_provider("ollama"):
+        print("✓ Deleted Ollama provider")
+
+        providers = get_llm_providers()
+        assert get_provider("ollama") is None
+
+        # Default should have changed
+        default = get_default_provider()
+        assert default != "ollama"
+    else:
+        print("✗ Failed to delete provider")
+        return False
+
+    return True
+
+
 def main():
     """Run all tests."""
     print("Resume Customizer - Cloud Settings Tests")
@@ -194,6 +298,7 @@ def main():
         ("Cloud Config Detection", test_cloud_config_detection),
         ("Settings Source Display", test_settings_source_display),
         ("LLM Config", test_llm_config),
+        ("Provider Management", test_provider_management),
     ]
 
     passed = 0
