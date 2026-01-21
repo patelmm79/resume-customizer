@@ -301,12 +301,23 @@ with st.sidebar:
         st.session_state.selected_model = None  # Reset model selection
 
     # Model selection based on provider
-    available_models = AVAILABLE_MODELS.get(provider, [])
+    # Priority: Use models from settings (includes user-added models), fallback to environment variable models
+    selected_provider_obj = get_provider(provider)
+    if selected_provider_obj and selected_provider_obj.get('models'):
+        available_models = selected_provider_obj['models']
+    else:
+        available_models = AVAILABLE_MODELS.get(provider, [])
 
     if available_models:
+        # Ensure selected model is in the available list
+        model_idx = 0
+        if st.session_state.selected_model in available_models:
+            model_idx = available_models.index(st.session_state.selected_model)
+
         model = st.selectbox(
             "Model",
             options=available_models,
+            index=model_idx,
             help=f"Select the specific {provider} model to use",
             key="model_selector"
         )
