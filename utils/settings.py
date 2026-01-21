@@ -31,57 +31,95 @@ def _get_default_providers() -> list:
     (GEMINI_MODELS, CLAUDE_MODELS, CUSTOM_MODELS) or uses hardcoded defaults.
 
     This ensures settings.py always uses the same models as llm_client.py
+
+    Returns empty list if import fails (graceful degradation).
     """
-    from utils.llm_client import get_available_models
+    try:
+        from utils.llm_client import get_available_models
 
-    available_models = get_available_models()
+        available_models = get_available_models()
 
-    providers = []
+        providers = []
 
-    # Gemini provider
-    if "gemini" in available_models:
-        providers.append({
-            "name": "gemini",
-            "models": available_models["gemini"],
-            "api_key_env": "GEMINI_API_KEY",
-            "enabled": True,
-        })
+        # Gemini provider
+        if "gemini" in available_models:
+            providers.append({
+                "name": "gemini",
+                "models": available_models["gemini"],
+                "api_key_env": "GEMINI_API_KEY",
+                "enabled": True,
+            })
 
-    # Claude provider
-    if "claude" in available_models:
-        providers.append({
-            "name": "claude",
-            "models": available_models["claude"],
-            "api_key_env": "ANTHROPIC_API_KEY",
-            "enabled": True,
-        })
+        # Claude provider
+        if "claude" in available_models:
+            providers.append({
+                "name": "claude",
+                "models": available_models["claude"],
+                "api_key_env": "ANTHROPIC_API_KEY",
+                "enabled": True,
+            })
 
-    # Custom provider
-    if "custom" in available_models:
-        providers.append({
-            "name": "custom",
-            "models": available_models["custom"],
-            "api_key_env": "CUSTOM_LLM_API_KEY",
-            "enabled": False,
-        })
+        # Custom provider
+        if "custom" in available_models:
+            providers.append({
+                "name": "custom",
+                "models": available_models["custom"],
+                "api_key_env": "CUSTOM_LLM_API_KEY",
+                "enabled": False,
+            })
 
-    return providers
+        return providers
+    except Exception as e:
+        print(f"[WARNING] Failed to get default providers: {e}")
+        print("[INFO] Using fallback provider defaults")
+        # Fallback to hardcoded defaults if import fails
+        return [
+            {
+                "name": "gemini",
+                "models": ["gemini-2.0-flash-exp", "gemini-1.5-pro", "gemini-1.5-flash"],
+                "api_key_env": "GEMINI_API_KEY",
+                "enabled": True,
+            },
+            {
+                "name": "claude",
+                "models": ["claude-3-5-sonnet-20241022", "claude-3-5-haiku-20241022", "claude-3-opus-20240229"],
+                "api_key_env": "ANTHROPIC_API_KEY",
+                "enabled": True,
+            },
+            {
+                "name": "custom",
+                "models": ["custom-model"],
+                "api_key_env": "CUSTOM_LLM_API_KEY",
+                "enabled": False,
+            },
+        ]
 
 
-DEFAULT_SETTINGS = {
-    # Candidate Information
-    "candidate_name": "Optimized_Resume",
+# Initialize DEFAULT_SETTINGS with error handling
+def _get_default_settings() -> Dict[str, Any]:
+    """
+    Get default settings with error handling.
 
-    # PDF Formatting
-    "pdf_font_size": 9.5,
-    "pdf_line_height": 1.2,
-    "pdf_page_margin": 0.75,
+    This is called once at module load time to safely initialize DEFAULT_SETTINGS.
+    If any step fails, graceful fallbacks are used.
+    """
+    return {
+        # Candidate Information
+        "candidate_name": "Optimized_Resume",
 
-    # LLM Provider Management - dynamically populated from available models
-    "llm_providers": _get_default_providers(),
-    "llm_default_provider": "gemini",
-    "llm_default_model": None,  # Will be set to first available model for default provider
-}
+        # PDF Formatting
+        "pdf_font_size": 9.5,
+        "pdf_line_height": 1.2,
+        "pdf_page_margin": 0.75,
+
+        # LLM Provider Management - dynamically populated from available models
+        "llm_providers": _get_default_providers(),
+        "llm_default_provider": "gemini",
+        "llm_default_model": None,  # Will be set to first available model for default provider
+    }
+
+
+DEFAULT_SETTINGS = _get_default_settings()
 
 
 def _get_storage_type() -> str:
@@ -183,12 +221,23 @@ def _save_to_cloud(settings: Dict[str, Any]) -> bool:
 
 def load_settings() -> Dict[str, Any]:
     """
-    Load settings from cloud storage or local file.
+    Load settings from cloud storage or local file with safe defaults merging.
 
     Priority order:
     1. Cloud Storage (if configured and available)
     2. Local .settings.json file
     3. Built-in defaults
+
+    Settings are merged intelligently:
+    - Starts with DEFAULT_SETTINGS (ensures new settings always have defaults)
+    - Saved settings override defaults (preserves user customizations)
+    - User settings persist across code updates (via .gitignore)
+
+    This approach ensures:
+    - Adding new settings: Existing users get defaults automatically
+    - Removing settings: Old .settings.json files harmlessly keep removed settings
+    - Code updates: Don't affect user .settings.json (it's .gitignored)
+    - Cloud deployments: Use S3/GCS for persistence across redeploys
 
     Returns:
         Dictionary of settings merged from all available sources
