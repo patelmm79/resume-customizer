@@ -10,6 +10,7 @@ from utils.langfuse_config import configure_langfuse
 from utils.debug import enable_debug, disable_debug, get_all_interactions, format_interaction
 from utils.langfuse_wrapper import get_tracing_status
 from utils.markdown_renderer import render_markdown_with_html
+from utils.settings import load_settings, save_settings
 
 # Configure LangSmith and Langfuse tracing at startup (cached to prevent reinit on every rerun)
 @st.cache_resource
@@ -312,6 +313,82 @@ with st.sidebar:
             config_status = "❌ Missing API config"
 
     st.caption(f"Status: {config_status}")
+
+    st.divider()
+
+    # Settings Section
+    with st.expander("⚙️ Settings", expanded=False):
+        st.subheader("Default Settings")
+
+        # Load current settings
+        current_settings = load_settings()
+
+        # Candidate Name
+        candidate_name = st.text_input(
+            "Candidate Name",
+            value=current_settings.get("candidate_name", "Optimized_Resume"),
+            help="This will be used in the exported PDF and Markdown filenames",
+            key="settings_candidate_name"
+        )
+
+        st.caption("**PDF Formatting Defaults**")
+
+        # PDF Font Size
+        pdf_font_size = st.slider(
+            "Font Size (px)",
+            min_value=7.0,
+            max_value=14.0,
+            value=float(current_settings.get("pdf_font_size", 9.5)),
+            step=0.5,
+            help="Default font size for PDF export",
+            key="settings_pdf_font_size"
+        )
+
+        # PDF Line Height
+        pdf_line_height = st.slider(
+            "Line Height",
+            min_value=1.0,
+            max_value=1.8,
+            value=float(current_settings.get("pdf_line_height", 1.2)),
+            step=0.1,
+            help="Default line height for PDF export (space between lines)",
+            key="settings_pdf_line_height"
+        )
+
+        # PDF Page Margin
+        pdf_page_margin = st.slider(
+            "Page Margin (inches)",
+            min_value=0.5,
+            max_value=1.0,
+            value=float(current_settings.get("pdf_page_margin", 0.75)),
+            step=0.05,
+            help="Default page margin for PDF export",
+            key="settings_pdf_page_margin"
+        )
+
+        # Save Settings Button
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("💾 Save Settings", use_container_width=True):
+                new_settings = {
+                    "candidate_name": candidate_name,
+                    "pdf_font_size": pdf_font_size,
+                    "pdf_line_height": pdf_line_height,
+                    "pdf_page_margin": pdf_page_margin,
+                }
+                if save_settings(new_settings):
+                    st.success("✅ Settings saved!")
+                else:
+                    st.error("❌ Failed to save settings")
+
+        with col2:
+            if st.button("🔄 Reset to Defaults", use_container_width=True):
+                from utils.settings import DEFAULT_SETTINGS
+                if save_settings(DEFAULT_SETTINGS.copy()):
+                    st.success("✅ Settings reset to defaults!")
+                    st.rerun()
+                else:
+                    st.error("❌ Failed to reset settings")
 
     st.divider()
     st.header("Workflow Stages")
@@ -1568,12 +1645,16 @@ elif current_stage == "completed":
     # Export options
     st.subheader("Download Options")
 
+    # Load settings for defaults
+    app_settings = load_settings()
+    default_candidate_name = app_settings.get("candidate_name", "Optimized_Resume")
+
     col1, col2 = st.columns(2)
 
     with col1:
         pdf_filename = st.text_input(
             "PDF Filename",
-            value="optimized_resume.pdf",
+            value=f"{default_candidate_name}.pdf",
             help="Enter the desired filename for your PDF",
             key="export_pdf_filename"
         )
@@ -1581,7 +1662,7 @@ elif current_stage == "completed":
     with col2:
         md_filename = st.text_input(
             "Markdown Filename",
-            value="optimized_resume.md",
+            value=f"{default_candidate_name}.md",
             help="Enter the desired filename for your Markdown file",
             key="export_md_filename"
         )
@@ -1590,13 +1671,18 @@ elif current_stage == "completed":
     st.markdown("#### PDF Formatting")
     st.caption("Adjust these settings to fit your resume on one page. Decrease values to fit more content.")
 
+    # Use settings defaults for PDF formatting
+    default_font_size = app_settings.get("pdf_font_size", 9.5)
+    default_line_height = app_settings.get("pdf_line_height", 1.2)
+    default_page_margin = app_settings.get("pdf_page_margin", 0.75)
+
     # Ensure PDF formatting defaults are set in state (handle None values too)
     if not st.session_state.workflow_state.get('pdf_font_size'):
-        st.session_state.workflow_state['pdf_font_size'] = 9.5
+        st.session_state.workflow_state['pdf_font_size'] = default_font_size
     if not st.session_state.workflow_state.get('pdf_line_height'):
-        st.session_state.workflow_state['pdf_line_height'] = 1.2
+        st.session_state.workflow_state['pdf_line_height'] = default_line_height
     if not st.session_state.workflow_state.get('pdf_page_margin'):
-        st.session_state.workflow_state['pdf_page_margin'] = 0.75
+        st.session_state.workflow_state['pdf_page_margin'] = default_page_margin
 
     col1, col2, col3, col4 = st.columns(4)
 
