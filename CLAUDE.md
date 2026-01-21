@@ -429,11 +429,86 @@ final_state = customizer.run_complete_workflow(
 - ✅ Error handling and recovery
 - ✅ Legacy compatibility layer
 
+## Cloud Deployment & Infrastructure
+
+### Settings Persistence (Critical for Cloud Deployments)
+
+The application includes **persistent settings storage** for cloud deployments:
+
+- **Problem Solved**: User settings (LLM provider, formatting preferences, etc.) are automatically persisted across deployments
+- **Storage Options**: AWS S3 or Google Cloud Storage (automatic fallback to local .settings.json)
+- **Deployment Targets**: Streamlit Cloud, Heroku, Railway, Docker, or any cloud platform
+
+**Key Features**:
+- ✅ Settings survive app restarts and redeployments
+- ✅ Graceful fallback if cloud storage unavailable
+- ✅ Encryption at rest and versioning enabled
+- ✅ Cost: ~$0-$1/month
+- ✅ Automated deployment scripts (Windows & Linux/macOS)
+
+### Infrastructure Setup
+
+**Location**: `/terraform` directory contains ALL infrastructure-as-code:
+
+```
+terraform/
+├── main.tf                      # Google Cloud Run deployment
+├── settings-s3.tf               # AWS S3 bucket (settings)
+├── settings-gcs.tf              # Google Cloud Storage bucket (settings)
+├── deploy-settings.bat          # Windows deployment automation
+├── deploy-settings.sh           # Linux/macOS deployment automation
+├── README.md                    # Terraform directory guide
+└── SETTINGS_PERSISTENCE_GUIDE.md # Complete deployment guide
+```
+
+**Quick Start**:
+```bash
+cd terraform
+./deploy-settings.sh    # Linux/macOS
+# or
+deploy-settings.bat     # Windows
+```
+
+**Supported Deployments**:
+- Google Cloud Run (GCP) - Full application
+- AWS S3 + Any cloud platform - Settings persistence only
+- Google Cloud Storage + Any cloud platform - Settings persistence only
+- Streamlit Cloud, Heroku, Railway, Docker, etc. - With settings persistence
+
+See `CLOUD_DEPLOYMENT_QUICKSTART.md` for detailed deployment instructions.
+
+### Settings System
+
+**Files**:
+- `utils/settings.py` - Core settings management
+- `.settings.json` - Local settings file (gitignored for development)
+- Cloud buckets - Persisted settings for cloud deployments
+
+**Persisted Settings**:
+- Candidate name
+- PDF formatting (font size, line height, margins)
+- LLM provider selection (Gemini, Claude, Custom, or user-added)
+- Selected LLM model
+- Custom providers and models
+
+**Load Priority**:
+1. Cloud storage (if configured and available)
+2. Local `.settings.json` file
+3. Built-in defaults
+
 ## API Requirements
 
 - **Gemini API Key**: Required for LLM operations
   - Get your key from: https://makersuite.google.com/app/apikey
   - Model: gemini-2.0-flash-exp (configurable)
+
+- **AWS S3** (optional, for cloud settings persistence):
+  - AWS credentials or IAM role
+  - Deployed automatically via Terraform
+
+- **Google Cloud Storage** (optional, for cloud settings persistence):
+  - GCP service account (created automatically via Terraform)
+  - Or deploy to GCP with IAM roles
 
 ## Development Notes
 
