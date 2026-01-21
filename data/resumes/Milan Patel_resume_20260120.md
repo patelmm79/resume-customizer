@@ -28,20 +28,18 @@ Versatility: Whether architecting ML/AI platforms, engaging C-suite stakeholders
 
 
 **Senior Director of Data Science** | <span style="color: #1a73e8;">**Adara**</span>  | New York, NY, US | *Jan 2020 - Mar 2025*\
-*Adara provides programmatic media measurement and targeting products to the travel and tourism industry.  I joined as head of Field Data Science, eventually assuming responsibilities for all data science and analytics functions.*\
-  ***Enterprise AI Strategy & Product Leadership***
+*Adara provides programmatic media measurement and targeting products to the travel and tourism industry.  I joined as head of Field Data Science, eventually assuming responsibilities for all data science and analytics functions.*
 
+***Enterprise AI Strategy & Product Leadership***
 * Directed global data science & analytics product roadmap and strategy as Head of Data Science and Analytics, increasing revenue 1.5x year-over-year through strategic AI/ML platform investments and product innovation.
 * Architected enterprise data infrastructure (medallion architecture) supporting $100M+ in annual revenue, enabling 50% increase in international data supply and 10% boost in predictive model performance across the travel and tourism vertical.
 
-  ***Scaling AI/ML Operations & Cost Optimization***
-
+***Scaling AI/ML Operations & Cost Optimization***
 * Reduced analytics per-report costs by 95% through systematic operating model transformation—migrating from bespoke, resource-intensive customizations to productized, cloud-native solutions that improved delivery efficiency while maintaining quality standards.
 * Led platform migration to Google Vertex AI (Kubeflow), reducing model deployment cycles by 60% (5 days → 2 days) and cutting Google Cloud infrastructure costs by 25% per model, enabling faster experimentation and scalability.
 * Architected comprehensive MLOps pipeline and governance framework, establishing foundational infrastructure for future agentic AI workflows.
 
-  ***Revenue Growth & Product Innovation***
-
+***Revenue Growth & Product Innovation***
 * Innovated analytical reporting products for connected TV and DOOH campaigns, revealing performance by attributed travel activity and generating $250k in annual recurring revenue through new product-market fit.
 * Tripled lead generation through cross-functional collaboration on GTM strategy, refining content creation and market trend dissemination to align technical insights with stakeholder and partner engagement.
 * Led technical pre-sales and solution architecture discussions with 50+ enterprise prospects, translating complex analytics capabilities into business-aligned value propositions.
