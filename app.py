@@ -9,6 +9,7 @@ from utils.langsmith_config import configure_langsmith
 from utils.langfuse_config import configure_langfuse
 from utils.debug import enable_debug, disable_debug, get_all_interactions, format_interaction
 from utils.langfuse_wrapper import get_tracing_status
+from utils.markdown_renderer import render_markdown_with_html
 
 # Configure LangSmith and Langfuse tracing at startup (cached to prevent reinit on every rerun)
 @st.cache_resource
@@ -598,7 +599,7 @@ elif current_stage == "awaiting_optimization_selection":
             # Show the modified resume
             st.subheader("Modified Resume")
             with st.expander("View your modified resume", expanded=False):
-                st.markdown(state.get('modified_resume', 'No modified resume available'))
+                render_markdown_with_html(st, state.get('modified_resume', 'No modified resume available'))
 
     st.divider()
 
@@ -996,7 +997,7 @@ elif current_stage == "awaiting_approval":
     with col1:
         st.subheader("Original Resume")
         with st.expander("View Original", expanded=False):
-            st.markdown(state['original_resume'])
+            render_markdown_with_html(st, state['original_resume'])
 
     with col2:
         st.subheader("Optimized Resume")
@@ -1007,7 +1008,7 @@ elif current_stage == "awaiting_approval":
                 state.get('optimized_resume') or
                 state['modified_resume']
             )
-            st.markdown(final_resume)
+            render_markdown_with_html(st, final_resume)
 
     st.divider()
 
@@ -1558,7 +1559,7 @@ elif current_stage == "completed":
             "Resume content not available"
         )
         if final_resume:
-            st.markdown(final_resume)
+            render_markdown_with_html(st, final_resume)
         else:
             st.warning("No resume content found in state")
 
@@ -1731,7 +1732,7 @@ elif current_stage == "completed":
 
             # Display cover letter
             with st.expander("View Final Cover Letter", expanded=True):
-                st.markdown(state['cover_letter'])
+                render_markdown_with_html(st, state['cover_letter'])
 
             # Download cover letter PDF
             col1, col2 = st.columns(2)
@@ -1758,7 +1759,7 @@ elif current_stage == "completed":
 
             # Display the cover letter
             with st.expander("View Cover Letter", expanded=True):
-                st.markdown(state['cover_letter'])
+                render_markdown_with_html(st, state['cover_letter'])
 
             # Show summary
             if state.get('cover_letter_summary'):
@@ -1830,7 +1831,7 @@ elif current_stage == "completed":
             # Show revision notes if this is a revised version
             if state.get('cover_letter_revision_notes'):
                 with st.expander("📝 Revision Notes"):
-                    st.markdown(state['cover_letter_revision_notes'])
+                    render_markdown_with_html(st, state['cover_letter_revision_notes'])
 
             st.divider()
 
