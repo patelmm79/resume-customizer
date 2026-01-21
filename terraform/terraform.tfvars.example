@@ -129,113 +129,91 @@ secret_prefix = "resume_customizer"
 # SETTINGS PERSISTENCE (S3 or GCS for .settings.json storage)
 # ============================================================================
 #
-# CHOOSE ONE: AWS S3 OR GOOGLE CLOUD STORAGE
-#
 # Settings persistence ensures user settings (LLM provider, formatting, etc.)
-# survive cloud deployments and app restarts. This section configures where
-# to store the .settings.json file.
+# survive cloud deployments and app restarts.
 #
-# OPTION 1: AWS S3 (Recommended for AWS deployments)
-# ============================================================================
-# Uncomment and modify these lines for S3 deployment
-# Leave the GCS section commented out
-#
-# aws_region = "us-west-2"
-# app_name   = "resume-customizer"
-#
-#
-# OPTION 2: Google Cloud Storage (Recommended for GCP deployments)
-# ============================================================================
-# Uncomment and modify these lines for GCS deployment
-# Leave the S3 section above commented out
-# NOTE: GCS uses the 'region' variable defined above (no separate gcp_region needed)
-#
-# gcp_project = "my-gcp-project-id"
-# app_name    = "resume-customizer"
-#
+# Set storage_provider to choose where to persist settings:
+# - "s3"  → AWS S3 bucket (requires AWS credentials)
+# - "gcs" → Google Cloud Storage bucket (requires gcp_project)
+# - ""    → Disable settings persistence (settings lost on redeploy)
 #
 # ============================================================================
-# Important Notes for Settings Persistence
+# OPTION 1: AWS S3 Persistence
 # ============================================================================
+# Uncomment this block to enable S3 settings persistence:
 #
-# 1. Choose ONE: Either S3 or GCS
-#    - Uncomment the S3 section if using AWS
-#    - Uncomment the GCS section if using Google Cloud
-#    - Keep only one section uncommented
+# storage_provider = "s3"
+# aws_region       = "us-west-2"
+# app_name         = "resume-customizer"
 #
-# 2. Regional Considerations:
-#    - Both S3 and GCS use the 'region' variable at the top of this file
-#    - Valid GCP regions: us-central1, us-east1, europe-west1, asia-southeast1, etc.
-#    - For S3-only: Override with aws_region (separate variable)
+# Make sure AWS credentials are configured:
+#   Command: aws configure
+#   Or set: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
 #
-# 3. Application Name:
-#    - Must be alphanumeric and hyphens only
-#    - Used in bucket naming to ensure global uniqueness
-#    - Default: "resume-customizer"
-#
-# 4. Credentials:
-#    - AWS: Ensure AWS CLI is configured with credentials
-#      Command: aws configure
-#      Or set: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-#    - GCP: Ensure gcloud is authenticated
-#      Command: gcloud auth login
-#      Or use service account key
-#
-# 5. Using the Deployment Script (RECOMMENDED):
-#    - The deploy-settings.sh or deploy-settings.bat script
-#      will automatically configure this section for you
-#    - You only need to edit this manually if doing manual deployment
-#
-# 6. Next Steps After Configuration:
-#    1. Run: terraform init
-#    2. Run: terraform plan
-#    3. Review the plan
-#    4. Run: terraform apply
-#    5. Save the output (bucket name, credentials needed)
-#    6. Add environment variables to your deployment platform
 #
 # ============================================================================
-# READY-TO-USE COMPLETE EXAMPLES
+# OPTION 2: Google Cloud Storage Persistence
 # ============================================================================
-# Copy and paste one of the complete configurations below into this file
-# (replacing the commented section above)
+# Uncomment this block to enable GCS settings persistence:
 #
-# EXAMPLE A: AWS S3 (us-west-2) - Ready to copy
+# storage_provider = "gcs"
+# gcp_project      = "your-gcp-project-id"
+# app_name         = "resume-customizer"
+#
+# Make sure GCP authentication is configured:
+#   Command: gcloud auth login
+#
+#
 # ============================================================================
-# aws_region = "us-west-2"
-# app_name   = "resume-customizer"
-#
-#
-# EXAMPLE B: AWS S3 (eu-west-1 Europe) - Ready to copy
+# OPTION 3: Disable Settings Persistence
 # ============================================================================
-# aws_region = "eu-west-1"
-# app_name   = "resume-customizer"
+# Uncomment this block to disable settings persistence:
+#
+# storage_provider = ""
 #
 #
-# EXAMPLE C: AWS S3 (us-east-1) - Ready to copy
 # ============================================================================
-# aws_region = "us-east-1"
-# app_name   = "resume-customizer"
-#
-#
-# EXAMPLE D: Google Cloud Storage (us-central1) - Ready to copy
-# (Ensure 'region' is set to us-central1 at the top of this file)
+# CONFIGURATION REFERENCE
 # ============================================================================
-# gcp_project = "my-gcp-project-123"
-# app_name    = "resume-customizer"
 #
+# storage_provider:
+#   - "s3"  : AWS S3 bucket
+#   - "gcs" : Google Cloud Storage
+#   - ""    : Disabled (default)
 #
-# EXAMPLE E: Google Cloud Storage (europe-west1) - Ready to copy
-# (Ensure 'region' is set to europe-west1 at the top of this file)
+# aws_region (only used if storage_provider = "s3"):
+#   Valid values: us-west-2, us-east-1, eu-west-1, etc.
+#   Default: us-west-2
+#
+# gcp_project (only used if storage_provider = "gcs"):
+#   Your Google Cloud Project ID (required for GCS)
+#   Default: ""
+#
+# app_name (used for both S3 and GCS):
+#   Alphanumeric and hyphens only
+#   Used in bucket naming for global uniqueness
+#   Default: resume-customizer
+#
+# region (defined at top of this file, used for both Cloud Run and storage):
+#   The GCP region applies to both the Cloud Run app and GCS bucket
+#   AWS S3 uses aws_region separately
+#
 # ============================================================================
-# gcp_project = "my-gcp-project-123"
-# app_name    = "resume-customizer"
-#
-#
-# EXAMPLE F: Google Cloud Storage (asia-southeast1) - Ready to copy
-# (Ensure 'region' is set to asia-southeast1 at the top of this file)
+# QUICK START EXAMPLES
 # ============================================================================
-# gcp_project = "my-gcp-project-123"
-# app_name    = "resume-customizer"
+#
+# Example 1: S3 with default region
+#   storage_provider = "s3"
+#
+# Example 2: S3 with custom region
+#   storage_provider = "s3"
+#   aws_region       = "eu-west-1"
+#
+# Example 3: GCS
+#   storage_provider = "gcs"
+#   gcp_project      = "my-project-123"
+#
+# Example 4: No settings persistence
+#   storage_provider = ""
 #
 

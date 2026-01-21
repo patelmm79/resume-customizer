@@ -1,20 +1,6 @@
 # Terraform configuration for Google Cloud Storage bucket for Resume Customizer settings
 # This creates a GCS bucket for persisting .settings.json across deployments
-
-# NOTE: This file is an alternative to settings-s3.tf
-# Use this if deploying to Google Cloud Platform instead of AWS
-
-# Set GCP project
-variable "gcp_project" {
-  description = "GCP project ID"
-  type        = string
-}
-
-# Set application name
-variable "app_name" {
-  description = "Application name (used in resource naming)"
-  default     = "resume-customizer"
-}
+# Only created when storage_provider = "gcs"
 
 provider "google" {
   project = var.gcp_project
@@ -23,6 +9,7 @@ provider "google" {
 
 # GCS bucket for settings storage
 resource "google_storage_bucket" "settings" {
+  count         = var.storage_provider == "gcs" ? 1 : 0
   name          = "${var.app_name}-settings-${var.gcp_project}"
   location      = var.region
   force_destroy = false
@@ -42,7 +29,8 @@ resource "google_storage_bucket" "settings" {
 
 # Block public access
 resource "google_storage_bucket_iam_binding" "public_access" {
-  bucket = google_storage_bucket.settings.name
+  count  = var.storage_provider == "gcs" ? 1 : 0
+  bucket = google_storage_bucket.settings[0].name
   role   = "roles/storage.objectViewer"
 
   members = []  # No public access
@@ -50,15 +38,17 @@ resource "google_storage_bucket_iam_binding" "public_access" {
 
 # Service account for application access
 resource "google_service_account" "app" {
+  count        = var.storage_provider == "gcs" ? 1 : 0
   account_id   = "${var.app_name}-settings-sa"
   display_name = "Service account for Resume Customizer settings access"
 }
 
 # Grant permissions to service account
 resource "google_storage_bucket_iam_member" "app_read_write" {
-  bucket = google_storage_bucket.settings.name
+  count  = var.storage_provider == "gcs" ? 1 : 0
+  bucket = google_storage_bucket.settings[0].name
   role   = "roles/storage.objectAdmin"
-  member = "serviceAccount:${google_service_account.app.email}"
+  member = "serviceAccount:${google_service_account.app[0].email}"
 }
 
 # Create service account key (for local testing/development)
@@ -69,27 +59,27 @@ resource "google_storage_bucket_iam_member" "app_read_write" {
 #   public_key_type    = "TYPE_X509_PEM_CERT"
 # }
 
-# Outputs
-output "bucket_name" {
+# Outputs (only populated if storage_provider = "gcs")
+output "gcs_bucket_name" {
   description = "GCS bucket name for settings storage"
-  value       = google_storage_bucket.settings.name
+  value       = var.storage_provider == "gcs" ? google_storage_bucket.settings[0].name : null
 }
 
-output "bucket_region" {
+output "gcs_bucket_region" {
   description = "GCS bucket region"
-  value       = var.region
+  value       = var.storage_provider == "gcs" ? var.region : null
 }
 
-output "service_account_email" {
+output "gcs_service_account_email" {
   description = "Service account email for application"
-  value       = google_service_account.app.email
+  value       = var.storage_provider == "gcs" ? google_service_account.app[0].email : null
 }
 
-output "environment_vars" {
-  description = "Environment variables to set for application"
-  value = {
+output "gcs_environment_vars" {
+  description = "Environment variables to set for application (GCS)"
+  value = var.storage_provider == "gcs" ? {
     RESUME_SETTINGS_STORAGE = "gcs"
-    RESUME_SETTINGS_BUCKET  = google_storage_bucket.settings.name
+    RESUME_SETTINGS_BUCKET  = google_storage_bucket.settings[0].name
     GOOGLE_CLOUD_PROJECT    = var.gcp_project
-  }
+  } : null
 }
