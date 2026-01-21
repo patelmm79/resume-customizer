@@ -23,23 +23,24 @@ Versatility: Whether architecting ML/AI platforms, engaging C-suite stakeholders
 
 **Advisor in Data Science and AI** | <span style="color: #1a73e8;">**Freelance**</span> | New York, NY, US | *Mar 2025 - Present*\
 *Provided strategic advice & built solutions to accelerate digital transformation, automation, and cost control using agentic AI.*
-* Built and deployed an AI agent-based system to orchestrate code migrations and enforce service-oriented architecture patterns across multiple distributed repositories.
-* Devised an agentic AI web search summary tool using LangGraph to accelerate company research from 4 hours to 5 minutes, integrating with Claude, Gemini, and OpenAI-type LLMs.
+* Built an AI agent-based system to orchestrate code migrations and enforce service-oriented architecture patterns across multiple distributed repositories, using LangSmith for LLM Observability and pgvector for RAG-based code vector similarity comparison.
+* Devised an agentic AI web search summary tool using LangGraph to accelerate company research from 4 hours to 5 minutes..
 
 
 **Senior Director of Data Science** | <span style="color: #1a73e8;">**Adara**</span>  | New York, NY, US | *Jan 2020 - Mar 2025*\
-***Enterprise AI Strategy & Product Leadership***
+*Adara provides programmatic media measurement and targeting products to the travel and tourism industry.  I joined as head of Field Data Science, eventually assuming responsibilities for all data science and analytics functions.*\
+  ***Enterprise AI Strategy & Product Leadership***
 
 * Directed global data science & analytics product roadmap and strategy as Head of Data Science and Analytics, increasing revenue 1.5x year-over-year through strategic AI/ML platform investments and product innovation.
 * Architected enterprise data infrastructure (medallion architecture) supporting $100M+ in annual revenue, enabling 50% increase in international data supply and 10% boost in predictive model performance across the travel and tourism vertical.
 
-***Scaling AI/ML Operations & Cost Optimization***
+  ***Scaling AI/ML Operations & Cost Optimization***
 
 * Reduced analytics per-report costs by 95% through systematic operating model transformation—migrating from bespoke, resource-intensive customizations to productized, cloud-native solutions that improved delivery efficiency while maintaining quality standards.
 * Led platform migration to Google Vertex AI (Kubeflow), reducing model deployment cycles by 60% (5 days → 2 days) and cutting Google Cloud infrastructure costs by 25% per model, enabling faster experimentation and scalability.
 * Architected comprehensive MLOps pipeline and governance framework, establishing foundational infrastructure for future agentic AI workflows.
 
-***Revenue Growth & Product Innovation***
+  ***Revenue Growth & Product Innovation***
 
 * Innovated analytical reporting products for connected TV and DOOH campaigns, revealing performance by attributed travel activity and generating $250k in annual recurring revenue through new product-market fit.
 * Tripled lead generation through cross-functional collaboration on GTM strategy, refining content creation and market trend dissemination to align technical insights with stakeholder and partner engagement.
@@ -86,19 +87,15 @@ Versatility: Whether architecting ML/AI platforms, engaging C-suite stakeholders
 
 * **Programming & Development:** Python, SQL
 * **Cloud Platforms & Tools:** Google Cloud (GCP), AWS, Cloud Run, Cloud Function, BigQuery
-* **Productivity:** Atlassian JIRA, Bitbucket, Confluence, GitHub
 * **Data Science & MLOps:** Vertex AI, Kubeflow, TensorFlow, Deep Learning, Scikit-learn, Pandas
-* **Generative & Agentic AI:** LangGraph, MCP, Claude, Gemini, OpenAI, LangChain, Hugging Face, Chroma
+* **Generative & Agentic AI:** LangChain, LangGraph, LangSmith, MCP, A2A, Chroma, pgvector
 * **Data Engineering:** Airflow, PySpark, dbt, Spark
-* **Data Visualization & Business Intelligence:** Gradio, Streamlit, Looker, Tableau
-* **Data & AI Strategy:** Data & Analytics Product Roadmap, Data-Driven Decision-Making, Data Quality, Data-Driven Culture, Data Governance, Cloud Architecture, Data Architecture, Data Security, Data Lifecycle Management, Prompt Engineering, LLM Agents
-* **Management:** Digital Transformation, Stakeholder Management, International Client Management, Change Management, Team Development, Risk Reduction, Business Development, Strategic Problem Solving, Teamwork, Strategic Thinking, Recurring Revenue Generation
+* **Data Visualization & Business Intelligence:** Looker, Tableau
 * **Languages:** Spanish (Proficient), Portuguese (Intermediate), French (Beginner)
 ***
 ## CERTIFICATIONS
 * Professional Machine Learning Engineer | <span style="color: #1a73e8;">**Google**</span>
 * AWS Generative AI Practitioner | <span style="color: #1a73e8;">**Amazon Web Services**</span>
-* Model Context Protocol - Advanced | <span style="color: #1a73e8;">**Anthropic**</span>
+* Neo4j Certified Professional| <span style="color: #1a73e8;">**Neo4j**</span>
 * Data Warehousing | <span style="color: #1a73e8;">**Snowflake**</span>
 * GCP Databricks Platform Architect | <span style="color: #1a73e8;">**Databricks**</span>
-* Neo4j Certified Professional| <span style="color: #1a73e8;">**Neo4j**</span>

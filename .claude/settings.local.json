@@ -22,7 +22,8 @@
       "Bash(terraform validate:*)",
       "Bash(terraform plan:*)",
       "Bash(terraform init:*)",
-      "Bash(it is disabled\" error on first terraform apply.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>\nEOF\n\\)\")"
+      "Bash(it is disabled\" error on first terraform apply.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git rm:*)"
     ],
     "deny": [],
     "ask": []
