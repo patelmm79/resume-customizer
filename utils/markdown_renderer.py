@@ -16,18 +16,20 @@ def process_markdown_for_streamlit(content: str) -> str:
         Processed markdown with HTML fallbacks
     """
     # Fix bold+italic (***text*** or ___text___)
-    # Convert ***text*** to <b><i>text</i></b>
+    # Convert ***text*** to <b><i>text</i></b> (handle multiple lines/words)
     content = re.sub(
-        r'\*\*\*([^\*]+)\*\*\*',
+        r'\*\*\*(.+?)\*\*\*',
         r'<b><i>\1</i></b>',
-        content
+        content,
+        flags=re.DOTALL
     )
 
-    # Convert ___text___ to <b><i>text</i></b>
+    # Convert ___text___ to <b><i>text</i></b> (handle multiple lines/words)
     content = re.sub(
-        r'___([^_]+)___',
+        r'___(.+?)___',
         r'<b><i>\1</i></b>',
-        content
+        content,
+        flags=re.DOTALL
     )
 
     return content

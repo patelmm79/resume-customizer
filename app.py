@@ -1676,6 +1676,14 @@ elif current_stage == "exporting":
     st.write("Processing your resume export...")
 
     try:
+        # Load saved formatting settings and add to state BEFORE export
+        app_settings = load_settings()
+        state['pdf_font_size'] = app_settings.get("pdf_font_size", 9.5)
+        state['pdf_line_height'] = app_settings.get("pdf_line_height", 1.2)
+        state['pdf_page_margin'] = app_settings.get("pdf_page_margin", 0.75)
+
+        print(f"[Export] Using saved formatting: font_size={state['pdf_font_size']}, line_height={state['pdf_line_height']}, page_margin={state['pdf_page_margin']}")
+
         # Execute export
         final_state = st.session_state.customizer.finalize_workflow(state)
         st.session_state.workflow_state = final_state
@@ -1839,12 +1847,19 @@ elif current_stage == "completed":
     app_settings = load_settings()
     default_candidate_name = app_settings.get("candidate_name", "Optimized_Resume")
 
+    # Generate filenames with date and time
+    from datetime import datetime
+    now = datetime.now()
+    date_time_str = now.strftime("%Y%m%d_%H%M%S")
+    default_pdf_filename = f"{default_candidate_name}_{date_time_str}.pdf"
+    default_md_filename = f"{default_candidate_name}_{date_time_str}.md"
+
     col1, col2 = st.columns(2)
 
     with col1:
         pdf_filename = st.text_input(
             "PDF Filename",
-            value=f"{default_candidate_name}.pdf",
+            value=default_pdf_filename,
             help="Enter the desired filename for your PDF",
             key="export_pdf_filename"
         )
@@ -1852,7 +1867,7 @@ elif current_stage == "completed":
     with col2:
         md_filename = st.text_input(
             "Markdown Filename",
-            value=f"{default_candidate_name}.md",
+            value=default_md_filename,
             help="Enter the desired filename for your Markdown file",
             key="export_md_filename"
         )
