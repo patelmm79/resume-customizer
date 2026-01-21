@@ -3,30 +3,29 @@
 # Copy this to terraform.tfvars and update with your values
 
 # ============================================================================
-# AWS S3 Configuration (use this section if deploying to AWS)
+# CHOOSE ONE: AWS S3 OR GOOGLE CLOUD STORAGE
 # ============================================================================
-# Uncomment this section and comment out the GCS section below
-
-# AWS region where the S3 bucket will be created
-# aws_region = "us-west-2"
-
-# Application name (used in resource naming, must be alphanumeric + hyphens)
-# app_name = "resume-customizer"
-
 
 # ============================================================================
-# Google Cloud Storage (GCS) Configuration (use this section if deploying to GCP)
+# EXAMPLE 1: AWS S3 (Recommended for AWS deployments)
 # ============================================================================
-# Uncomment this section and comment out the S3 section above
+# Uncomment and modify these lines for S3 deployment
+# Leave the GCS section commented out
 
-# GCP project ID where the bucket will be created
-# gcp_project = "your-gcp-project-id"
+aws_region = "us-west-2"
+app_name   = "resume-customizer"
 
-# GCP region for the storage bucket
-# gcp_region = "us-central1"
 
-# Application name (used in resource naming, must be alphanumeric + hyphens)
-# app_name = "resume-customizer"
+# ============================================================================
+# EXAMPLE 2: Google Cloud Storage (Recommended for GCP deployments)
+# ============================================================================
+# Uncomment and modify these lines for GCS deployment
+# Leave the S3 section above commented out
+# NOTE: Remove or comment out the S3 section (aws_region and app_name above)
+
+# gcp_project = "my-gcp-project-id"
+# gcp_region  = "us-central1"
+# app_name    = "resume-customizer"
 
 
 # ============================================================================
@@ -69,25 +68,47 @@
 #    6. Add environment variables to your deployment platform
 #
 # ============================================================================
-# Example Configurations
+# READY-TO-USE COMPLETE EXAMPLES
 # ============================================================================
+# Copy and paste one of the complete configurations below into this file
+# (replacing the EXAMPLE 1 or EXAMPLE 2 sections above)
 #
-# For AWS S3 in us-west-2:
-#   aws_region = "us-west-2"
-#   app_name   = "resume-customizer"
+# OPTION A: AWS S3 (us-west-2) - Ready to copy
+# ============================================================================
+# aws_region = "us-west-2"
+# app_name   = "resume-customizer"
 #
-# For AWS S3 in eu-west-1 (Europe):
-#   aws_region = "eu-west-1"
-#   app_name   = "resume-customizer"
 #
-# For GCP in us-central1:
-#   gcp_project = "my-gcp-project-123"
-#   gcp_region  = "us-central1"
-#   app_name    = "resume-customizer"
+# OPTION B: AWS S3 (eu-west-1 Europe) - Ready to copy
+# ============================================================================
+# aws_region = "eu-west-1"
+# app_name   = "resume-customizer"
 #
-# For GCP in europe-west1:
-#   gcp_project = "my-gcp-project-123"
-#   gcp_region  = "europe-west1"
-#   app_name    = "resume-customizer"
+#
+# OPTION C: AWS S3 (us-east-1) - Ready to copy
+# ============================================================================
+# aws_region = "us-east-1"
+# app_name   = "resume-customizer"
+#
+#
+# OPTION D: Google Cloud Storage (us-central1) - Ready to copy
+# ============================================================================
+# gcp_project = "my-gcp-project-123"
+# gcp_region  = "us-central1"
+# app_name    = "resume-customizer"
+#
+#
+# OPTION E: Google Cloud Storage (europe-west1) - Ready to copy
+# ============================================================================
+# gcp_project = "my-gcp-project-123"
+# gcp_region  = "europe-west1"
+# app_name    = "resume-customizer"
+#
+#
+# OPTION F: Google Cloud Storage (asia-southeast1) - Ready to copy
+# ============================================================================
+# gcp_project = "my-gcp-project-123"
+# gcp_region  = "asia-southeast1"
+# app_name    = "resume-customizer"
 #
 # ============================================================================
