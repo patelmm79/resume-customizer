@@ -143,9 +143,9 @@ secret_prefix = "resume_customizer"
 # Uncomment this block to enable S3 settings persistence:
 #
 # storage_provider = "s3"
-# aws_region       = "us-west-2"           # optional, defaults to us-west-2
-# app_name         = "resume-customizer"    # optional, defaults to resume-customizer
+# aws_region       = "us-west-2"  # optional, defaults to us-west-2
 #
+# S3 bucket will be named: {service_name}-settings-{aws-account-id}
 # Make sure AWS credentials are configured:
 #   Command: aws configure
 #   Or set: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
@@ -157,9 +157,9 @@ secret_prefix = "resume_customizer"
 # Uncomment this block to enable GCS settings persistence:
 #
 # storage_provider = "gcs"
-# app_name         = "resume-customizer"    # optional, defaults to resume-customizer
 #
-# GCS will use the existing 'project' and 'region' variables defined above.
+# GCS will use the existing 'project', 'region', and 'service_name' variables.
+# GCS bucket will be named: {service_name}-settings-{gcp-project-id}
 # Make sure GCP authentication is configured:
 #   Command: gcloud auth login
 #
@@ -185,9 +185,9 @@ secret_prefix = "resume_customizer"
 #   Valid values: us-west-2, us-east-1, eu-west-1, etc.
 #   Default: us-west-2
 #
-# app_name (used for both S3 and GCS):
-#   Alphanumeric and hyphens only
-#   Used in bucket naming for global uniqueness
+# service_name (defined at top of this file):
+#   Used for Cloud Run service name
+#   Also used for settings bucket naming (both S3 and GCS)
 #   Default: resume-customizer
 #
 # project (defined at top of this file):
@@ -204,14 +204,14 @@ secret_prefix = "resume_customizer"
 # QUICK START EXAMPLES
 # ============================================================================
 #
-# Example 1: S3 with defaults
+# Example 1: S3 with defaults (uses existing service_name)
 #   storage_provider = "s3"
 #
 # Example 2: S3 with custom region
 #   storage_provider = "s3"
 #   aws_region       = "eu-west-1"
 #
-# Example 3: GCS (uses existing project & region from Cloud Run config)
+# Example 3: GCS (reuses project, region, service_name from Cloud Run config)
 #   storage_provider = "gcs"
 #
 # Example 4: No settings persistence (default)

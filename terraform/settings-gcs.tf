@@ -5,12 +5,7 @@
 # Uses existing variables from main Cloud Run config:
 # - project: GCP project ID
 # - region: GCP region
-
-variable "app_name" {
-  description = "Application name for settings storage resource naming"
-  type        = string
-  default     = "resume-customizer"
-}
+# - service_name: Application name for resource naming
 
 provider "google" {
   project = var.project
@@ -20,7 +15,7 @@ provider "google" {
 # GCS bucket for settings storage
 resource "google_storage_bucket" "settings" {
   count         = var.storage_provider == "gcs" ? 1 : 0
-  name          = "${var.app_name}-settings-${var.project}"
+  name          = "${var.service_name}-settings-${var.project}"
   location      = var.region
   force_destroy = false
 
@@ -31,7 +26,7 @@ resource "google_storage_bucket" "settings" {
   uniform_bucket_level_access = true
 
   labels = {
-    app         = var.app_name
+    app         = var.service_name
     environment = "production"
     purpose     = "settings-storage"
   }
@@ -49,7 +44,7 @@ resource "google_storage_bucket_iam_binding" "public_access" {
 # Service account for application access
 resource "google_service_account" "app" {
   count        = var.storage_provider == "gcs" ? 1 : 0
-  account_id   = "${var.app_name}-settings-sa"
+  account_id   = "${var.service_name}-settings-sa"
   display_name = "Service account for Resume Customizer settings access"
 }
 

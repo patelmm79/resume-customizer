@@ -1,17 +1,15 @@
 # Terraform configuration for S3 bucket to store Resume Customizer settings
 # This creates an S3 bucket for persisting .settings.json across deployments
 # Only created when storage_provider = "s3"
+#
+# Uses existing variables from main Cloud Run config:
+# - service_name: Application name for resource naming
+# - aws_region: AWS region (optional)
 
 variable "aws_region" {
   description = "AWS region for S3 bucket (only used if storage_provider = 's3')"
   type        = string
   default     = "us-west-2"
-}
-
-variable "app_name" {
-  description = "Application name for settings storage resource naming"
-  type        = string
-  default     = "resume-customizer"
 }
 
 provider "aws" {
@@ -21,10 +19,10 @@ provider "aws" {
 # S3 bucket for settings storage
 resource "aws_s3_bucket" "settings" {
   count  = var.storage_provider == "s3" ? 1 : 0
-  bucket = "${var.app_name}-settings-${data.aws_caller_identity.current.account_id}"
+  bucket = "${var.service_name}-settings-${data.aws_caller_identity.current.account_id}"
 
   tags = {
-    Name        = "${var.app_name}-settings"
+    Name        = "${var.service_name}-settings"
     Environment = "production"
     Purpose     = "Application configuration storage"
   }
@@ -66,7 +64,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "settings" {
 # IAM role for application to access settings bucket
 resource "aws_iam_role" "app_role" {
   count = var.storage_provider == "s3" ? 1 : 0
-  name  = "${var.app_name}-settings-access-role"
+  name  = "${var.service_name}-settings-access-role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -89,7 +87,7 @@ resource "aws_iam_role" "app_role" {
 # IAM policy for S3 bucket access
 resource "aws_iam_role_policy" "app_s3_policy" {
   count  = var.storage_provider == "s3" ? 1 : 0
-  name   = "${var.app_name}-s3-access-policy"
+  name   = "${var.service_name}-s3-access-policy"
   role   = aws_iam_role.app_role[0].id
 
   policy = jsonencode({
