@@ -126,95 +126,18 @@ custom_llm_context_limit = 32768
 secret_prefix = "resume_customizer"
 
 # ============================================================================
-# SETTINGS PERSISTENCE (S3 or GCS for .settings.json storage)
+# SETTINGS PERSISTENCE (Google Cloud Storage for .settings.json storage)
 # ============================================================================
 #
 # Settings persistence ensures user settings (LLM provider, formatting, etc.)
 # survive cloud deployments and app restarts.
 #
-# Set storage_provider to choose where to persist settings:
-# - "s3"  → AWS S3 bucket (requires AWS credentials)
-# - "gcs" → Google Cloud Storage bucket (requires gcp_project)
-# - ""    → Disable settings persistence (settings lost on redeploy)
+# Enable GCS settings persistence (uses existing project, region, service_name):
 #
-# ============================================================================
-# OPTION 1: AWS S3 Persistence
-# ============================================================================
-# Uncomment this block to enable S3 settings persistence:
+storage_provider = "gcs"
 #
-# storage_provider = "s3"
-# aws_region       = "us-west-2"  # optional, defaults to us-west-2
-#
-# S3 bucket will be named: {service_name}-settings-{aws-account-id}
-# Make sure AWS credentials are configured:
-#   Command: aws configure
-#   Or set: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
-#
-#
-# ============================================================================
-# OPTION 2: Google Cloud Storage Persistence (uses existing project & region)
-# ============================================================================
-# Uncomment this block to enable GCS settings persistence:
-#
-# storage_provider = "gcs"
-#
-# GCS will use the existing 'project', 'region', and 'service_name' variables.
 # GCS bucket will be named: {service_name}-settings-{gcp-project-id}
 # Make sure GCP authentication is configured:
 #   Command: gcloud auth login
-#
-#
-# ============================================================================
-# OPTION 3: Disable Settings Persistence
-# ============================================================================
-# Leave storage_provider empty (or omit it) to disable settings persistence:
-#
-# storage_provider = ""
-#
-#
-# ============================================================================
-# CONFIGURATION REFERENCE
-# ============================================================================
-#
-# storage_provider (required for settings persistence):
-#   - "s3"  : AWS S3 bucket
-#   - "gcs" : Google Cloud Storage
-#   - ""    : Disabled (default)
-#
-# aws_region (only used if storage_provider = "s3"):
-#   Valid values: us-west-2, us-east-1, eu-west-1, etc.
-#   Default: us-west-2
-#
-# service_name (defined at top of this file):
-#   Used for Cloud Run service name
-#   Also used for settings bucket naming (both S3 and GCS)
-#   Default: resume-customizer
-#
-# project (defined at top of this file):
-#   Used for GCP Cloud Run deployment
-#   Also used for GCS bucket (if storage_provider = "gcs")
-#   S3 does not use this variable
-#
-# region (defined at top of this file):
-#   Used for GCP Cloud Run deployment
-#   Also used for GCS bucket location (if storage_provider = "gcs")
-#   S3 uses aws_region separately
-#
-# ============================================================================
-# QUICK START EXAMPLES
-# ============================================================================
-#
-# Example 1: S3 with defaults (uses existing service_name)
-#   storage_provider = "s3"
-#
-# Example 2: S3 with custom region
-#   storage_provider = "s3"
-#   aws_region       = "eu-west-1"
-#
-# Example 3: GCS (reuses project, region, service_name from Cloud Run config)
-#   storage_provider = "gcs"
-#
-# Example 4: No settings persistence (default)
-#   storage_provider = ""
 #
 
