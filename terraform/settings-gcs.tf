@@ -1,12 +1,10 @@
 # Terraform configuration for Google Cloud Storage bucket for Resume Customizer settings
 # This creates a GCS bucket for persisting .settings.json across deployments
 # Only created when storage_provider = "gcs"
-
-variable "gcp_project" {
-  description = "GCP project ID for settings bucket (only used if storage_provider = 'gcs')"
-  type        = string
-  default     = ""
-}
+#
+# Uses existing variables from main Cloud Run config:
+# - project: GCP project ID
+# - region: GCP region
 
 variable "app_name" {
   description = "Application name for settings storage resource naming"
@@ -15,14 +13,14 @@ variable "app_name" {
 }
 
 provider "google" {
-  project = var.gcp_project
+  project = var.project
   region  = var.region
 }
 
 # GCS bucket for settings storage
 resource "google_storage_bucket" "settings" {
   count         = var.storage_provider == "gcs" ? 1 : 0
-  name          = "${var.app_name}-settings-${var.gcp_project}"
+  name          = "${var.app_name}-settings-${var.project}"
   location      = var.region
   force_destroy = false
 
@@ -92,6 +90,6 @@ output "gcs_environment_vars" {
   value = var.storage_provider == "gcs" ? {
     RESUME_SETTINGS_STORAGE = "gcs"
     RESUME_SETTINGS_BUCKET  = google_storage_bucket.settings[0].name
-    GOOGLE_CLOUD_PROJECT    = var.gcp_project
+    GOOGLE_CLOUD_PROJECT    = var.project
   } : null
 }

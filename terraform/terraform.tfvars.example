@@ -152,14 +152,14 @@ secret_prefix = "resume_customizer"
 #
 #
 # ============================================================================
-# OPTION 2: Google Cloud Storage Persistence
+# OPTION 2: Google Cloud Storage Persistence (uses existing project & region)
 # ============================================================================
 # Uncomment this block to enable GCS settings persistence:
 #
 # storage_provider = "gcs"
-# gcp_project      = "your-gcp-project-id"  # required for GCS
 # app_name         = "resume-customizer"    # optional, defaults to resume-customizer
 #
+# GCS will use the existing 'project' and 'region' variables defined above.
 # Make sure GCP authentication is configured:
 #   Command: gcloud auth login
 #
@@ -185,18 +185,20 @@ secret_prefix = "resume_customizer"
 #   Valid values: us-west-2, us-east-1, eu-west-1, etc.
 #   Default: us-west-2
 #
-# gcp_project (required if storage_provider = "gcs"):
-#   Your Google Cloud Project ID
-#
 # app_name (used for both S3 and GCS):
 #   Alphanumeric and hyphens only
 #   Used in bucket naming for global uniqueness
 #   Default: resume-customizer
 #
+# project (defined at top of this file):
+#   Used for GCP Cloud Run deployment
+#   Also used for GCS bucket (if storage_provider = "gcs")
+#   S3 does not use this variable
+#
 # region (defined at top of this file):
 #   Used for GCP Cloud Run deployment
 #   Also used for GCS bucket location (if storage_provider = "gcs")
-#   AWS S3 uses aws_region separately
+#   S3 uses aws_region separately
 #
 # ============================================================================
 # QUICK START EXAMPLES
@@ -209,9 +211,8 @@ secret_prefix = "resume_customizer"
 #   storage_provider = "s3"
 #   aws_region       = "eu-west-1"
 #
-# Example 3: GCS
+# Example 3: GCS (uses existing project & region from Cloud Run config)
 #   storage_provider = "gcs"
-#   gcp_project      = "my-project-123"
 #
 # Example 4: No settings persistence (default)
 #   storage_provider = ""
