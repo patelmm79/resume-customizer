@@ -227,24 +227,3 @@ variable "storage_provider" {
   }
 }
 
-# AWS S3 settings (required if storage_provider = "s3")
-variable "aws_region" {
-  description = "AWS region for S3 bucket (only used if storage_provider = 's3')"
-  type        = string
-  default     = "us-west-2"
-}
-
-# GCP settings for settings bucket (required if storage_provider = "gcs")
-variable "gcp_project" {
-  description = "GCP project ID for settings bucket (only used if storage_provider = 'gcs')"
-  type        = string
-  default     = ""
-}
-
-# Application name for settings storage (used for both S3 and GCS)
-variable "app_name" {
-  description = "Application name for settings storage resource naming (used for both S3 and GCS)"
-  type        = string
-  default     = "resume-customizer"
-}
-

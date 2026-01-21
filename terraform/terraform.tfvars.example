@@ -143,8 +143,8 @@ secret_prefix = "resume_customizer"
 # Uncomment this block to enable S3 settings persistence:
 #
 # storage_provider = "s3"
-# aws_region       = "us-west-2"
-# app_name         = "resume-customizer"
+# aws_region       = "us-west-2"           # optional, defaults to us-west-2
+# app_name         = "resume-customizer"    # optional, defaults to resume-customizer
 #
 # Make sure AWS credentials are configured:
 #   Command: aws configure
@@ -157,8 +157,8 @@ secret_prefix = "resume_customizer"
 # Uncomment this block to enable GCS settings persistence:
 #
 # storage_provider = "gcs"
-# gcp_project      = "your-gcp-project-id"
-# app_name         = "resume-customizer"
+# gcp_project      = "your-gcp-project-id"  # required for GCS
+# app_name         = "resume-customizer"    # optional, defaults to resume-customizer
 #
 # Make sure GCP authentication is configured:
 #   Command: gcloud auth login
@@ -167,7 +167,7 @@ secret_prefix = "resume_customizer"
 # ============================================================================
 # OPTION 3: Disable Settings Persistence
 # ============================================================================
-# Uncomment this block to disable settings persistence:
+# Leave storage_provider empty (or omit it) to disable settings persistence:
 #
 # storage_provider = ""
 #
@@ -176,7 +176,7 @@ secret_prefix = "resume_customizer"
 # CONFIGURATION REFERENCE
 # ============================================================================
 #
-# storage_provider:
+# storage_provider (required for settings persistence):
 #   - "s3"  : AWS S3 bucket
 #   - "gcs" : Google Cloud Storage
 #   - ""    : Disabled (default)
@@ -185,24 +185,24 @@ secret_prefix = "resume_customizer"
 #   Valid values: us-west-2, us-east-1, eu-west-1, etc.
 #   Default: us-west-2
 #
-# gcp_project (only used if storage_provider = "gcs"):
-#   Your Google Cloud Project ID (required for GCS)
-#   Default: ""
+# gcp_project (required if storage_provider = "gcs"):
+#   Your Google Cloud Project ID
 #
 # app_name (used for both S3 and GCS):
 #   Alphanumeric and hyphens only
 #   Used in bucket naming for global uniqueness
 #   Default: resume-customizer
 #
-# region (defined at top of this file, used for both Cloud Run and storage):
-#   The GCP region applies to both the Cloud Run app and GCS bucket
+# region (defined at top of this file):
+#   Used for GCP Cloud Run deployment
+#   Also used for GCS bucket location (if storage_provider = "gcs")
 #   AWS S3 uses aws_region separately
 #
 # ============================================================================
 # QUICK START EXAMPLES
 # ============================================================================
 #
-# Example 1: S3 with default region
+# Example 1: S3 with defaults
 #   storage_provider = "s3"
 #
 # Example 2: S3 with custom region
@@ -213,7 +213,7 @@ secret_prefix = "resume_customizer"
 #   storage_provider = "gcs"
 #   gcp_project      = "my-project-123"
 #
-# Example 4: No settings persistence
+# Example 4: No settings persistence (default)
 #   storage_provider = ""
 #
 

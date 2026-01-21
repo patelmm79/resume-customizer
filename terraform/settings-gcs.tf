@@ -2,6 +2,18 @@
 # This creates a GCS bucket for persisting .settings.json across deployments
 # Only created when storage_provider = "gcs"
 
+variable "gcp_project" {
+  description = "GCP project ID for settings bucket (only used if storage_provider = 'gcs')"
+  type        = string
+  default     = ""
+}
+
+variable "app_name" {
+  description = "Application name for settings storage resource naming"
+  type        = string
+  default     = "resume-customizer"
+}
+
 provider "google" {
   project = var.gcp_project
   region  = var.region

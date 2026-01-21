@@ -2,6 +2,18 @@
 # This creates an S3 bucket for persisting .settings.json across deployments
 # Only created when storage_provider = "s3"
 
+variable "aws_region" {
+  description = "AWS region for S3 bucket (only used if storage_provider = 's3')"
+  type        = string
+  default     = "us-west-2"
+}
+
+variable "app_name" {
+  description = "Application name for settings storage resource naming"
+  type        = string
+  default     = "resume-customizer"
+}
+
 provider "aws" {
   region = var.aws_region
 }
