@@ -561,6 +561,14 @@ resource "google_secret_manager_secret_iam_member" "langfuse_secret_key_accessor
   member    = "serviceAccount:${local.cloudrun_sa_email}"
 }
 
+# Grant Cloud Run service account access to GCS settings bucket
+resource "google_storage_bucket_iam_member" "cloudrun_settings_access" {
+  count  = var.storage_provider == "gcs" ? 1 : 0
+  bucket = google_storage_bucket.settings[0].name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${local.cloudrun_sa_email}"
+}
+
 # Get the default Compute Engine service account
 data "google_compute_default_service_account" "default" {
   count   = var.use_default_sa ? 1 : 0
@@ -614,6 +622,16 @@ resource "google_cloud_run_service" "service" {
           env {
             name  = "CUSTOM_LLM_CONTEXT_LIMIT"
             value = tostring(var.custom_llm_context_limit)
+          }
+
+          # Settings storage (GCS)
+          env {
+            name  = "RESUME_SETTINGS_STORAGE"
+            value = "gcs"
+          }
+          env {
+            name  = "RESUME_SETTINGS_BUCKET"
+            value = var.storage_provider == "gcs" ? google_storage_bucket.settings[0].name : ""
           }
 
           # LangSmith integration
@@ -727,6 +745,7 @@ resource "google_cloud_run_service" "service" {
   # - Artifact Registry IAM members (conditionally referenced via local.cloudrun_sa_email)
   # - Cloud Build trigger (has count condition, will be implicit if created)
   # - Langfuse IAM members (implicitly created through dynamic env blocks)
+  # - GCS bucket (implicitly created through env value reference)
   # Explicit static dependencies:
   depends_on = [
     google_project_service.run_api,
@@ -734,7 +753,9 @@ resource "google_cloud_run_service" "service" {
     google_secret_manager_secret_iam_member.gemini_accessor,
     google_secret_manager_secret_iam_member.anthropic_accessor,
     google_secret_manager_secret_iam_member.custom_llm_accessor,
-    google_secret_manager_secret_iam_member.langsmith_accessor
+    google_secret_manager_secret_iam_member.langsmith_accessor,
+    google_storage_bucket.settings,
+    google_storage_bucket_iam_member.cloudrun_settings_access
   ]
 }
 
