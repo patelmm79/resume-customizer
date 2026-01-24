@@ -21,48 +21,6 @@ from workflow.nodes import (
 )
 
 
-def should_continue_to_modification(state: WorkflowState) -> Literal["modify", "end"]:
-    """
-    Route after scoring based on whether suggestions are selected.
-
-    Args:
-        state: Current workflow state
-
-    Returns:
-        Next node name
-    """
-    if state.get("error"):
-        return "end"
-
-    # Check if any suggestions are selected
-    suggestions = state.get("suggestions", [])
-    if any(s.get("selected", False) for s in suggestions):
-        return "modify"
-
-    return "end"
-
-
-def should_continue_to_export(state: WorkflowState) -> Literal["export", "rescoring", "end"]:
-    """
-    Route after rescoring based on approval status.
-
-    Args:
-        state: Current workflow state
-
-    Returns:
-        Next node name
-    """
-    if state.get("error"):
-        return "end"
-
-    if state.get("approved"):
-        return "export"
-
-    # If not approved and user wants to try again, go back to scoring
-    # This would be handled by external workflow restart
-    return "end"
-
-
 def create_workflow() -> StateGraph:
     """
     Create the LangGraph workflow for resume customization.
