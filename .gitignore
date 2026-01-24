@@ -34,6 +34,7 @@ env/
 # IDE
 .vscode/
 .idea/
+.claude/
 *.swp
 *.swo
 *~
@@ -45,14 +46,16 @@ Thumbs.db
 # Streamlit
 .streamlit/
 
-# Generated PDFs (keep samples if any)
+# Generated/User Resumes (keep samples if needed, but ignore generated ones)
 data/resumes/*.pdf
+data/resumes/*.md
 
 # Logs
 *.log
 
 # Temporary files
 *.tmp
+=*  # pip version output artifacts
 
 # Terraform local variables (keep secrets out of git)
 terraform/terraform.tfvars
