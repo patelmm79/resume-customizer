@@ -38,10 +38,10 @@ class FreeformEditorAgent:
 
 IMPORTANT:
 - Apply EXACTLY what the user requests
-- Do not add unrequested changes
+- Do not make any unrequested changes
 - Maintain markdown formatting (including *** section separators)
 - Keep the resume professional and ATS-friendly
-- Preserve information the user didn't ask to change
+- Preserve all information the user didn't ask to change
 - PRESERVE all section separators (*** horizontal rules) unless user explicitly requests their removal
 - Do NOT use HTML <br> tags - use standard markdown blank lines only
 - Use consistent job formatting: **Job Title** | <span style="color: #1a73e8;">**Company**</span> | Location | *Dates*"""
