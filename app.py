@@ -1,10 +1,8 @@
 """Streamlit frontend for Resume Customizer with LangGraph orchestration."""
 import streamlit as st
-from pathlib import Path
 import traceback
 
 from main import ResumeCustomizer
-from workflow.state import WorkflowState
 from utils.langsmith_config import configure_langsmith
 from utils.langfuse_config import configure_langfuse
 from utils.debug import enable_debug, disable_debug, get_all_interactions, format_interaction
@@ -12,7 +10,6 @@ from utils.langfuse_wrapper import get_tracing_status
 from utils.markdown_renderer import render_markdown_with_html
 from utils.settings import (
     load_settings, save_settings, get_settings_source,
-    get_saved_llm_config, set_saved_llm_config,
     get_llm_providers, get_provider, add_provider, update_provider, delete_provider,
     add_model, remove_model, set_default_provider, get_default_provider, get_default_model
 )
@@ -690,7 +687,7 @@ elif current_stage in ["fetch_job", "scoring"]:
 # Stage 4: Suggestion Selection
 elif current_stage == "awaiting_selection":
     state = st.session_state.workflow_state
-    st.header("Step 2: Review Analysis & Select Suggestions")
+    st.header("Step 4: Review Analysis & Select Suggestions")
 
     # Display score
     col1, col2, col3 = st.columns([1, 2, 2])
@@ -824,7 +821,7 @@ elif current_stage in ["modification", "rescoring", "optimization"]:
 # Stage 8: Optimization Suggestion Selection
 elif current_stage == "awaiting_optimization_selection":
     state = st.session_state.workflow_state
-    st.header("Step 3: Select Optimization Suggestions")
+    st.header("Step 8: Select Optimization Suggestions")
 
     # Display score info
     col1, col2, col3 = st.columns(3)
@@ -1003,7 +1000,7 @@ elif current_stage in ["applying_optimizations", "optimization_round2"]:
 # Stage 11: Round 2 Optimization Suggestion Selection
 elif current_stage == "awaiting_optimization_selection_round2":
     state = st.session_state.workflow_state
-    st.header("Step 4: Select Additional Optimizations (Round 2)")
+    st.header("Step 11: Select Additional Optimizations (Round 2)")
 
     st.info("💡 After applying Round 1 optimizations, Agent 5 has identified additional opportunities to make your resume even more concise.")
 
@@ -1154,7 +1151,7 @@ elif current_stage in ["applying_optimizations_round2", "validation"]:
 # Stage 14: Review Optimized Resume
 elif current_stage == "awaiting_approval":
     state = st.session_state.workflow_state
-    st.header("Step 3: Review & Approve Optimized Resume")
+    st.header("Step 14: Review & Approve Optimized Resume")
 
     # Display score comparison
     col1, col2, col3 = st.columns(3)
@@ -1700,121 +1697,10 @@ elif current_stage == "exporting":
         st.code(traceback.format_exc())
 
 
-# Stage 9b: Legacy validation approval stage (shouldn't reach here anymore)
-elif current_stage == "awaiting_validation_approval":
-    # Redirect to awaiting_approval since validation is now shown there
-    st.session_state.workflow_state['current_stage'] = "awaiting_approval"
-    st.rerun()
-
-
-# Stage 9c: Old validation check page (kept for backwards compatibility)
-elif current_stage == "awaiting_validation_approval_old":
-    state = st.session_state.workflow_state
-    st.header("Step 4: Validation Results")
-
-    # Display validation score
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.metric(
-            "Validation Score",
-            f"{state['validation_score']}/100",
-            help="Resume formatting and consistency score"
-        )
-
-    with col2:
-        critical_count = state.get('critical_count', 0)
-        warning_count = state.get('warning_count', 0)
-        if critical_count > 0:
-            st.metric("Critical Issues", critical_count, delta_color="inverse")
-        elif warning_count > 0:
-            st.metric("Warnings", warning_count, delta_color="inverse")
-        else:
-            st.metric("Issues", 0)
-
-    with col3:
-        if state['is_valid']:
-            st.success("✅ Passes Validation")
-        else:
-            st.error("❌ Needs Fixes")
-
-    st.divider()
-
-    # Display validation summary
-    if state.get('validation_summary'):
-        st.subheader("Summary")
-        st.info(state['validation_summary'])
-
-    # Display issues if any
-    if state.get('validation_issues'):
-        st.subheader("Issues Found")
-
-        # Group by severity
-        critical = [i for i in state['validation_issues'] if i['severity'] == 'CRITICAL']
-        warnings = [i for i in state['validation_issues'] if i['severity'] == 'WARNING']
-        info = [i for i in state['validation_issues'] if i['severity'] == 'INFO']
-
-        if critical:
-            with st.expander(f"🔴 Critical Issues ({len(critical)})", expanded=True):
-                for issue in critical:
-                    st.markdown(f"**[{issue['category']}]** {issue['description']}")
-
-        if warnings:
-            with st.expander(f"🟡 Warnings ({len(warnings)})", expanded=True):
-                for issue in warnings:
-                    st.markdown(f"**[{issue['category']}]** {issue['description']}")
-
-        if info:
-            with st.expander(f"ℹ️ Informational ({len(info)})", expanded=False):
-                for issue in info:
-                    st.markdown(f"**[{issue['category']}]** {issue['description']}")
-
-    # Display recommendations
-    if state.get('validation_recommendations'):
-        st.subheader("Recommendations")
-        for rec in state['validation_recommendations']:
-            st.markdown(f"- {rec}")
-
-    st.divider()
-
-    # Action buttons
-    st.subheader("Next Steps")
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        def _on_start_over_click():
-            reset_app()
-
-        st.button("⬅️ Start Over", use_container_width=True, on_click=_on_start_over_click, key="validation_start_over_btn")
-
-    with col2:
-        def _on_reselect_click():
-            st.session_state.workflow_state['current_stage'] = "awaiting_selection"
-
-        st.button("🔄 Reselect Suggestions", use_container_width=True, on_click=_on_reselect_click, key="validation_reselect_btn")
-
-    with col3:
-        button_label = "✅ Proceed to Export" if state['is_valid'] else "⚠️ Export Anyway"
-        button_type = "primary" if state['is_valid'] else "secondary"
-
-        def _on_export_click():
-            """Callback for export button - transition to exporting stage."""
-            st.session_state.workflow_state['current_stage'] = "exporting"
-
-        st.button(
-            button_label,
-            type=button_type,
-            use_container_width=True,
-            key="validation_export_btn",
-            on_click=_on_export_click
-        )
-
-
 # Stage 13: Completed
 elif current_stage == "completed":
     state = st.session_state.workflow_state
-    st.header("Step 6: Export Complete!")
+    st.header("Step 17: Export Complete!")
 
     st.success("Resume approved and exported successfully!")
 
