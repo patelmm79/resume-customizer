@@ -16,11 +16,11 @@ An intelligent, multi-agent AI system orchestrated by **LangGraph** that analyze
 ### How It Works
 Instead of relying on prompt engineering, we use **JSON Schema validation** via the `response_format` parameter. This **guarantees** valid JSON output from any model, including reasoning models that previously only returned plain text.
 
-**📖 See [STRUCTURED_OUTPUT_UPDATE.md](STRUCTURED_OUTPUT_UPDATE.md) for complete details on this breakthrough.**
+**📖 See [STRUCTURED_OUTPUT_UPDATE.md](docs/STRUCTURED_OUTPUT_UPDATE.md) for complete details on this breakthrough.**
 
-**📖 See [MODEL_SELECTION_GUIDE.md](MODEL_SELECTION_GUIDE.md) for model comparison and setup instructions.**
+**📖 See [MODEL_SELECTION_GUIDE.md](docs/MODEL_SELECTION_GUIDE.md) for model comparison and setup instructions.**
 
-**📚 For the original debugging journey, see [LESSONS_LEARNED.md](LESSONS_LEARNED.md).**
+**📚 For the original debugging journey, see [LESSONS_LEARNED.md](docs/LESSONS_LEARNED.md).**
 
 ## Features
 
@@ -217,8 +217,12 @@ resume-customizer/
 ├── main.py                   # Core application logic
 ├── requirements.txt          # Python dependencies
 ├── .env.example             # Environment configuration template
+├── docs/                    # Documentation directory
+│   ├── LANGGRAPH_ARCHITECTURE.md # LangGraph architecture details
+│   ├── STRUCTURED_OUTPUT_UPDATE.md # Structured output implementation
+│   ├── MODEL_SELECTION_GUIDE.md # Model comparison and setup
+│   └── LESSONS_LEARNED.md   # Debugging journey
 ├── CLAUDE.md                # Project documentation
-├── LANGGRAPH_ARCHITECTURE.md # LangGraph architecture details
 └── README.md                # This file
 ```
 
@@ -304,6 +308,9 @@ See `requirements.txt` for full list:
 - `reportlab>=4.0.0` - PDF generation
 - `pillow>=9.0.0` - Image handling for PDFs
 
+**Cloud Storage** (optional, for cloud deployments):
+- `google-cloud-storage>=2.10.0` - Google Cloud Storage for settings persistence (cloud deployments only)
+
 ## Tips for Best Results
 
 1. **Resume Format**: Use markdown format with clear sections (## Headings)
@@ -354,10 +361,10 @@ Description
 **Solution**:
 1. Open the Streamlit sidebar
 2. Switch to **Gemini** or **Claude** provider
-3. Select a compatible model (see [MODEL_SELECTION_GUIDE.md](MODEL_SELECTION_GUIDE.md))
+3. Select a compatible model (see [MODEL_SELECTION_GUIDE.md](docs/MODEL_SELECTION_GUIDE.md))
 4. Try again
 
-**Why it happens**: Reasoning models output thinking process in plain text instead of JSON format. See [LESSONS_LEARNED.md](LESSONS_LEARNED.md) for technical details.
+**Why it happens**: Reasoning models output thinking process in plain text instead of JSON format. See [LESSONS_LEARNED.md](docs/LESSONS_LEARNED.md) for technical details.
 
 ### LLM Configuration Issues
 - **"❌ Missing API Key"**: Check that your `.env` file contains the correct API key

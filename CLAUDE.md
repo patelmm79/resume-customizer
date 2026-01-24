@@ -475,7 +475,7 @@ deploy-settings.bat     # Windows
 - Google Cloud Storage + Any cloud platform - Settings persistence only
 - Streamlit Cloud, Heroku, Railway, Docker, etc. - With settings persistence
 
-See `CLOUD_DEPLOYMENT_QUICKSTART.md` for detailed deployment instructions.
+See [CLOUD_DEPLOYMENT_QUICKSTART.md](docs/CLOUD_DEPLOYMENT_QUICKSTART.md) for detailed deployment instructions.
 
 ### Settings System
 
