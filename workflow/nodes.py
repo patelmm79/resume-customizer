@@ -522,16 +522,26 @@ def cover_letter_generation_node(state: WorkflowState) -> Dict[str, Any]:
 
         # Validate the result
         cover_letter = result.get("cover_letter", "")
+        print(f"[cover_letter_generation_node] Agent returned cover_letter length: {len(cover_letter)}")
+        print(f"[cover_letter_generation_node] Cover letter first 100 chars: {cover_letter[:100]}")
+
         if not cover_letter or not cover_letter.strip():
             raise ValueError("Cover letter generation returned empty content. Please try again.")
 
-        return {
+        return_dict = {
             "cover_letter": cover_letter,
             "cover_letter_summary": result.get("summary", "Cover letter generated successfully."),
             "current_stage": "cover_letter_ready",
             "messages": [{"role": "ai", "content": "Agent 7: Cover letter generated successfully"}]
         }
+
+        print(f"[cover_letter_generation_node] Returning dict with cover_letter length: {len(return_dict['cover_letter'])}")
+        return return_dict
+
     except Exception as e:
+        print(f"[cover_letter_generation_node] ERROR: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
         return {
             "error": f"Cover letter generation failed: {str(e)}",
             "current_stage": "error",
@@ -612,6 +622,9 @@ def review_cover_letter_node(state: WorkflowState) -> Dict[str, Any]:
     try:
         # Get the cover letter to review
         cover_letter = state.get("cover_letter")
+        print(f"[review_cover_letter_node] Received cover_letter length: {len(cover_letter) if cover_letter else 0}")
+        print(f"[review_cover_letter_node] Cover letter first 100 chars: {cover_letter[:100] if cover_letter else 'None'}")
+
         if not cover_letter:
             raise ValueError("No cover letter found to review")
 
