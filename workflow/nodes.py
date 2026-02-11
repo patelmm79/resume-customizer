@@ -520,35 +520,19 @@ def cover_letter_generation_node(state: WorkflowState) -> Dict[str, Any]:
             state["job_description"]
         )
 
-        # Basic check: what did agent return?
-        print(f"[cover_letter_generation_node] Agent returned dict type: {type(result)}")
-        print(f"[cover_letter_generation_node] Agent returned dict keys: {list(result.keys()) if isinstance(result, dict) else 'NOT A DICT'}")
-
         # Validate the result
         cover_letter = result.get("cover_letter", "")
-        print(f"[cover_letter_generation_node] Agent returned cover_letter type: {type(cover_letter)}")
-        print(f"[cover_letter_generation_node] Agent returned cover_letter length: {len(cover_letter)}")
-        print(f"[cover_letter_generation_node] Cover letter first 100 chars: {cover_letter[:100] if cover_letter else 'EMPTY'}")
-
         if not cover_letter or not cover_letter.strip():
-            print(f"[cover_letter_generation_node] VALIDATION FAILED: cover_letter is empty or whitespace only")
             raise ValueError("Cover letter generation returned empty content. Please try again.")
 
-        print(f"[cover_letter_generation_node] VALIDATION PASSED, creating return dict")
-        return_dict = {
+        return {
             "cover_letter": cover_letter,
             "cover_letter_summary": result.get("summary", "Cover letter generated successfully."),
             "current_stage": "cover_letter_ready",
             "messages": [{"role": "ai", "content": "Agent 7: Cover letter generated successfully"}]
         }
 
-        print(f"[cover_letter_generation_node] Returning dict with cover_letter length: {len(return_dict['cover_letter'])}")
-        return return_dict
-
     except Exception as e:
-        print(f"[cover_letter_generation_node] ERROR: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
         return {
             "error": f"Cover letter generation failed: {str(e)}",
             "current_stage": "error",
@@ -572,17 +556,12 @@ def export_cover_letter_pdf_node(state: WorkflowState) -> Dict[str, Any]:
         if not cover_letter:
             raise ValueError("No cover letter found in state. Generate cover letter first.")
 
-        print(f"[export_cover_letter_pdf_node] Starting cover letter export...")
-        print(f"[export_cover_letter_pdf_node] Cover letter length: {len(cover_letter)} chars")
-
         exporter = PDFExporter()
 
         # Get PDF formatting options from state (with defaults)
         font_size = state.get("cover_letter_pdf_font_size", 9.5)
         line_height = state.get("cover_letter_pdf_line_height", 1.2)
         page_margin = state.get("cover_letter_pdf_page_margin", 0.75)
-
-        print(f"[export_cover_letter_pdf_node] PDF settings: font_size={font_size}, line_height={line_height}, page_margin={page_margin}")
 
         # Generate PDF bytes for download
         pdf_bytes = exporter.markdown_to_pdf_bytes(
@@ -592,12 +571,8 @@ def export_cover_letter_pdf_node(state: WorkflowState) -> Dict[str, Any]:
             page_margin=page_margin
         )
 
-        print(f"[export_cover_letter_pdf_node] PDF bytes generated: {len(pdf_bytes)} bytes")
-
         # Optionally save to file
         pdf_path = exporter.markdown_to_pdf(cover_letter, filename="cover_letter.pdf")
-
-        print(f"[export_cover_letter_pdf_node] PDF saved to: {pdf_path}")
 
         return {
             "cover_letter_pdf_path": pdf_path,
@@ -606,9 +581,6 @@ def export_cover_letter_pdf_node(state: WorkflowState) -> Dict[str, Any]:
             "messages": [{"role": "system", "content": f"Cover letter PDF exported: {pdf_path}"}]
         }
     except Exception as e:
-        print(f"[export_cover_letter_pdf_node] ERROR: {str(e)}")
-        import traceback
-        print(traceback.format_exc())
         return {
             "error": f"Cover letter PDF export failed: {str(e)}",
             "current_stage": "error",
@@ -629,9 +601,6 @@ def review_cover_letter_node(state: WorkflowState) -> Dict[str, Any]:
     try:
         # Get the cover letter to review
         cover_letter = state.get("cover_letter")
-        print(f"[review_cover_letter_node] Received cover_letter length: {len(cover_letter) if cover_letter else 0}")
-        print(f"[review_cover_letter_node] Cover letter first 100 chars: {cover_letter[:100] if cover_letter else 'None'}")
-
         if not cover_letter:
             raise ValueError("No cover letter found to review")
 

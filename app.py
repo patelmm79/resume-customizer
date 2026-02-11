@@ -1926,15 +1926,6 @@ elif current_stage == "completed":
     st.subheader("📨 Cover Letter (Optional)")
     st.markdown("Generate a tailored cover letter for this job application.")
 
-    # Debug: Show state info
-    print(f"[UI] Cover letter state check:")
-    print(f"[UI] - cover_letter exists: {'cover_letter' in state}")
-    print(f"[UI] - cover_letter_pdf_bytes exists: {'cover_letter_pdf_bytes' in state}")
-    cover_letter_content = state.get('cover_letter') or ''
-    print(f"[UI] - cover_letter length: {len(cover_letter_content)} chars")
-    pdf_bytes = state.get('cover_letter_pdf_bytes')
-    if pdf_bytes:
-        print(f"[UI] - cover_letter_pdf_bytes length: {len(pdf_bytes)} bytes")
 
     # Check if cover letter was already generated
     if state.get('cover_letter'):
@@ -2113,18 +2104,10 @@ elif current_stage == "completed":
             with st.spinner("Generating and reviewing cover letter..."):
                 try:
                     # Generate cover letter using orchestrator (includes review)
-                    print("[UI] Before generate_cover_letter call")
                     updated_state = st.session_state.customizer.orchestrator.generate_cover_letter(
                         st.session_state.workflow_state
                     )
-                    print(f"[UI] After generate_cover_letter call, returned state has keys: {list(updated_state.keys())}")
-                    print(f"[UI] cover_letter in returned state: {'cover_letter' in updated_state}")
-                    if 'cover_letter' in updated_state:
-                        cl = updated_state['cover_letter']
-                        print(f"[UI] cover_letter type: {type(cl)}, length: {len(cl) if cl else 0}, repr: {repr(cl[:50]) if cl else 'None'}")
-
                     st.session_state.workflow_state = updated_state
-                    print(f"[UI] After saving to session state, cover_letter length: {len(st.session_state.workflow_state.get('cover_letter', ''))}")
 
                     st.success("Cover letter generated and reviewed successfully!")
                     st.rerun()
