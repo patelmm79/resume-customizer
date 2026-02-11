@@ -1908,7 +1908,7 @@ elif current_stage == "completed":
         st.metric("Final Score", f"{final_score}/100" if final_score != 'N/A' else final_score)
 
     with col3:
-        improvement = state.get('score_improvement', 0)
+        improvement = state.get('score_improvement') or 0
         st.metric("Improvement", f"+{improvement}" if improvement > 0 else str(improvement))
 
     st.divider()
