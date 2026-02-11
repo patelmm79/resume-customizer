@@ -1713,6 +1713,15 @@ elif current_stage == "exporting":
         st.code(traceback.format_exc())
 
 
+# Stages 12a-12c: Cover Letter Generation & Review (processing stages)
+elif current_stage in ["cover_letter_ready", "cover_letter_reviewed"]:
+    st.header("Processing Cover Letter...")
+    with st.spinner("Cover letter has been generated and reviewed. Preparing display..."):
+        # These are intermediate stages - set back to completed to show the cover letter
+        st.session_state.workflow_state['current_stage'] = "completed"
+        st.rerun()
+
+
 # Stage 13: Completed
 elif current_stage == "completed":
     state = st.session_state.workflow_state
