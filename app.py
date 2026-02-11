@@ -659,22 +659,44 @@ if current_stage == "input":
 
     st.divider()
 
-    if resume_content and (job_url or manual_input):
-        if st.button("🚀 Start Workflow", type="primary", use_container_width=True):
-            with st.spinner("Starting workflow..."):
-                try:
-                    state = st.session_state.customizer.start_workflow(
-                        resume=resume_content,
-                        job_description=manual_input if manual_input else None,
-                        job_url=job_url if job_url else None
-                    )
-                    st.session_state.workflow_state = state
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Error starting workflow: {str(e)}")
-                    st.code(traceback.format_exc())
+    if resume_content:
+        col1, col2 = st.columns(2)
+
+        with col1:
+            if job_url or manual_input:
+                if st.button("🚀 Start Workflow", type="primary", use_container_width=True):
+                    with st.spinner("Starting workflow..."):
+                        try:
+                            state = st.session_state.customizer.start_workflow(
+                                resume=resume_content,
+                                job_description=manual_input if manual_input else None,
+                                job_url=job_url if job_url else None
+                            )
+                            st.session_state.workflow_state = state
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Error starting workflow: {str(e)}")
+                            st.code(traceback.format_exc())
+            else:
+                st.button("🚀 Start Workflow", type="primary", use_container_width=True, disabled=True)
+                st.caption("Provide job description to analyze")
+
+        with col2:
+            if st.button("📄 Export PDF (No Changes)", use_container_width=True):
+                with st.spinner("Preparing resume for export..."):
+                    try:
+                        # Create minimal state with just the resume for direct export
+                        from workflow.state import create_initial_state
+                        state = create_initial_state(resume=resume_content)
+                        # Skip directly to export stage
+                        state["current_stage"] = "exporting"
+                        st.session_state.workflow_state = state
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Error preparing export: {str(e)}")
+                        st.code(traceback.format_exc())
     else:
-        st.info("Please upload a resume and provide a job description to continue.")
+        st.info("Please upload a resume to continue.")
 
 
 # Stage 2-3: Analysis & Scoring
@@ -919,17 +941,14 @@ elif current_stage == "awaiting_optimization_selection":
             st.divider()
 
             for suggestion in suggestions:
-                # Use Select All state if checked, otherwise use suggestion's default
-                default_value = select_all if select_all else suggestion.get('selected', True)
-
-                # Display suggestion with location context
+                # Use Select All state for all items (when unchecked, all items are unchecked)
                 suggestion_label = suggestion['text']
                 if suggestion.get('location'):
                     suggestion_label += f" (Location: {suggestion['location']})"
 
                 suggestion['selected'] = st.checkbox(
                     suggestion_label,
-                    value=default_value,
+                    value=select_all,
                     key=f"opt_suggestion_{suggestion['id']}"
                 )
 
@@ -1070,17 +1089,14 @@ elif current_stage == "awaiting_optimization_selection_round2":
                 st.divider()
 
                 for suggestion in suggestions:
-                    # Use Select All state if checked, otherwise use suggestion's default
-                    default_value = select_all if select_all else suggestion.get('selected', True)
-
-                    # Display suggestion with location context
+                    # Use Select All state for all items (when unchecked, all items are unchecked)
                     suggestion_label = suggestion['text']
                     if suggestion.get('location'):
                         suggestion_label += f" (Location: {suggestion['location']})"
 
                     suggestion['selected'] = st.checkbox(
                         suggestion_label,
-                        value=default_value,
+                        value=select_all,
                         key=f"opt_r2_suggestion_{suggestion['id']}"
                     )
 
@@ -1737,8 +1753,8 @@ elif current_stage == "completed":
     from datetime import datetime
     now = datetime.now()
     date_time_str = now.strftime("%Y%m%d_%H%M%S")
-    default_pdf_filename = f"{default_candidate_name}_{date_time_str}.pdf"
-    default_md_filename = f"{default_candidate_name}_{date_time_str}.md"
+    default_pdf_filename = f"{default_candidate_name}_resume_{date_time_str}.pdf"
+    default_md_filename = f"{default_candidate_name}_resume_{date_time_str}.md"
 
     col1, col2 = st.columns(2)
 
@@ -1911,13 +1927,21 @@ elif current_stage == "completed":
             with st.expander("View Final Cover Letter", expanded=True):
                 render_markdown_with_html(st, state['cover_letter'])
 
-            # Download cover letter PDF
+            # Download cover letter PDF (use same naming as resume)
+            from datetime import datetime
+            now = datetime.now()
+            date_time_str = now.strftime("%Y%m%d_%H%M%S")
+            app_settings = load_settings()
+            default_candidate_name = app_settings.get("candidate_name", "Optimized_Resume")
+            cover_letter_pdf_filename = f"{default_candidate_name}_cover_letter_{date_time_str}.pdf"
+            cover_letter_md_filename = f"{default_candidate_name}_cover_letter_{date_time_str}.md"
+
             col1, col2 = st.columns(2)
             with col1:
                 st.download_button(
                     label="📄 Download Cover Letter PDF",
                     data=state['cover_letter_pdf_bytes'],
-                    file_name="cover_letter.pdf",
+                    file_name=cover_letter_pdf_filename,
                     mime="application/pdf",
                     use_container_width=True
                 )
@@ -1925,7 +1949,7 @@ elif current_stage == "completed":
                 st.download_button(
                     label="📝 Download Cover Letter Markdown",
                     data=state['cover_letter'],
-                    file_name="cover_letter.md",
+                    file_name=cover_letter_md_filename,
                     mime="text/markdown",
                     use_container_width=True
                 )

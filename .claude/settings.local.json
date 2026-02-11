@@ -23,7 +23,13 @@
       "Bash(terraform plan:*)",
       "Bash(terraform init:*)",
       "Bash(it is disabled\" error on first terraform apply.\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(for:*)",
+      "Bash(do if [ -f \"$file\" ])",
+      "Bash(then echo \"✓ $file\")",
+      "Bash(else echo \"✗ MISSING: $file\")",
+      "Bash(fi)",
+      "Bash(done)"
     ],
     "deny": [],
     "ask": []

@@ -435,12 +435,13 @@ def export_pdf_node(state: WorkflowState) -> Dict[str, Any]:
     try:
         exporter = PDFExporter()
 
-        # Use the most recent version: freeform > round2 > round1 > modified
+        # Use the most recent version: freeform > round2 > round1 > modified > original
         final_resume = (
             state.get("freeform_resume") or
             state.get("optimized_resume_round2") or
             state.get("optimized_resume") or
-            state["modified_resume"]
+            state.get("modified_resume") or
+            state.get("original_resume")
         )
 
         # Get PDF formatting options from state (with defaults)
