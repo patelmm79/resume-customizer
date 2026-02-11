@@ -520,14 +520,21 @@ def cover_letter_generation_node(state: WorkflowState) -> Dict[str, Any]:
             state["job_description"]
         )
 
+        # Basic check: what did agent return?
+        print(f"[cover_letter_generation_node] Agent returned dict type: {type(result)}")
+        print(f"[cover_letter_generation_node] Agent returned dict keys: {list(result.keys()) if isinstance(result, dict) else 'NOT A DICT'}")
+
         # Validate the result
         cover_letter = result.get("cover_letter", "")
+        print(f"[cover_letter_generation_node] Agent returned cover_letter type: {type(cover_letter)}")
         print(f"[cover_letter_generation_node] Agent returned cover_letter length: {len(cover_letter)}")
-        print(f"[cover_letter_generation_node] Cover letter first 100 chars: {cover_letter[:100]}")
+        print(f"[cover_letter_generation_node] Cover letter first 100 chars: {cover_letter[:100] if cover_letter else 'EMPTY'}")
 
         if not cover_letter or not cover_letter.strip():
+            print(f"[cover_letter_generation_node] VALIDATION FAILED: cover_letter is empty or whitespace only")
             raise ValueError("Cover letter generation returned empty content. Please try again.")
 
+        print(f"[cover_letter_generation_node] VALIDATION PASSED, creating return dict")
         return_dict = {
             "cover_letter": cover_letter,
             "cover_letter_summary": result.get("summary", "Cover letter generated successfully."),
