@@ -1917,6 +1917,14 @@ elif current_stage == "completed":
     st.subheader("📨 Cover Letter (Optional)")
     st.markdown("Generate a tailored cover letter for this job application.")
 
+    # Debug: Show state info
+    print(f"[UI] Cover letter state check:")
+    print(f"[UI] - cover_letter exists: {'cover_letter' in state}")
+    print(f"[UI] - cover_letter_pdf_bytes exists: {'cover_letter_pdf_bytes' in state}")
+    print(f"[UI] - cover_letter length: {len(state.get('cover_letter', ''))} chars")
+    if state.get('cover_letter_pdf_bytes'):
+        print(f"[UI] - cover_letter_pdf_bytes length: {len(state.get('cover_letter_pdf_bytes'))} bytes")
+
     # Check if cover letter was already generated
     if state.get('cover_letter'):
         # Check if we have PDF (fully approved and exported)
@@ -2069,9 +2077,16 @@ elif current_stage == "completed":
                     with st.spinner("Exporting cover letter to PDF..."):
                         try:
                             # Export cover letter using orchestrator
+                            print("[UI] Starting cover letter export...")
                             updated_state = st.session_state.customizer.orchestrator.export_cover_letter(
                                 st.session_state.workflow_state
                             )
+                            print(f"[UI] Export returned state with keys: {list(updated_state.keys())}")
+                            print(f"[UI] cover_letter_pdf_bytes in state: {'cover_letter_pdf_bytes' in updated_state}")
+                            if 'cover_letter_pdf_bytes' in updated_state:
+                                print(f"[UI] PDF bytes length: {len(updated_state['cover_letter_pdf_bytes'])} bytes")
+                            print(f"[UI] Current stage: {updated_state.get('current_stage')}")
+
                             st.session_state.workflow_state = updated_state
                             st.success("Cover letter exported successfully!")
                             st.rerun()
