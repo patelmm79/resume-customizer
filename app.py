@@ -1921,9 +1921,11 @@ elif current_stage == "completed":
     print(f"[UI] Cover letter state check:")
     print(f"[UI] - cover_letter exists: {'cover_letter' in state}")
     print(f"[UI] - cover_letter_pdf_bytes exists: {'cover_letter_pdf_bytes' in state}")
-    print(f"[UI] - cover_letter length: {len(state.get('cover_letter', ''))} chars")
-    if state.get('cover_letter_pdf_bytes'):
-        print(f"[UI] - cover_letter_pdf_bytes length: {len(state.get('cover_letter_pdf_bytes'))} bytes")
+    cover_letter_content = state.get('cover_letter') or ''
+    print(f"[UI] - cover_letter length: {len(cover_letter_content)} chars")
+    pdf_bytes = state.get('cover_letter_pdf_bytes')
+    if pdf_bytes:
+        print(f"[UI] - cover_letter_pdf_bytes length: {len(pdf_bytes)} bytes")
 
     # Check if cover letter was already generated
     if state.get('cover_letter'):
